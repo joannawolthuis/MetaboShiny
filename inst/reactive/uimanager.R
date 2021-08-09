@@ -120,6 +120,11 @@ shiny::observe({
                          paste0(as.character(nrow(mSet$dataSet$norm)),
                                 if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
                        })
+                       
+                       output$mz_count <- shiny::renderText({
+                         as.character(ncol(mSet$dataSet$norm))
+                       })
+                       
                        if(length(mSet$storage) > 0){
                          storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
                          subtext = sapply(storeNames, function(storeName){

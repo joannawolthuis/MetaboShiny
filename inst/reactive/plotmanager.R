@@ -75,44 +75,46 @@ shiny::observe({
                 if(!(plotName %in% c("network",
                                      "wordcloud"))){
                   try({
+                    
+                    if(plotName == "heatmap_plot") myplot$heatmap_static() else{
+                      if(length(myplot$layers[[1]]$data) > 0){
+                        myplot$data = myplot$layers[[1]]$data
+                      }
+                      
+                      if(input$plot_mzlabels & (
+                        any(grepl("mz|m/z", names(myplot$data)))
+                      )){
+                        if(length(myplot$layers[[1]]$mapping) > 0){
+                          myplot$mapping = myplot$layers[[1]]$mapping
+                        }
+                        myX = rlang::quo_get_expr(myplot$mapping[['x']])
+                        myY = rlang::quo_get_expr(myplot$mapping[['y']])
+                        myText = rlang::quo_get_expr(myplot$mapping[['text']])
+                        myCol = rlang::quo_get_expr(myplot$mapping[['colour']])
+                        flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+                        
+                        if(length(myplot$data) == 0){
+                          myplot$data = myplot$layers[[1]]$data  
+                        }
+                        
+                        if("significant" %in% colnames(myplot$data)){
+                          plotdata = myplot$data[significant == "YES"]
+                        }else{
+                          plotdata = myplot$data
+                        }
+                        
+                        myplot = myplot + ggrepel::geom_label_repel(data = plotdata,
+                                                                    aes_string(y = myY,
+                                                                               x = myX,
+                                                                               label = myText),
+                                                                    color="black",
+                                                                    size = 5)
+                      }
+                    }
+                    
                     output[[plotName]] <- shiny::renderPlot({
                       suppressWarnings({
-                        if(plotName == "heatmap_plot") myplot$heatmap_static() else{
-                          if(length(myplot$layers[[1]]$data) > 0){
-                            myplot$data = myplot$layers[[1]]$data
-                          }
-                          
-                          if(input$plot_mzlabels & (
-                            any(grepl("mz|m/z", names(myplot$data)))
-                            )){
-                            if(length(myplot$layers[[1]]$mapping) > 0){
-                              myplot$mapping = myplot$layers[[1]]$mapping
-                            }
-                            myX = rlang::quo_get_expr(myplot$mapping[['x']])
-                            myY = rlang::quo_get_expr(myplot$mapping[['y']])
-                            myText = rlang::quo_get_expr(myplot$mapping[['text']])
-                            myCol = rlang::quo_get_expr(myplot$mapping[['colour']])
-                            flip = grepl("tt|fc|aov|var|samp|corr", plotName)
-                            
-                            if(length(myplot$data) == 0){
-                              myplot$data = myplot$layers[[1]]$data  
-                            }
-                            
-                            if("significant" %in% colnames(myplot$data)){
-                              plotdata = myplot$data[significant == "YES"]
-                            }else{
-                              plotdata = myplot$data
-                            }
-                            
-                            myplot = myplot + ggrepel::geom_label_repel(data = plotdata,
-                                                                        aes_string(y = myY,
-                                                                                   x = myX,
-                                                                                   label = myText),
-                                                                        color="black",
-                                                                        size = 5)
-                          }
-                          myplot
-                        }
+                        myplot
                         })
                     })  
                   }, silent = F)
@@ -167,6 +169,11 @@ shiny::observe({
                       })
                     })
                   }
+                
+                print(plotName)
+                try({
+                  plot(myplot)
+                })
                 
                 output[[paste0("download_", plotName)]] <- downloadHandler(
                   filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),

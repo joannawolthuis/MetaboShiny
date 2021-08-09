@@ -1590,6 +1590,8 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                ,shiny::h2("Subset data")
                                                                                                                                                                ,helpText("Current sample count:")
                                                                                                                                                                ,h2(shiny::textOutput("samp_count"))
+                                                                                                                                                               ,helpText("Current m/z count:")
+                                                                                                                                                               ,h2(shiny::textOutput("mz_count"))
                                                                                                                                                                ,br()
                                                                                                                                                                ,shiny::selectizeInput("subset_var", label="Subset data based on:", choices = c(" "),width = "80%")
                                                                                                                                                                ,shinyWidgets::pickerInput(

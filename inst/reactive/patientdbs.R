@@ -227,7 +227,8 @@ shiny::observeEvent(input$metadata_new_add, {
     new_meta <- data.table::fread(meta_path)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
-    mSet <- MetaboShiny::store.mSet(mSet)
+    mSet <- MetaboShiny::store.mSet(mSet, 
+                                    proj.folder = lcl$paths$proj_dir)
     mSet <- MetaboShiny::reset.mSet(mSet,
                                     fn = file.path(lcl$paths$proj_dir, 
                                                    paste0(lcl$proj_name,
@@ -246,7 +247,7 @@ shiny::observeEvent(input$metadata_new_add, {
   if(success){
     mSet <<- mSet
     # overwrite orig?
-    save(mSet, file = file.path(lcl$paths$proj_dir, 
+    save(mSet, file = file.path(lcl$paths$proj_dir,
                                 paste0(lcl$proj_name,"_ORIG.metshi")))
     mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <- NULL 
     fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")

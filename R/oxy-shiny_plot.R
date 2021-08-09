@@ -268,13 +268,15 @@ blackwhite.colors <- function(n){
 #' @importFrom ggplot2 ggplot geom_boxplot geom_violin geom_point annotate stat_summary scale_color_manual scale_fill_manual xlab
 #' @importFrom Hmisc capitalize
 #' @importFrom ggbeeswarm geom_beeswarm
-ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pink"),
+ggplotSummary <- function(mSet, cpd, 
+                          shape.fac = "label", 
+                          cols = c("black", "pink"),
                           cf = rainbow, 
                           mode = "nm", 
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           color.fac = "label",
                           text.fac = "label",
-                          fill.fac="label"){
+                          fill.fac = "label"){
   
   sourceTable = mSet$dataSet$norm
   
@@ -1473,7 +1475,8 @@ plotPCA.3d <- function(mSet,
                        type="pca",font,
                        col.fac = "label",
                        fill.fac = "label",
-                       mode="normal",cf,
+                       mode="normal",
+                       cf,
                        ellipse=T){
   
   pcx = as.numeric(pcx)
@@ -1570,6 +1573,8 @@ plotPCA.3d <- function(mSet,
   }else if(fill.fac == "label"){
     classes
   }else{
+    print("b")
+    
     as.factor(mSet$dataSet$covars[, ..fill.fac][[1]])
   }
   
@@ -1777,8 +1782,14 @@ plotPCA.3d <- function(mSet,
 #' @importFrom ggplot2 ggplot geom_point stat_ellipse scale_x_continuous scale_y_continuous scale_fill_manual scale_color_manual ggtitle
 #' @importFrom gsubfn fn
 #' @importFrom Hmisc capitalize
-plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill.fac = "label",
-                       pcx, pcy, mode="normal", type="pca",
+plotPCA.2d <- function(mSet, 
+                       shape.fac = "label", 
+                       cols, 
+                       col.fac = "label", 
+                       fill.fac = "label",
+                       pcx, pcy, 
+                       mode="normal",
+                       type="pca",
                        cf = rainbow, ellipse=T){
   
   classes <- if(mode == "ipca"){
@@ -1880,9 +1891,10 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
   
   dat_long$fill <- if(is.null(fill.fac)){
     dat_long$group
-  } else if(fill.fac == "label"){
+  }else if(fill.fac == "label"){
     dat_long$group
   }else{
+    print("a")
     as.factor(mSet$dataSet$covars[,..fill.fac][[1]])
   }
   

@@ -38,7 +38,6 @@ function(input, output, session) {
   assignInNamespace("AddErrMsg", AddErrMsg, ns="MetaboAnalystR", 
                     envir=as.environment("package:MetaboAnalystR"))
   
-  # ====
   shiny::showNotification("Starting server process...")
   
   # detach("package:MetaboShiny", unload=T)
@@ -73,7 +72,7 @@ function(input, output, session) {
     lists = list(),
     prev_mz = "",
     prev_struct = "",
-    beep=F,
+    beep = F,
     tables = list(last_matches = data.table::data.table(query_mz = "none"),
                   prev_pie = data.table::data.table()),
     functions = list(),
