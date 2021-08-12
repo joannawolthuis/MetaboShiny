@@ -394,10 +394,6 @@ shiny::observe({
                      small_mSet = mSet
                      small_mSet$dataSet = small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
                      
-                     try({
-                       parallel::clusterExport(session_cl, c("input", "gbl", "lcl"))
-                     })
-                     
                      # # set static train/test
                      # joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
                      # train = caret::createDataPartition(joint_lbl, p = 0.8)[[1]]
@@ -416,12 +412,12 @@ shiny::observe({
                      
                     #  basejob = ml_queue$jobs[[1]]
                     #  basejob$ml_mzs_topn = 1
-                    #  basejob$ml_n_shufflings = 1
+                    #  basejob$ml_n_shufflings = 10
                     #  basejob$ml_label_shuffle = T
-                    #  basejob$ml_name = "shuffle1 combi1"
+                    #  basejob$ml_name = "shuffle10 rose50 combi1"
                     #  jobs = list()
-                    #  for(i in 1:10){ #mzs
-                    #    for(j in 1:1){ #repeats
+                    #  for(i in 1:250){ #mzs
+                    #    for(j in 1:10){ #repeats
                     #      for(randomize in c(T, F)){ #randomization
                     #        job = basejob
                     #        job$ml_mtry = as.character(ceiling(sqrt(i)))
@@ -437,23 +433,31 @@ shiny::observe({
                      
                      try({
                        mSet_loc = tempfile()
-                       qs::qsave(small_mSet, mSet_loc)
-                       parallel::clusterExport(session_cl, c("ml_run", "gbl"))
+                       #qs::qsave(small_mSet, mSet_loc)
+                       parallel::clusterExport(session_cl, c("ml_run", "gbl", "small_mSet"))
                      })
                      
+                     n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
                      
-                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
+                     queue_blocks = rep(1:length(session_cl), each = n_per_thread)
+                     queue_blocks = queue_blocks[1:length(ml_queue$jobs)]
+                     split_queue = split(ml_queue$jobs, queue_blocks)
+                     
+                     ml_queue_res <- pbapply::pblapply(split_queue, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
-                                                       function(settings, ml_cl, mSet_loc){
-                                                         res = list()
-                                                         small_mSet = qs::qread(mSet_loc)
-                                                         try({
+                                                       function(settings_block, ml_cl, mSet_loc){
+                                                         #small_mSet = qs::qread(mSet_loc)
+                                                         lapply(settings_block, function(settings){
+                                                           res = list()
+                                                           try({
                                                            res = ml_run(settings = settings, 
                                                                         mSet = small_mSet,
                                                                         input = input,
                                                                         cl = ml_cl)  
                                                          })
                                                          res
+                                                         })
+                                                         
                                                        }, mSet_loc = mSet_loc,
                                                        ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
                    }
@@ -461,11 +465,17 @@ shiny::observe({
                    print("Done!")
                    
                    closeAllConnections()
-                   file.remove(mSet_loc)
+                   #file.remove(mSet_loc)
                    
                    shiny::showNotification("Gathering results...")
                    
+                   ml_queue_res = unlist(ml_queue_res, recursive = F, use.names = T)
+                   
                    ml_queue_res = ml_queue_res[unlist(sapply(ml_queue_res, function(l) length(l) > 0))]
+                   
+                   if(!("ml" %in% names(mSet$analSet))){
+                     mSet$analSet$ml <- list()
+                   }
                    
                    for(res in ml_queue_res){
                      mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
