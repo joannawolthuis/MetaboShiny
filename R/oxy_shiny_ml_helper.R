@@ -309,9 +309,6 @@ ml_run <- function(settings, mSet, input, cl){
       mSet_train = metshiProcess(mSet_train, init = F, cl = 0)
       # --- GET TEST ---
       mSet_test = subset_mSet(reset_mSet, "sample", samps_test)
-      if(length(mzs) > 0){
-        mSet_test = subset_mSet_mz(mSet_test, mzs)
-      }
       mSet_test = change.mSet(mSet_test, 
                               stats_var = mSet.settings$exp.var, 
                               time_var =  mSet.settings$time.var,
@@ -349,13 +346,13 @@ ml_run <- function(settings, mSet, input, cl){
             if(length(settings$ml_mzs) > 0){
               curr <- curr[,settings$ml_mzs]  
             }else{
-              mzs = getAllHits(mSet = small_mSet,
+              mzs = getAllHits(mSet = mSet,
                                expname = settings$ml_specific_mzs,
                                randomize = settings$ml_mzs_rand)
               mzs = mzs$m.z[1:settings$ml_mzs_topn]
               mzs = gsub("^X", "", mzs)
               mzs = gsub("\\.$", "-", mzs)
-              curr <- curr[,mzs]
+              curr <- as.data.frame(curr[,mzs])
             }
           }else{
             curr <- data.table::data.table() # only use configs
@@ -363,9 +360,6 @@ ml_run <- function(settings, mSet, input, cl){
         }
       }
     }
-    
-    mSet$storage <- NULL
-    mSet = NULL
     
     test_sampnames = rownames(curr)[test_idx]
     

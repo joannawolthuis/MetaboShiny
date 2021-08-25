@@ -391,8 +391,8 @@ shiny::observe({
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                      
                      # make subsetted mset for ML so it's not as huge in memory
-                     small_mSet = mSet
-                     small_mSet$dataSet = small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
+                     small_mSet <- mSet
+                     small_mSet$dataSet <- small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
                      
                      # # set static train/test
                      # joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
@@ -447,10 +447,15 @@ shiny::observe({
                        small_mSet$analSet <- NULL
                      }
                      
-                     #gc()
+                     gc()
                      
                      mSet_loc = tempfile()
                      qs::qsave(small_mSet, mSet_loc)
+                    
+                     small_mSet <- NULL
+                     
+                     gc()
+                     
                      parallel::clusterExport(session_cl, c("ml_run", "gbl"))
                      
                      n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
