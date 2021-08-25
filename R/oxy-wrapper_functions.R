@@ -1183,7 +1183,11 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }else{NULL}
                    },
                    ml = {
-                     if("ml" %in% names(mSet$analSet)){
+                     if("ml" %in% names(mSet$analSet) & 
+                        !(input$ml_plot_posclass %in% c("placeholder", "")) & 
+                          input$ml_plot_x != "" &
+                          input$ml_plot_y != ""){
+
                        if(length(mSet$analSet$ml) > 0){
                          
                          data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
@@ -1192,6 +1196,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            data$res$shuffled = FALSE
                            data$res = list(data$res)
                          }
+                         
                          # PLOT #
                          ml_performance_rows = lapply(1:length(data$res), function(i){
                            res = data$res[[i]]

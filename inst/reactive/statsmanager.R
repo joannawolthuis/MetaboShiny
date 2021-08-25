@@ -161,7 +161,7 @@ shiny::observe({
                                                 mode = sapply(flattened[[1]]$m.z, function(mz){
                                                   if(grepl(pattern="-",x=mz)) "negative" else "positive"
                                                 }))
-
+                   
                    
                    hasT = ncol(flattened[[1]]) >= 3
                    
@@ -176,7 +176,7 @@ shiny::observe({
                    
                    if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
                    if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
-                  
+                   
                    tmpfile <- tempfile()
                    
                    fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
@@ -410,32 +410,48 @@ shiny::observe({
                      # }
                      # ml_queue$jobs = jobs
                      
-                    #  basejob = ml_queue$jobs[[1]]
-                    #  basejob$ml_mzs_topn = 1
-                    #  basejob$ml_n_shufflings = 10
-                    #  basejob$ml_label_shuffle = T
-                    #  basejob$ml_name = "shuffle10 rose50 combi1"
-                    #  jobs = list()
-                    #  for(i in 1:250){ #mzs
-                    #    for(j in 1:10){ #repeats
-                    #      for(randomize in c(T, F)){ #randomization
-                    #        job = basejob
-                    #        job$ml_mtry = as.character(ceiling(sqrt(i)))
-                    #        job$ml_mzs_topn = i
-                    #        job$ml_mzs_rand = randomize
-                    #        job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
-                    #        jobs[[job$ml_name]] = job
-                    #      }
-                    #    }
-                    #  }
-                    # 
-                    # ml_queue$jobs = jobs
+                     #  basejob = ml_queue$jobs[[1]]
+                     #  basejob$ml_mzs_topn = 1
+                     #  basejob$ml_n_shufflings = 10
+                     #  basejob$ml_label_shuffle = T
+                     #  basejob$ml_name = "shuffle10 rose50 combi1"
+                     #  jobs = list()
+                     #  for(i in 1:250){ #mzs
+                     #    for(j in 1:10){ #repeats
+                     #      for(randomize in c(T, F)){ #randomization
+                     #        job = basejob
+                     #        job$ml_mtry = as.character(ceiling(sqrt(i)))
+                     #        job$ml_mzs_topn = i
+                     #        job$ml_mzs_rand = randomize
+                     #        job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
+                     #        jobs[[job$ml_name]] = job
+                     #      }
+                     #    }
+                     #  }
+                     # 
+                     # ml_queue$jobs = jobs
                      
-                     try({
-                       mSet_loc = tempfile()
-                       #qs::qsave(small_mSet, mSet_loc)
-                       parallel::clusterExport(session_cl, c("ml_run", "gbl", "small_mSet"))
-                     })
+                     #small_mSet_shared = SharedObject::share(small_mSet) # try again in future, but crashed r
+                     
+                     uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
+                     if(uses.specific.mzs){
+                       keep.analyses = unique(gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs)))
+                       keep.analyses = keep.analyses[keep.analyses != "no"]
+                       if("pca" %in% names(small_mSet$analSet)) keep.analyses <- unique(c("pca", keep.analyses))
+                       small_mSet$analSet <- small_mSet$analSet[keep.analyses]
+                       small_mSet$storage <- lapply(small_mSet$storage, function(store){
+                         store$analSet <- store$analSet[keep.analyses]
+                         store
+                       })
+                     }else{
+                       small_mSet$analSet <- NULL
+                     }
+                     
+                     #gc()
+                     
+                     mSet_loc = tempfile()
+                     qs::qsave(small_mSet, mSet_loc)
+                     parallel::clusterExport(session_cl, c("ml_run", "gbl"))
                      
                      n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
                      
@@ -446,16 +462,16 @@ shiny::observe({
                      ml_queue_res <- pbapply::pblapply(split_queue, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
                                                        function(settings_block, ml_cl, mSet_loc){
-                                                         #small_mSet = qs::qread(mSet_loc)
+                                                         small_mSet = qs::qread(mSet_loc)
                                                          lapply(settings_block, function(settings){
                                                            res = list()
                                                            try({
-                                                           res = ml_run(settings = settings, 
-                                                                        mSet = small_mSet,
-                                                                        input = input,
-                                                                        cl = ml_cl)  
-                                                         })
-                                                         res
+                                                             res = ml_run(settings = settings, 
+                                                                          mSet = small_mSet,
+                                                                          input = input,
+                                                                          cl = ml_cl)  
+                                                           })
+                                                           res
                                                          })
                                                          
                                                        }, mSet_loc = mSet_loc,

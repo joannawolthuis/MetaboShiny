@@ -14,7 +14,7 @@ getMissing <- function(peakpath, nrow=NULL){
   cols = stringi::stri_split(header, fixed=",")[[1]]
 
   if(any(grepl("mass_to_charge", cols))){
-    peaklist = data.table::fread(peakpath)
+    peaklist = data.table::fread(peakpath,fill=TRUE)
     data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
     if(!is.na(peaklist$retention_time[1])){
       hasRT = TRUE
@@ -34,7 +34,8 @@ getMissing <- function(peakpath, nrow=NULL){
   }else{
     if(!reallyBig){
       peaklist <- data.table::fread(peakpath,
-                                    header=T)
+                                    header=T,
+                                    fill=TRUE)
       considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
       peaklist = peaklist[, ..considerMe]
       totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
@@ -96,7 +97,7 @@ import.pat.csvs <- function(metapath,
 
   metadata = NULL
   try({
-    metadata <- data.table::fread(metapath)
+    metadata <- data.table::fread(metapath,fill=TRUE)
     metadata <- reformat.metadata(metadata)
     keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
     metadata$sample <- gsub(metadata$sample, 
@@ -111,10 +112,10 @@ import.pat.csvs <- function(metapath,
   
   if(is.null(metadata)){
     try({
-      peaklist = data.table::fread(pospath)
+      peaklist = data.table::fread(pospath,fill=TRUE)
     })
     try({
-      peaklist = data.table::fread(negpath)
+      peaklist = data.table::fread(negpath,fill=TRUE)
     })
     metadata = data.table::data.table(sample = peaklist$Sample,
                                       individual = peaklist$Sample,
@@ -140,6 +141,10 @@ import.pat.csvs <- function(metapath,
   # metadata = metadata[, ..keep_meta_cols]
   
   samplesIn <- metadata$sample
+  if(any(duplicated(samplesIn))){
+    warning("'sample' column must be unique! Last instance will be used. Please correct to avoid unpredictable results.")
+    metadata = metadata[!duplicated(sample)]
+  }
 
   zeros_after_period <- function(x) {
     if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
@@ -154,8 +159,8 @@ import.pat.csvs <- function(metapath,
     
     if(length(peakpath) == 0){
       return( list(ionMode = ionMode, 
-           peaktbl = data.table::data.table()))
-      }
+                   peaktbl = data.table::data.table()))
+    }
     
     print(paste("Importing", ionMode, "mode peaks!"))
     
@@ -183,7 +188,7 @@ import.pat.csvs <- function(metapath,
     
     # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
     if(any(grepl("mass_to_charge", cols))){
-      peaklist = data.table::fread(peakpath)
+      peaklist = data.table::fread(peakpath,fill=TRUE)
       data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
       if(!is.na(peaklist$retention_time[1])){
         hasRT = TRUE
@@ -210,6 +215,7 @@ import.pat.csvs <- function(metapath,
             append=TRUE)
       
       pbapply::pbsapply(1:nrows, function(i, con, qualifies){
+        print(i)
         line = readLines(con_read, n = 1)
         splRow = stringr::str_split(line, ",")[[1]]
         sampName = splRow[1]
@@ -219,21 +225,19 @@ import.pat.csvs <- function(metapath,
         label = splRow[2]
         splRow = splRow[missCounts$isMz]
         splRow[splRow == "0" | splRow == 0 | splRow == ""] <- NA
-        if(sampName %in% if(typeof(metadata) == "list") samplesIn else sampName){
+        try({
           row = c(metadata[sample == as.character(sampName), ..meta_col_order],
                   splRow[qualifies])
           write(paste0(row, collapse=","),
                 file = write_loc,append=TRUE)
-        }else{
-          NULL
-        }
+        })
       }, con = con_read, qualifies = qualifies)
       
       close.connection(con_read)
       
       peaklist = data.table::fread(file = write_loc, 
                                    sep = ",",
-                                   key = "sample",
+                                   #key = "sample",
                                    header = T)
     }
     

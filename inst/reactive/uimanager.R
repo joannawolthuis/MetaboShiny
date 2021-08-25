@@ -271,6 +271,7 @@ shiny::observe({
                      shiny::updateSliderInput(session, "ml_keep_pcs", max = npc)
                      
                      if(length(mSet$analSet$ml) > 0){
+                       
                        shiny::showTab(session = session, 
                                       inputId = "ml2", 
                                       target = "res")
@@ -282,9 +283,22 @@ shiny::observe({
                        }else{
                          colnames(data$res[[1]]$prediction)
                        }
+                       
+                       # try both options and check higher AUC
+                       perf.per.posclass = sapply(classes, function(pos.class.test){
+                         perf = getMLperformance(ml_res = data$res[[1]], 
+                                                 pos.class = pos.class.test,
+                                                 x.metric = input$ml_plot_x,
+                                                 y.metric = input$ml_plot_y)
+                         t = perf$coords
+                         pracma::trapz(t[`Test set` == "Test"]$x, 
+                                       t[`Test set` == "Test"]$y)
+                       })
+                       pos.class <- names(which.max(perf.per.posclass))
+                       
                        shiny::updateSelectizeInput(session, "ml_plot_posclass", 
                                                 choices = classes, 
-                                                selected = classes[length(classes)])
+                                                selected = pos.class)
                        ###
                        
                        choices = c()

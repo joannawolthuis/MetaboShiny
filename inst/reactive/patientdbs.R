@@ -224,7 +224,7 @@ shiny::observeEvent(input$metadata_new_add, {
   meta_path <- input$metadata_new$datapath
   success = F
   try({
-    new_meta <- data.table::fread(meta_path)
+    new_meta <- data.table::fread(meta_path,fill=TRUE,comment.char=.)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
     mSet <- MetaboShiny::store.mSet(mSet, 
@@ -322,7 +322,7 @@ output$wipe_regex_ui <- shiny::renderUI({
 })
 
 shiny::observeEvent(input$check_ref_mzs, {
-  firstRow = data.table::fread(lcl$paths$csv_loc,nrows = 1)
+  firstRow = data.table::fread(lcl$paths$csv_loc,nrows = 1,fill=TRUE,comment.char=.)
   distr = MetaboShiny::getColDistribution(firstRow)
   refMzs = colnames(firstRow)[distr$mz]
   shinyWidgets::updatePickerInput(session, 

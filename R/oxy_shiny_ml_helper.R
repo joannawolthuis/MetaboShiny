@@ -31,6 +31,13 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric, silent = F){
     })  
   }
   
+  # alternative precision recall...
+  
+  
+  
+  # -------------------------------
+  
+  
   prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
                                 ml_res$labels)
   
@@ -55,8 +62,8 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric, silent = F){
       coords.dt[[col]][coords.dt[[col]] == Inf] <- 1
     }
     if(NaN %in% coords.dt[[col]]){
-      if(!silent) print("WARNING: NaN changed to 0")
-      coords.dt[[col]][is.nan(coords.dt[[col]])] <- 0
+      if(!silent) print("WARNING: NaN changed to 1")
+      coords.dt[[col]][is.nan(coords.dt[[col]])] <- 1
     }
   }
   
@@ -279,32 +286,6 @@ ml_run <- function(settings, mSet, input, cl){
       #table(split_label[test_idx])
     }
     
-    # subset to specific m/z values used
-    mzs = c()
-    if(pickedTbl != "pca"){
-      if(settings$ml_specific_mzs != "no"){
-        msg = "Using user-specified m/z set."
-        if(!is.null(settings$ml_mzs) | settings$ml_specific_mzs == "none"){
-          if(settings$ml_specific_mzs != "none"){
-            curr <- curr[,settings$ml_mzs, with=F]
-          }else{
-            curr <- data.table::data.table() # only use configs
-          }
-        }else{
-          mzs = getAllHits(mSet = mSet,
-                           expname = settings$ml_specific_mzs,
-                           randomize = settings$ml_mzs_rand)
-          mzs = mzs$m.z[1:settings$ml_mzs_topn]
-          # mzs = getTopHits(mSet = mSet,
-          #                  expnames = settings$ml_specific_mzs, 
-          #                  top = settings$ml_mzs_topn, 
-          #                  filter_mode = "top")[[1]]
-          mzs = gsub("^X", "", mzs)
-          mzs = gsub("\\.$", "-", mzs)
-        }
-      }   
-    }
-    
     if(mSet$metshiParams$renorm & pickedTbl != "pca"){
       samps_train = rownames(mSet$dataSet$norm)[train_idx]
       samps_test = rownames(mSet$dataSet$norm)[test_idx]
@@ -358,12 +339,28 @@ ml_run <- function(settings, mSet, input, cl){
                                   orig = mSet$dataSet$orig,
                                   norm = mSet$dataSet$norm,
                                   pca = mSet$analSet$pca$x))
-      
+     
       if(settings$ml_specific_mzs == "none"){
         curr = data.frame()
-      }
-      if(length(mzs) > 0){
-        curr <- curr[, mzs]
+      }else if(settings$ml_specific_mzs != "no"){
+        if(pickedTbl != "pca"){
+          msg = "Using user-specified m/z set."
+          if(settings$ml_specific_mzs != "none"){
+            if(length(settings$ml_mzs) > 0){
+              curr <- curr[,settings$ml_mzs]  
+            }else{
+              mzs = getAllHits(mSet = small_mSet,
+                               expname = settings$ml_specific_mzs,
+                               randomize = settings$ml_mzs_rand)
+              mzs = mzs$m.z[1:settings$ml_mzs_topn]
+              mzs = gsub("^X", "", mzs)
+              mzs = gsub("\\.$", "-", mzs)
+              curr <- curr[,mzs]
+            }
+          }else{
+            curr <- data.table::data.table() # only use configs
+          }
+        }
       }
     }
     

@@ -1100,21 +1100,22 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
       })  
       if(length(shuffleSplit) > 1){
         # test normality
-        p = shapiro.test(shuffleAUCs)
-        if(p$p.value > 0.05){
-          # chance of shuffled being better than AUC -> get p value from this
-          tt_res = t.test(shuffleAUCs, mu = AUC, alternative = "less")
-          p = tt_res$p.value
-          stars = MetaboShiny::p2stars(p)
-          sigmeasure = paste0("(",stars,")")
-          #lbl = paste("p =", p, sigmeasure)
-          lbl = stars  
-          AUC_txt = paste0(stars, "\nAUC: ", sprintf("%.4s",AUC))
-        }else{
-          print("Shuffle AUC distribution isn't normally distributed, need more shuffled runs for p-value...")
-          lbl = "NA"
-          AUC_txt = "NA"
-        }
+        lbl = "NA"
+        AUC_txt = "NA"
+        try({
+          p = shapiro.test(shuffleAUCs)
+          if(p$p.value > 0.05){
+            # chance of shuffled being better than AUC -> get p value from this
+            tt_res = t.test(shuffleAUCs, mu = AUC, alternative = "less")
+            p = tt_res$p.value
+            stars = MetaboShiny::p2stars(p)
+            sigmeasure = paste0("(",stars,")")
+            lbl = stars  
+            AUC_txt = paste0(stars, "\nAUC: ", sprintf("%.4s",AUC))
+          }else{
+            print("Shuffle AUC distribution isn't normally distributed, need more shuffled runs for p-value...")
+          }  
+        })
         
         dens_dat = data.table::data.table(auc = shuffleAUCs)
         dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
@@ -1178,7 +1179,9 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     myplot = myplot +
       ggpmisc::geom_plot_npc(data = inset.df,
                              vp.width = 1/4, vp.height = 1/4,
-                             ggplot2::aes(npcx = x, npcy = y, label = plot))    
+                             ggplot2::aes(npcx = x,
+                                          npcy = y,
+                                          label = plot))    
   }
 
   #-----------------------
