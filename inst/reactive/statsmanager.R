@@ -449,7 +449,7 @@ shiny::observe({
                      
                      gc()
                      
-                     mSet_loc = tempfile()
+                     mSet_loc <- tempfile()
                      qs::qsave(small_mSet, mSet_loc)
                     
                      small_mSet <- NULL
@@ -460,26 +460,27 @@ shiny::observe({
                      
                      n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
                      
-                     queue_blocks = rep(1:length(session_cl), each = n_per_thread)
-                     queue_blocks = queue_blocks[1:length(ml_queue$jobs)]
-                     split_queue = split(ml_queue$jobs, queue_blocks)
+                     # queue_blocks = rep(1:length(session_cl), each = n_per_thread)
+                     # queue_blocks = queue_blocks[1:length(ml_queue$jobs)]
+                     # split_queue = split(ml_queue$jobs, queue_blocks)
                      
-                     ml_queue_res <- pbapply::pblapply(split_queue, 
+                     parallel::clusterExport(session_cl, "mSet_loc",envir = environment())
+                     parallel::clusterEvalQ(session_cl, {
+                       small_mSet = qs::qread(mSet_loc)
+                     })
+                     
+                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
-                                                       function(settings_block, ml_cl, mSet_loc){
-                                                         small_mSet = qs::qread(mSet_loc)
-                                                         lapply(settings_block, function(settings){
-                                                           res = list()
-                                                           try({
-                                                             res = ml_run(settings = settings, 
-                                                                          mSet = small_mSet,
-                                                                          input = input,
-                                                                          cl = ml_cl)  
-                                                           })
-                                                           res
+                                                       function(settings, ml_cl){
+                                                         res = list()
+                                                         try({
+                                                           res = ml_run(settings = settings, 
+                                                                        mSet = small_mSet,
+                                                                        input = input,
+                                                                        cl = ml_cl)  
                                                          })
-                                                         
-                                                       }, mSet_loc = mSet_loc,
+                                                         res
+                                                       },
                                                        ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
                    }
                    
