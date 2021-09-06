@@ -384,7 +384,7 @@ shiny::observe({
                  mSet$analSet$featsel <- list(boruta_res)
                },
                ml = {
-                 try({
+                 #try({
                    
                    {
                      assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
@@ -435,8 +435,8 @@ shiny::observe({
                      
                      uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
                      if(uses.specific.mzs){
-                       keep.analyses = unique(gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs)))
-                       keep.analyses = keep.analyses[keep.analyses != "no"]
+                       keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
+                       keep.analyses <- keep.analyses[keep.analyses != "no"]
                        if("pca" %in% names(small_mSet$analSet)) keep.analyses <- unique(c("pca", keep.analyses))
                        small_mSet$analSet <- small_mSet$analSet[keep.analyses]
                        small_mSet$storage <- lapply(small_mSet$storage, function(store){
@@ -445,29 +445,20 @@ shiny::observe({
                        })
                      }else{
                        small_mSet$analSet <- NULL
+                       small_mSet$storage <- list()
                      }
-                     
-                     gc()
                      
                      mSet_loc <- tempfile()
                      qs::qsave(small_mSet, mSet_loc)
                     
+                     parallel::clusterExport(session_cl, c("ml_run", "gbl", "small_mSet"), envir = environment())
                      small_mSet <- NULL
-                     
-                     gc()
-                     
-                     parallel::clusterExport(session_cl, c("ml_run", "gbl"))
                      
                      n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
                      
                      # queue_blocks = rep(1:length(session_cl), each = n_per_thread)
                      # queue_blocks = queue_blocks[1:length(ml_queue$jobs)]
                      # split_queue = split(ml_queue$jobs, queue_blocks)
-                     
-                     parallel::clusterExport(session_cl, "mSet_loc",envir = environment())
-                     parallel::clusterEvalQ(session_cl, {
-                       small_mSet = qs::qread(mSet_loc)
-                     })
                      
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
@@ -514,7 +505,8 @@ shiny::observe({
                    
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
                    print("ML done and saved.")
-                 })
+                 
+                  #})
                },
                heatmap = {
                  # reset
