@@ -837,7 +837,7 @@ getAllHits <- function(mSet, expname, randomize = F){
                      mdls = analysis$ml[[base_name]][[ml_name]]$res
                      final_nonshuffle = mdls[[which(sapply(mdls, function(mdl) !mdl$shuffled))]]
                      res = data.frame(`m/z` = gsub("\\.$", "-", gsub("^X", "", rownames(final_nonshuffle$importance))),
-                                      value =  c(1),
+                                      value =  c(0),
                                       stastistic = final_nonshuffle$importance[,1])
                      res
                    },
