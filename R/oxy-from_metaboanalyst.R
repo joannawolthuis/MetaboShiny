@@ -1,3 +1,4 @@
+#' @export
 Ttests.Anal <- function (mSetObj = NA, nonpar = F, threshp = 0.05, paired = FALSE, 
           equal.var = TRUE, all_results = FALSE, multicorr_method="fdr"){
   mSetObj <- MetaboAnalystR:::.get.mSet(mSetObj)
