@@ -385,7 +385,6 @@ shiny::observe({
                },
                ml = {
                  #try({
-                   
                    {
                      assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
@@ -393,45 +392,6 @@ shiny::observe({
                      # make subsetted mset for ML so it's not as huge in memory
                      small_mSet <- mSet
                      small_mSet$dataSet <- small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
-                     
-                     # # set static train/test
-                     # joint_lbl = paste0(small_mSet$dataSet$covars$country,"_",small_mSet$dataSet$covars$new_group)
-                     # train = caret::createDataPartition(joint_lbl, p = 0.8)[[1]]
-                     # train_samps = small_mSet$dataSet$covars$sample[train]
-                     # basejob = ml_queue$jobs[[1]]
-                     # jobs = list()
-                     # for( i in 1:26){
-                     #   for(j in 1:30){
-                     #     job = basejob
-                     #     job$ml_mzs_topn = i
-                     #     job$ml_name = gsub("1$", paste(i, paste0("#", j)), job$ml_name)
-                     #     jobs[[job$ml_name]] = job
-                     #   }
-                     # }
-                     # ml_queue$jobs = jobs
-                     
-                     #  basejob = ml_queue$jobs[[1]]
-                     #  basejob$ml_mzs_topn = 1
-                     #  basejob$ml_n_shufflings = 10
-                     #  basejob$ml_label_shuffle = T
-                     #  basejob$ml_name = "shuffle10 rose50 combi1"
-                     #  jobs = list()
-                     #  for(i in 1:250){ #mzs
-                     #    for(j in 1:10){ #repeats
-                     #      for(randomize in c(T, F)){ #randomization
-                     #        job = basejob
-                     #        job$ml_mtry = as.character(ceiling(sqrt(i)))
-                     #        job$ml_mzs_topn = i
-                     #        job$ml_mzs_rand = randomize
-                     #        job$ml_name = paste0(gsub("1$", paste(i, paste0("#", j)), job$ml_name), " rand", randomize)
-                     #        jobs[[job$ml_name]] = job
-                     #      }
-                     #    }
-                     #  }
-                     # 
-                     # ml_queue$jobs = jobs
-                     
-                     #small_mSet_shared = SharedObject::share(small_mSet) # try again in future, but crashed r
                      
                      uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
                      if(uses.specific.mzs){
@@ -448,11 +408,15 @@ shiny::observe({
                        small_mSet$storage <- list()
                      }
                      
-                     mSet_loc <- tempfile()
-                     qs::qsave(small_mSet, mSet_loc)
+                     #mSet_loc <- tempfile()
+                     #qs::qsave(small_mSet, mSet_loc)
                     
-                     parallel::clusterExport(session_cl, c("ml_run", "gbl", "small_mSet"), envir = environment())
-                     small_mSet <- NULL
+                     if(length(session_cl) > 1){
+                       parallel::clusterExport(session_cl, c("ml_run", 
+                                                             "gbl", 
+                                                             "small_mSet"), envir = environment())
+                       #small_mSet <- NULL
+                     }
                      
                      n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
                      
@@ -477,12 +441,9 @@ shiny::observe({
                    
                    print("Done!")
                    
-                   closeAllConnections()
-                   #file.remove(mSet_loc)
-                   
                    shiny::showNotification("Gathering results...")
                    
-                   ml_queue_res = unlist(ml_queue_res, recursive = F, use.names = T)
+                   #ml_queue_res = unlist(ml_queue_res, recursive = F, use.names = T)
                    
                    ml_queue_res = ml_queue_res[unlist(sapply(ml_queue_res, function(l) length(l) > 0))]
                    
@@ -520,12 +481,12 @@ shiny::observe({
                },
                tt = {
                  withProgress({
-                   mSet <- MetaboAnalystR::Ttests.Anal(mSet,
-                                                       nonpar = input$tt_nonpar,
-                                                       threshp = input$tt_p_thresh,
-                                                       paired = mSet$dataSet$ispaired,
-                                                       equal.var = input$tt_eqvar
-                   )
+                   mSet <- Ttests.Anal(mSet,
+                                       nonpar = input$tt_nonpar,
+                                       threshp = input$tt_p_thresh,
+                                       paired = mSet$dataSet$ispaired,
+                                       equal.var = input$tt_eqvar,
+                                       multicorr_method = input$tt_multi_test)
                  })
                },
                fc = {

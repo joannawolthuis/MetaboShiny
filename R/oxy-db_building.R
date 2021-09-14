@@ -215,7 +215,6 @@ import.pat.csvs <- function(metapath,
             append=TRUE)
       
       pbapply::pbsapply(1:nrows, function(i, con, qualifies){
-        print(i)
         line = readLines(con_read, n = 1)
         splRow = stringr::str_split(line, ",")[[1]]
         sampName = splRow[1]

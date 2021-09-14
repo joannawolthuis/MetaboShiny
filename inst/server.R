@@ -821,6 +821,10 @@ beep = no')
     source(fp, local = T)
   }  
   
+  # overwrite
+  assignInNamespace("Ttests.Anal", Ttests.Anal, ns="MetaboAnalystR", 
+                    envir=as.environment("package:MetaboAnalystR"))
+  
   observeEvent(input$quit_metshi, {
     if(!is.null(mSet) & isolate(save_info$has_changed)){
       shinyWidgets::confirmSweetAlert(

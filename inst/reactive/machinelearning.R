@@ -189,3 +189,29 @@ shiny::observeEvent(input$queue_ml_del, {
   row = input$ml_queue_rows_selected
   ml_queue$jobs = ml_queue$jobs[-row]
 })
+
+shiny::observeEvent(input$clear_ml_runs, {
+  shinyWidgets::confirmSweetAlert(
+    session = session,
+    inputId = "clear_ml_sure",
+    text = tags$div(
+      tags$b("Click upper right ", icon("times"), " button to cancel."),br(),
+      br(),
+      shiny::img(class = "imagetop", 
+                 src = "www/metshi_heart_bezel.png", 
+                 height = "70px"),
+      br()
+    ),
+    btn_labels = c("No", "Yes"),
+    title = "Are you sure? This will erase all machine learning results.",
+    #showCloseButton = T,
+    html = TRUE
+  )
+})
+
+observeEvent(input$clear_ml_sure,{
+  if(isTRUE(input$clear_ml_sure)){
+    mSet$analSet$ml <<- NULL
+    uimanager$refresh <- "ml"
+  }
+},ignoreNULL = T)

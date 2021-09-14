@@ -234,7 +234,7 @@ ml_run <- function(settings, mSet, input, cl){
     if(!dir.exists(tmpdir)) dir.create(tmpdir)
     setwd(tmpdir)
     
-    # PIPELINE
+    ### PIPELINE ###
     # pick source table
     pickedTbl <- settings$ml_used_table
     
@@ -244,9 +244,13 @@ ml_run <- function(settings, mSet, input, cl){
     
     # covars needed
     keep.config = setdiff(unique(c(settings$ml_include_covars, settings$ml_batch_covars,
-                            settings$ml_train_subset[[1]], settings$ml_test_subset[[1]])),
+                                   settings$ml_train_subset[[1]], settings$ml_test_subset[[1]])),
                           "label")
-    config = mSet$dataSet$covars[,..keep.config]
+    if(length(keep.config) > 0){
+      config = mSet$dataSet$covars[, ..keep.config]
+    }else{
+      config = data.table::data.table()
+    }
     config$label = mSet$dataSet$cls
     
     # train/test split
@@ -316,10 +320,11 @@ ml_run <- function(settings, mSet, input, cl){
       mSet_test$dataSet$orig <- mSet_test$dataSet$start
       mSet_test$dataSet$start <- mSet_test$dataSet$preproc <- mSet_test$dataSet$proc <- mSet_test$dataSet$prenorm <- NULL
       mSet_test = metshiProcess(mSet_test, init = F, cl = 0)
+      
       # ------- rejoin and create curr -------
-      config_train = mSet_train$dataSet$covars[,..keep.config]
+      config_train = mSet_train$dataSet$covars[, ..keep.config]
       config_train$label = mSet_train$dataSet$cls
-      config_test = mSet_test$dataSet$covars[,..keep.config]
+      config_test = mSet_test$dataSet$covars[, ..keep.config]
       config_test$label = mSet_test$dataSet$cls
       
       mz.in.both = intersect(colnames(mSet_train$dataSet$norm),

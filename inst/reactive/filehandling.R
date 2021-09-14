@@ -259,5 +259,5 @@ shiny::observe({
 
 shiny::observeEvent(input$queue_ml_save, {
   q_path = normalizePath(file.path(lcl$paths$work_dir, paste0(input$queue_ml_name, ".qs")))
-  qs::qwrite(ml_queue$jobs, q_path)
+  qs::qsave(ml_queue$jobs, q_path)
 })

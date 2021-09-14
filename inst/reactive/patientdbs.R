@@ -224,7 +224,7 @@ shiny::observeEvent(input$metadata_new_add, {
   meta_path <- input$metadata_new$datapath
   success = F
   try({
-    new_meta <- data.table::fread(meta_path,fill=TRUE,comment.char=.)
+    new_meta <- data.table::fread(meta_path,fill=TRUE)#,comment.char=.)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
     mSet <- MetaboShiny::store.mSet(mSet, 
@@ -250,9 +250,8 @@ shiny::observeEvent(input$metadata_new_add, {
     save(mSet, file = file.path(lcl$paths$proj_dir,
                                 paste0(lcl$proj_name,"_ORIG.metshi")))
     mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <- NULL 
-    fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-    save(mSet, file = fn)
     shiny::showNotification("Updated metadata!")
+    filemanager$do <- "save"
     uimanager$refresh <- "general"
   }else{
     shiny::showNotification("Something went wrong! :(")
