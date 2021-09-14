@@ -822,7 +822,7 @@ beep = no')
   }  
   
   # overwrite
-  assignInNamespace("Ttests.Anal", Ttests.Anal, ns="MetaboAnalystR", 
+  assignInNamespace("Ttests.Anal", Ttests.Anal.JW, ns="MetaboAnalystR", 
                     envir=as.environment("package:MetaboAnalystR"))
   
   observeEvent(input$quit_metshi, {
