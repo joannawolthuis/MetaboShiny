@@ -279,7 +279,9 @@ reset.mSet <- function(mSet_new, fn) {
 #' @export 
 load.mSet <- function(mSet, name = mSet$dataSet$cls.name, proj.folder) {
   name = gsub(pattern = "[^\\w]", replacement = "_", x = name, perl = T)
-  mSet.loaded = qs::qread(file.path(proj.folder, paste0(name, ".metshi")))
+  fn = file.path(proj.folder, paste0(name, ".metshi"))
+  print(paste("loading mset:", fn))
+  mSet.loaded = qs::qread(fn)
   mSet$dataSet <- mSet.loaded$dataSet
   mSet$analSet <- mSet.loaded$analSet
   mSet$settings <- mSet.loaded$settings
@@ -315,19 +317,7 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name, proj.folder) {
 #' @rdname store.mSet
 #' @export
 store.mSet <- function(mSet, name = mSet$settings$cls.name, proj.folder){
-  
-  #analyses = mSet$analSet
-  # if("ml" %in% names(analyses)){
-  #   for(ml_type in names(analyses$ml)){
-  #    for(run in 1:length(analyses$ml[[ml_type]])){
-  #      analyses$ml[[ml_type]][[run]] <- list(params = analyses[[ml_type]][[run]]$params,
-  #                                            res = lapply(analyses[[ml_type]][[run]]$res, function(res){
-  #                                              list(importance = res$importance) # only keep importance for getting tophits/allhits order
-  #                                            })) 
-  #    } 
-  #   }
-  # }
-  
+
   mSet$storage[[name]] <- list(samples = rownames(mSet$dataSet$norm),
                                settings = mSet$settings,
                                analSet =  mSet$analSet)
@@ -336,6 +326,7 @@ store.mSet <- function(mSet, name = mSet$settings$cls.name, proj.folder){
   save.item$storage <- NULL
   name = gsub(pattern = "[^\\w]", replacement = "_", x = name, perl = T)
   fn = file.path(proj.folder, paste0(name, ".metshi"))
+  print(paste("storing mset as:", fn))
   print(fn)
   ## MORE MEMORY FRIENDLY ##
   qs::qsave(save.item, fn)

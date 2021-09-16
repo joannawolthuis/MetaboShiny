@@ -1965,7 +1965,6 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     res <- prcomp(mSet$dataSet$norm, 
                   center = F,
                   scale = F)
-    
     pc.use <- as.numeric(mSet$metshiParams$keep_pcs[1]:mSet$metshiParams$keep_pcs[2]) # explains 93% of variance
     trunc <- res$x[,pc.use] %*% t(res$rotation[,pc.use])
     mSet$dataSet$norm <- as.data.frame(trunc)

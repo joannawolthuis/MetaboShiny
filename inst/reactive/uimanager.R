@@ -186,8 +186,6 @@ shiny::observe({
                      }else{
                        search_button$on <- TRUE}
                      
-                     opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-                     
                      ml_queue$jobs = list()
                      
                      shiny::updateNavbarPage(session, "statistics", selected = "inf")

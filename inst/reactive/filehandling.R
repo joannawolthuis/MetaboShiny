@@ -67,9 +67,9 @@ observe({
   if(is.null(given_dir)) return()
   # change db storage directory in user options file
   MetaboShiny::setOption(lcl$paths$opt.loc, key="db_dir", value=given_dir)
-  lcl$paths$db_dir <- given_dir
+  lcl$paths$db_dir <<- given_dir
   # render current db location in text
-  output$curr_db_dir <- shiny::renderText({getOptions(lcl$paths$opt.loc)$db_dir})
+  output$curr_db_dir <- shiny::renderText({lcl$paths$db_dir})
 })
 
 # see above, but for working directory. CSV/DB files with user data are stored here.
@@ -85,7 +85,7 @@ shiny::observe({
   if(is.null(given_dir)) return()
   MetaboShiny::setOption(lcl$paths$opt.loc,key="work_dir", value=given_dir)
   lcl$paths$work_dir <<- given_dir
-  output$curr_exp_dir <- shiny::renderText({MetaboShiny::getOptions(lcl$paths$opt.loc)$work_dir})
+  output$curr_exp_dir <- shiny::renderText({lcl$paths$work_dir})
 })
 
 # triggers if user changes their current project name
@@ -140,16 +140,14 @@ observe({
         mSet$mSet <- NULL
         mSet$dataSet$combined.method <- TRUE # FC fix
         mSet <<- mSet
-        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-        ml_queue$jobs = list()
-        lcl$proj_name <<- opts$proj_name
-        lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
-        lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
-        lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+        ml_queue$jobs <- list()
         shiny::updateCheckboxInput(session,
                                    "paired",
                                    value = mSet$dataSet$paired)
-        uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
+        uimanager$refresh <- c("general",
+                               "statspicker",
+                               "adds", 
+                               "ml")
         plotmanager$make <- "general"  
       }
     }

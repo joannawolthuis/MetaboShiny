@@ -333,18 +333,11 @@ beep = no')
         as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
       }else parallel::detectCores()
       
-      # output$ncore_ui <- shiny::renderUI({
-      #   shiny::sliderInput("ncores", "How many cores can MetShi use?", 
-      #                      value = min(maxcores-1, as.numeric(opts$cores)), min = 1, 
-      #                      max = maxcores - 1)
-      # })
-      
       shiny::updateSliderInput(session, "ncores",
                                value = min(maxcores-1, as.numeric(opts$cores)), 
                                min = 1, 
-                               max = maxcores - 1)
-            # send specific functions/packages to other threads
-      
+                               max = maxcores)
+
       if("adducts" %in% names(opts)){
         fav_adducts <- opts$adducts
         fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]  
@@ -405,9 +398,12 @@ beep = no')
       
       # init stuff that depends on opts file
       lcl$proj_name <<- opts$proj_name
-      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
-      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
-      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, 
+                                       lcl$proj_name)
+      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir,
+                                    paste0(opts$proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir,
+                                      paste0(opts$proj_name, ".csv"))
       
       old.dir = getwd()
       on.exit({
@@ -636,7 +632,8 @@ beep = no')
       shiny::showNotification("Starting new threads...")
       logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
       #if(file.exists(logfile)) file.remove(logfile)
-      session_cl <<- parallel::makeCluster(net_cores,outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+      session_cl <<- parallel::makeCluster(net_cores,
+                                           outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
       # send specific functions/packages to other threads
       parallel::clusterEvalQ(session_cl, {
         library(data.table)
@@ -732,12 +729,6 @@ beep = no')
     assign("ml_queue",  shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
   })
   
-  # for(obj in names(mSet$storage$animal$data)){
-  #   print("---")
-  #   print(obj)
-  #   print(format(object.size(mSet$storage$animal$data[[obj]]), "Mb"))
-  # }
-  
   shiny::observeEvent(input$export_plot,{
     success=F
     try({
@@ -820,10 +811,6 @@ beep = no')
   for(fp in list.files("reactive", full.names = T)){
     source(fp, local = T)
   }  
-  
-  # overwrite
-  assignInNamespace("Ttests.Anal", Ttests.Anal.JW, ns="MetaboAnalystR", 
-                    envir=as.environment("package:MetaboAnalystR"))
   
   observeEvent(input$quit_metshi, {
     if(!is.null(mSet) & isolate(save_info$has_changed)){

@@ -408,21 +408,20 @@ shiny::observe({
                        small_mSet$storage <- list()
                      }
                      
-                     #mSet_loc <- tempfile()
-                     #qs::qsave(small_mSet, mSet_loc)
-                    
                      if(length(session_cl) > 1){
+                       mSet_loc <- tempfile()
+                       qs::qsave(small_mSet, mSet_loc)
                        parallel::clusterExport(session_cl, c("ml_run", 
                                                              "gbl", 
-                                                             "small_mSet"), envir = environment())
-                       #small_mSet <- NULL
+                                                             "mSet_loc"), 
+                                               envir = environment())
+                       parallel::clusterEvalQ(session_cl,{
+                         small_mSet <- qs::qread(mSet_loc)
+                       })
+                       print(session_cl)
+                     }else{
+                       print("running non-parallel ML")
                      }
-                     
-                     n_per_thread = ceiling(length(ml_queue$jobs) / length(session_cl))
-                     
-                     # queue_blocks = rep(1:length(session_cl), each = n_per_thread)
-                     # queue_blocks = queue_blocks[1:length(ml_queue$jobs)]
-                     # split_queue = split(ml_queue$jobs, queue_blocks)
                      
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
@@ -442,8 +441,6 @@ shiny::observe({
                    print("Done!")
                    
                    shiny::showNotification("Gathering results...")
-                   
-                   #ml_queue_res = unlist(ml_queue_res, recursive = F, use.names = T)
                    
                    ml_queue_res = ml_queue_res[unlist(sapply(ml_queue_res, function(l) length(l) > 0))]
                    
@@ -481,7 +478,7 @@ shiny::observe({
                },
                tt = {
                  withProgress({
-                   mSet <- Ttests.Anal(mSet,
+                   mSet <- Ttests.Anal.JW(mSet,
                                        nonpar = input$tt_nonpar,
                                        threshp = input$tt_p_thresh,
                                        paired = mSet$dataSet$ispaired,

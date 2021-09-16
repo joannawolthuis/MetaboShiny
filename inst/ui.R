@@ -200,11 +200,11 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                 "Median absolute deviation" = "mad",
                                                                                                                                                                                                 "Median" = "median",
                                                                                                                                                                                                 "None" = "none"),
-                                                                                                              selected = "rsd"),
+                                                                                                              selected = "none"),
                                                                                            shiny::conditionalPanel("input.filt_type != 'none'",
                                                                                                                    shiny::numericInput(inputId="maxMz",
                                                                                                                                        label = "Max. m/z to keep",
-                                                                                                                                       value = 500)
+                                                                                                                                       value = 5000)
                                                                                                                    ),
                                                                                            shiny::selectizeInput(width = "80%",'norm_type', 'What type of normalization do you want to do?', choices = list("Quantile normalization" = "QuantileNorm",
                                                                                                                                                                                                          "QCs per batch normalization" = "QcNorm",
