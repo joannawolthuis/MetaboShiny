@@ -181,7 +181,8 @@ observe({
         file.remove(fn_bu)
       }
     } 
-   }
+  }
+  gc()
   filemanager$do <- "nothing"
 })
 

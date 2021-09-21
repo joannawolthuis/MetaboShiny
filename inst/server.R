@@ -1002,6 +1002,7 @@ beep = no')
       parallel::stopCluster(session_cl)
     }
     session_cl <<- NULL
+    gc()
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })

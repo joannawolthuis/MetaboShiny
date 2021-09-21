@@ -426,6 +426,7 @@ shiny::observe({
                      ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                        cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
                                                        function(settings, ml_cl){
+                                                         print(settings$ml_name)
                                                          res = list()
                                                          try({
                                                            res = ml_run(settings = settings, 
