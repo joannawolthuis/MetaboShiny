@@ -447,8 +447,6 @@ ml_run <- function(settings, mSet, input, cl){
         
         # total group size within this loop?
         
-        # resample
-        print("b")
         ## K for the k-fold methods
         K = min(min(table(config.subset$label))-1, 10)
         mz.names = colnames(curr.subset)
@@ -585,7 +583,6 @@ ml_run <- function(settings, mSet, input, cl){
           lst
         })  
     }
-    
     
     # make sure levels of predicted class aren't numeric
     levels(training$label) <- paste0("class",  Hmisc::capitalize(levels(training$label)))
