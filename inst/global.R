@@ -472,9 +472,9 @@ radioTooltip <- function(id, choice, title, placement = "bottom", trigger = "hov
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
 
-session_cl <- NULL
-debug_mSet <- NULL
-debug_lcl <- NULL
-debug_input <- NULL
+session_cl <- parallel::makeCluster(1)
+debug_mSet <- list()
+debug_lcl <- list()
+debug_input <- list()
 
 msg.vec <- c()

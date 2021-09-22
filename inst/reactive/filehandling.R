@@ -176,9 +176,9 @@ observe({
         file.rename(from = fn_bu, 
                     to = fn)
       }else{
+        file.remove(fn_bu)
         save_info$prev_time <- Sys.time()
         save_info$has_changed <- FALSE
-        file.remove(fn_bu)
       }
     } 
    }

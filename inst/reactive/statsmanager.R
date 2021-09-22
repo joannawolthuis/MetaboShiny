@@ -390,16 +390,18 @@ shiny::observe({
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                      
                      # make subsetted mset for ML so it's not as huge in memory
-                     small_mSet <- mSet
-                     small_mSet$dataSet <- small_mSet$dataSet[c("cls", "orig.cls", "orig", "norm", "covars")]
+                     small_mSet <- list(metshiParams=mSet$metshiParams)
+                     small_mSet$dataSet <- mSet$dataSet[c("cls", "orig.cls", 
+                                                          "orig", "norm", 
+                                                          "covars")]
                      
                      uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
                      if(uses.specific.mzs){
                        keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
-                       keep.analyses <- keep.analyses[keep.analyses != "no"]
-                       if("pca" %in% names(small_mSet$analSet)) keep.analyses <- unique(c("pca", keep.analyses))
-                       small_mSet$analSet <- small_mSet$analSet[keep.analyses]
-                       small_mSet$storage <- lapply(small_mSet$storage, function(store){
+                       keep.analyses <- unique(keep.analyses[keep.analyses != "no"])
+                       #if("pca" %in% names(small_mSet$analSet)) keep.analyses <- unique(c("pca", keep.analyses))
+                       small_mSet$analSet <- mSet$analSet[keep.analyses]
+                       small_mSet$storage <- lapply(mSet$storage, function(store){
                          store$analSet <- store$analSet[keep.analyses]
                          store
                        })
@@ -408,34 +410,39 @@ shiny::observe({
                        small_mSet$storage <- list()
                      }
                      
-                     if(length(session_cl) > 1){
+                     try({
+                       parallel::stopCluster(session_cl)
+                       parallel::stopCluster(ml_session_cl)
+                     })
+                     net_cores = input$ncores# - 1
+                     if(net_cores > 0){
+                       logfile <- file.path(lcl$paths$work_dir, "metshiLog.txt")
+                       #if(file.exists(logfile)) file.remove(logfile)
+                       ml_session_cl <- parallel::makeCluster(net_cores,
+                                                              outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+                       # send specific functions/packages to other threads
+                       parallel::clusterEvalQ(ml_session_cl, {
+                         library(data.table)
+                         library(iterators)
+                         library(MetaboShiny)
+                         library(MetaDBparse)
+                       })  
+                     }else{
+                       ml_session_cl = 0
+                     }
+                     
+                     if(length(ml_session_cl) > 1){
                        mSet_loc <- tempfile()
                        qs::qsave(small_mSet, mSet_loc)
-                       parallel::clusterExport(session_cl, c("ml_run", 
-                                                             "gbl", 
-                                                             "mSet_loc"), 
-                                               envir = environment())
-                       parallel::clusterEvalQ(session_cl,{
-                         small_mSet <- qs::qread(mSet_loc)
-                       })
-                       print(session_cl)
+                       print(ml_session_cl)
                      }else{
                        print("running non-parallel ML")
                      }
                      
-                     ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
-                                                       cl = if(length(ml_queue$jobs) > 1) session_cl else 0, 
-                                                       function(settings, ml_cl){
-                                                         res = list()
-                                                         try({
-                                                           res = ml_run(settings = settings, 
-                                                                        mSet = small_mSet,
-                                                                        input = input,
-                                                                        cl = ml_cl)  
-                                                         })
-                                                         res
-                                                       },
-                                                       ml_cl = if(length(ml_queue$jobs) > 1) 0 else session_cl)
+                     ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
+                                                     jobs = ml_queue$jobs,
+                                                     gbl=gbl,
+                                                     ml_session_cl = ml_session_cl)
                    }
                    
                    print("Done!")
@@ -460,7 +467,9 @@ shiny::observe({
                    }else{
                      shiny::showNotification("Failed...")
                    }
-                   
+                   try({
+                     parallel::stopCluster(ml_session_cl)
+                   })
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
                    print("ML done and saved.")
                  

@@ -2144,5 +2144,27 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
   else stop("unrecognized node type!")
 }
 
+ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0){
+  parallel::clusterExport(ml_session_cl, c("ml_run",
+                                           "gbl", 
+                                           "mSet_loc"),envir = environment())
+  parallel::clusterEvalQ(ml_session_cl,{
+    small_mSet <- qs::qread(mSet_loc)
+  })
+  pbapply::pblapply(jobs, 
+                    cl = if(length(jobs) > 1) ml_session_cl else 0, 
+                    function(settings, ml_cl){
+                      res = list()
+                      try({
+                        res = ml_run(settings = settings, 
+                                     mSet = small_mSet,
+                                     input = input,
+                                     cl = ml_cl)  
+                      })
+                      res
+                    },
+                    ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
+}
+
 assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")
 
