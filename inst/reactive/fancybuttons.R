@@ -35,9 +35,9 @@ lapply(c("x", "y", "posclass"), function(axis){
   })  
 })
 
-shiny::observeEvent(input$plot_ml_mistake, {
+shiny::observeEvent(input$reload_ml_stats, {
   if(!is.null(mSet$analSet$ml)){
-    plotmanager$make <- "ml_mistake" # just reload  
+    plotmanager$make <- tablemanager$make <- "ml" # just reload
   }
 },ignoreInit = T, ignoreNULL = T)
 

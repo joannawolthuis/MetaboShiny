@@ -395,6 +395,45 @@ shiny::observe({
                                                           "orig", "norm", 
                                                           "covars")]
                      
+                     resource_saver_mode = T # only make the datasets once, for example with resampling
+                     if(resource_saver_mode){
+                       vars.require.dataset.change <- c("ml_test_subset",
+                                                        "ml_train_subset",
+                                                        "ml_sampling",
+                                                        "ml_batch_balance",
+                                                        "ml_batch_covars",
+                                                        "ml_batch_size_sampling",
+                                                        "ml_groupsize",
+                                                        "ml_include_covars",
+                                                        "ml_used_table",
+                                                        "ml_pca_corr",
+                                                        "ml_train_perc",
+                                                        "ml_keep_pcs",
+                                                        "ml_pca_corr"
+                       )
+                       rows.changes.dataset <- lapply(ml_queue$jobs, function(job){
+                         job[vars.require.dataset.change]
+                       })
+                       unique.dataset.change.jobs = unique(rows.changes.dataset)
+                       print(paste("preparing", length(unique.dataset.change.jobs), "dataset(s) for jobs"))
+                       train.test.unique <- pbapply::pblapply(unique.dataset.change.jobs, 
+                                                              cl=session_cl,
+                                                              function(job){
+                                                                tr_te = ml_prep_data(settings = job, 
+                                                                                     mSet = small_mSet,
+                                                                                     input = input, cl=0)
+                                                              })
+                       
+                       mapper = data.table::rbindlist(lapply(1:length(rows.changes.dataset), function(i){
+                         job = rows.changes.dataset[[i]]
+                         jobi = which(sapply(unique.dataset.change.jobs, 
+                                             function(uniq.job) identical(job, uniq.job)))
+                         data.table::data.table(ml_name = ml_queue$jobs[[i]]$ml_name, unique_data_id=jobi)
+                       }))
+                       small_mSet$dataSet$for_ml <- list(datasets = train.test.unique, 
+                                                         mapper = mapper)
+                     }
+                     
                      uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
                      if(uses.specific.mzs){
                        keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
@@ -414,6 +453,7 @@ shiny::observe({
                        parallel::stopCluster(session_cl)
                        parallel::stopCluster(ml_session_cl)
                      })
+                     
                      net_cores = input$ncores# - 1
                      if(net_cores > 0){
                        logfile <- file.path(lcl$paths$work_dir, "metshiLog.txt")
@@ -431,18 +471,14 @@ shiny::observe({
                        ml_session_cl = 0
                      }
                      
-                     if(length(ml_session_cl) > 1){
-                       mSet_loc <- tempfile()
-                       qs::qsave(small_mSet, mSet_loc)
-                       print(ml_session_cl)
-                     }else{
-                       print("running non-parallel ML")
-                     }
+                     mSet_loc <- tempfile()
+                     qs::qsave(small_mSet, mSet_loc)
+                     print(ml_session_cl)
                      
                      ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
                                                      jobs = ml_queue$jobs,
                                                      gbl=gbl,
-                                                     ml_session_cl = ml_session_cl)
+                                                     ml_session_cl = parallel::makeCluster(1))#ml_session_cl)
                    }
                    
                    print("Done!")
@@ -472,8 +508,6 @@ shiny::observe({
                    })
                    lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
                    print("ML done and saved.")
-                 
-                  #})
                },
                heatmap = {
                  # reset

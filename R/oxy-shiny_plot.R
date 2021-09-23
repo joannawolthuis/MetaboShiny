@@ -28,11 +28,15 @@ ggplotNormSummary <- function(mSet,
   which_samps <- sample(candidate.samps, sampsize, replace = FALSE, prob = NULL)
   
   # isolate these samples from original table and melt into long format (ggplot needs it!)
-  orig_melt <- reshape2::melt(cbind(which_samps, orig_data[which_samps, which_cpds]))
+  orig_melt <- reshape2::melt(cbind(which_samps, 
+                                    orig_data[which_samps, which_cpds]),
+                              id.vars = "which_samps")
   orig_melt[is.na(orig_melt)] <- 0 # replace NA values with 0
   
   # isolate these samples from normalized table and melt into long format
-  norm_melt <- reshape2::melt(cbind(which_samps, norm_data[which_samps, which_cpds]))
+  norm_melt <- reshape2::melt(cbind(which_samps, 
+                                    norm_data[which_samps, which_cpds]),
+                              id.vars = "which_samps")
   
   # create base plot with base theme and font size for original data
   plot <- ggplot2::ggplot(data=orig_melt)

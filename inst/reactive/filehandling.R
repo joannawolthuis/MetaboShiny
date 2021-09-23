@@ -113,7 +113,7 @@ observe({
     if(file.exists(fn)){
       mSet <- NULL
       mSet <- tryCatch({
-        load(fn)
+        suppressWarnings(load(fn))
         if(is.list(mSet)){
           msg = "Old save selected! Conversion isn't possible due to some batch correction methods changing in R 4.0. Please re-normalize your data."
           metshiAlert(msg)
@@ -124,7 +124,7 @@ observe({
       },
       error = function(cond){
         tryCatch({
-          mSet <- qs::qread(fn)
+          suppressWarnings(mSet <- qs::qread(fn))
         },
         error = function(cond){
           metshiAlert("Corrupt save detected! Reverting to previous state...")
@@ -170,7 +170,7 @@ observe({
       try({
         qs::qsave(mSet, file = fn)
         success = T
-      })
+      }, silent=T)
       
       if(!success){
         file.rename(from = fn_bu, 

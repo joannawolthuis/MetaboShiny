@@ -208,18 +208,18 @@ beep = no')
         dbdir = opts$db_dir
       }
       
-      # - - - 
-      if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
-      if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
-      
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
-
-      if(!dir.exists(lcl$paths$work_dir)){
-        print("Can't find directory - trying to do the docker > R autofix...")
+      
+      # - - - 
+      if(!grepl("^//root", lcl$paths$work_dir)){
+        print("Can't find 'root' directory -  activating docker > R autofix...")
         for(path in names(lcl$paths)){
           lcl$paths[[path]] <<- gsub("/root", "~", lcl$paths[[path]])
-        }  
+        }
+      }else{
+        if(!dir.exists(lcl$paths$work_dir)) dir.create(lcl$paths$work_dir,recursive = T)
+        if(!dir.exists(lcl$paths$db_dir)) dir.create(lcl$paths$db_dir,recursive = T)
       }
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
@@ -355,10 +355,10 @@ beep = no')
 
       # Download a webfont
       if(online){
-        lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
-          try({
+        try({
+          lapply(c(opts[grepl(pattern = "^font", names(opts))]), function(font){
             showtextdb::font_install(showtextdb::google_fonts(font))
-          })
+          })  
         })
       }
       

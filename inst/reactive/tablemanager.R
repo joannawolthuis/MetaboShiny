@@ -75,7 +75,7 @@ shiny::observe({
                                                    }
                                                    }
                                                  ch
-                                                })#, server = T) 
+                                                }, server = T) 
                      })
                      # --- 
                      venn_no$start <- report_no$start <- analyses_table

@@ -493,7 +493,6 @@ metshiTable <- function(content, options=NULL, rownames= T){
   }
   DT::datatable(content,
                 selection = 'single',
-                autoHideNavigation = T,
                 class = 'compact', height = "500px",
                 extensions = c("FixedColumns", "Scroller", "Buttons"), 
                 options = opts,

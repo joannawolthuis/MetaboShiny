@@ -42,7 +42,6 @@ output$ggplot_theme_example <- plotly::renderPlotly({
 
 # triggers when changes in interface aesthetics are applied
 shiny::observeEvent(input$change_css, {
-  
   # set default user color options
   MetaboShiny::setOption(lcl$paths$opt.loc, key="col1", value=input$bar.col.1)
   MetaboShiny::setOption(lcl$paths$opt.loc, key="col2", value=input$bar.col.2)

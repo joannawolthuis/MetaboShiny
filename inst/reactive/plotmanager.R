@@ -75,48 +75,46 @@ shiny::observe({
                 if(!(plotName %in% c("network",
                                      "wordcloud"))){
                   try({
-                    
-                    if(plotName == "heatmap_plot") myplot$heatmap_static() else{
-                      if(length(myplot$layers[[1]]$data) > 0){
-                        myplot$data = myplot$layers[[1]]$data
+                    if(length(myplot) > 1){
+                      if(plotName == "heatmap_plot") myplot$heatmap_static() else{
+                        if(length(myplot$layers[[1]]$data) > 0){
+                          myplot$data = myplot$layers[[1]]$data
+                        }
+                        if(input$plot_mzlabels & (
+                          any(grepl("mz|m/z", names(myplot$data)))
+                        )){
+                          if(length(myplot$layers[[1]]$mapping) > 0){
+                            myplot$mapping = myplot$layers[[1]]$mapping
+                          }
+                          myX = rlang::quo_get_expr(myplot$mapping[['x']])
+                          myY = rlang::quo_get_expr(myplot$mapping[['y']])
+                          myText = rlang::quo_get_expr(myplot$mapping[['text']])
+                          myCol = rlang::quo_get_expr(myplot$mapping[['colour']])
+                          flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+                          
+                          if(length(myplot$data) == 0){
+                            myplot$data = myplot$layers[[1]]$data  
+                          }
+                          
+                          if("significant" %in% colnames(myplot$data)){
+                            plotdata = myplot$data[significant == "YES"]
+                          }else{
+                            plotdata = myplot$data
+                          }
+                          
+                          myplot = myplot + ggrepel::geom_label_repel(data = plotdata,
+                                                                      aes_string(y = myY,
+                                                                                 x = myX,
+                                                                                 label = myText),
+                                                                      color="black",
+                                                                      size = 5)
+                        }
                       }
                       
-                      if(input$plot_mzlabels & (
-                        any(grepl("mz|m/z", names(myplot$data)))
-                      )){
-                        if(length(myplot$layers[[1]]$mapping) > 0){
-                          myplot$mapping = myplot$layers[[1]]$mapping
-                        }
-                        myX = rlang::quo_get_expr(myplot$mapping[['x']])
-                        myY = rlang::quo_get_expr(myplot$mapping[['y']])
-                        myText = rlang::quo_get_expr(myplot$mapping[['text']])
-                        myCol = rlang::quo_get_expr(myplot$mapping[['colour']])
-                        flip = grepl("tt|fc|aov|var|samp|corr", plotName)
-                        
-                        if(length(myplot$data) == 0){
-                          myplot$data = myplot$layers[[1]]$data  
-                        }
-                        
-                        if("significant" %in% colnames(myplot$data)){
-                          plotdata = myplot$data[significant == "YES"]
-                        }else{
-                          plotdata = myplot$data
-                        }
-                        
-                        myplot = myplot + ggrepel::geom_label_repel(data = plotdata,
-                                                                    aes_string(y = myY,
-                                                                               x = myX,
-                                                                               label = myText),
-                                                                    color="black",
-                                                                    size = 5)
-                      }
+                      output[[plotName]] <- shiny::renderPlot({
+                        suppressWarnings(print(myplot))
+                      })  
                     }
-                    
-                    output[[plotName]] <- shiny::renderPlot({
-                      suppressWarnings({
-                        myplot
-                        })
-                    })  
                   }, silent = F)
                   plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
                                      plotName), collapse="_") 
@@ -134,16 +132,16 @@ shiny::observe({
                   }else{
                     plotly::renderPlotly({
                       if(!is3D & plotName != "heatmap_plot"){
-                        myplot <- plotly::ggplotly(myplot,
+                        myplot <- plotly::ggplotly(suppressWarnings(print(myplot)),
                                                    tooltip = "text", 
                                                    height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                       }
                       if(plotName != "heatmap_plot"){
-                        myplot <- if(grepl("venn", plotName)) plotly::ggplotly(myplot) %>% plotly::layout(xaxis = emptyax,
+                        myplot <- if(grepl("venn", plotName)) plotly::ggplotly(suppressWarnings(print(myplot))) %>% plotly::layout(xaxis = emptyax,
                                                                                            yaxis = emptyax,
                                                                                            showlegend=input$legend) else myplot %>% plotly::layout(showlegend=input$legend) 
                       }else{
-                        myplot <- if(plotName == "heatmap_plot") myplot$heatmap_interactive else plotly::ggplotly(myplot) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
+                        myplot <- if(plotName == "heatmap_plot") suppressWarnings(print(myplot$heatmap_interactive)) else plotly::ggplotly(suppressWarnings(print(myplot))) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                                width = session$clientData[[empty]])
                       }
                       
@@ -160,12 +158,13 @@ shiny::observe({
                       }
                       
                       suppressWarnings({
-                        myplot %>%
+                        suppressWarnings(print(myplot %>%
                           plotly::config(
                             toImageButtonOptions = list(
                               format = if(input$plotsvg) "svg" else "png",
                               filename = paste0(plotFn, "_interactive")
-                            ))   
+                            ))
+                          ))
                       })
                     })
                   }
@@ -174,13 +173,12 @@ shiny::observe({
                   filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
                   content = function(file){
                     if(plotName == "heatmap_plot"){
-                      print("plotting heatmap...")
                       saveFun = if(input$plotsvg) svg else png
                       saveFun(file=file)
-                      myplot$heatmap_static()
+                      suppressWarnings(print(myplot$heatmap_static()))
                       dev.off()  
                     }else{
-                      ggplot2::ggsave(file, plot = myplot)
+                      ggplot2::ggsave(file, plot = suppressWarnings(print(myplot)))
                     }
                   }
                 )

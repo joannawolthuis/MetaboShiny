@@ -42,13 +42,13 @@ output$browse_tab <-DT::renderDataTable({
 
 output$ml_queue <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = data.table::data.table(name = names(ml_queue$jobs)))
-}, server = F)
+}, server = T)
 
 # adduct table editing from settings tab
 
 output$ml_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = data.table::data.table("nothing selected" = "Please select a model from ROC plot or left-hand table!"))
-}, server = F)
+}, server = T)
 
 shiny::observeEvent(input$ml_overview_tab_rows_selected, {
   attempt <- lcl$tables$ml_roc_all[input$ml_overview_tab_rows_selected,]$attempt

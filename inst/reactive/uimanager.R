@@ -311,7 +311,10 @@ shiny::observe({
                        
                        shiny::updateSelectizeInput(session, "show_which_ml", 
                                                 choices = choices, 
-                                                selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
+                                                selected = paste0(mSet$analSet$ml$last$method, 
+                                                                  " - ", 
+                                                                  mSet$analSet$ml$last$name),
+                                                server = T)
                        
                      }else{
                        shiny::hideTab(session = session, inputId = "ml2", target = "res")
