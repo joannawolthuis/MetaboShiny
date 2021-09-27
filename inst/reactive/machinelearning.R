@@ -186,7 +186,7 @@ shiny::observeEvent(input$queue_ml, {
 })
 
 shiny::observeEvent(input$queue_ml_del, {
-  row = input$ml_queue_rows_selected
+  row = input$ml_queue_all_rows_selected
   ml_queue$jobs = ml_queue$jobs[-row]
 })
 
@@ -215,3 +215,13 @@ observeEvent(input$clear_ml_sure,{
     uimanager$refresh <- "ml"
   }
 },ignoreNULL = T)
+
+shiny::observeEvent(input$ml_queue_all_rows_selected, {
+  print(input$ml_queue_all_rows_selected)
+  params = ml_queue$jobs[[input$ml_queue_all_rows_selected]]
+  param_dt = data.table::data.table(parameter = names(params),
+                         value = params)
+  output$ml_queue_sel <- DT::renderDataTable({
+    MetaboShiny::metshiTable(content = param_dt)
+  }, server = T)
+  })

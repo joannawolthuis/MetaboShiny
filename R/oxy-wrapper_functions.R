@@ -2144,12 +2144,16 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
 }
 
 ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0){
+  
   parallel::clusterExport(ml_session_cl, c("ml_run",
                                            "gbl", 
-                                           "mSet_loc"),envir = environment())
+                                           "mSet_loc"),
+                          envir = environment())
+  
   parallel::clusterEvalQ(ml_session_cl,{
     small_mSet <- qs::qread(mSet_loc)
   })
+  
   pbapply::pblapply(jobs, 
                     cl = if(length(jobs) > 1) ml_session_cl else 0, 
                     function(settings, ml_cl){

@@ -390,8 +390,8 @@ shiny::observe({
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
                      
                      # make subsetted mset for ML so it's not as huge in memory
-                     small_mSet <- list(metshiParams=mSet$metshiParams)
-                     small_mSet$dataSet <- mSet$dataSet[c("cls", "orig.cls", 
+                     small_mSet <<- list(metshiParams=mSet$metshiParams)
+                     small_mSet$dataSet <<- mSet$dataSet[c("cls", "orig.cls", 
                                                           "orig", "norm", 
                                                           "covars")]
                      
@@ -417,7 +417,7 @@ shiny::observe({
                        unique.dataset.change.jobs = unique(rows.changes.dataset)
                        print(paste("preparing", length(unique.dataset.change.jobs), "dataset(s) for jobs"))
                        train.test.unique <- pbapply::pblapply(unique.dataset.change.jobs, 
-                                                              cl=session_cl,
+                                                              cl=0, # TODO: make parallel
                                                               function(job){
                                                                 tr_te = ml_prep_data(settings = job, 
                                                                                      mSet = small_mSet,
@@ -430,7 +430,7 @@ shiny::observe({
                                              function(uniq.job) identical(job, uniq.job)))
                          data.table::data.table(ml_name = ml_queue$jobs[[i]]$ml_name, unique_data_id=jobi)
                        }))
-                       small_mSet$dataSet$for_ml <- list(datasets = train.test.unique, 
+                       small_mSet$dataSet$for_ml <<- list(datasets = train.test.unique, 
                                                          mapper = mapper)
                      }
                      
@@ -439,14 +439,14 @@ shiny::observe({
                        keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
                        keep.analyses <- unique(keep.analyses[keep.analyses != "no"])
                        #if("pca" %in% names(small_mSet$analSet)) keep.analyses <- unique(c("pca", keep.analyses))
-                       small_mSet$analSet <- mSet$analSet[keep.analyses]
-                       small_mSet$storage <- lapply(mSet$storage, function(store){
+                       small_mSet$analSet <<- mSet$analSet[keep.analyses]
+                       small_mSet$storage <<- lapply(mSet$storage, function(store){
                          store$analSet <- store$analSet[keep.analyses]
                          store
                        })
                      }else{
-                       small_mSet$analSet <- NULL
-                       small_mSet$storage <- list()
+                       small_mSet$analSet <<- NULL
+                       small_mSet$storage <<- list()
                      }
                      
                      try({
@@ -458,8 +458,8 @@ shiny::observe({
                      if(net_cores > 0){
                        logfile <- file.path(lcl$paths$work_dir, "metshiLog.txt")
                        #if(file.exists(logfile)) file.remove(logfile)
-                       ml_session_cl <- parallel::makeCluster(net_cores,
-                                                              outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+                       ml_session_cl <<- parallel::makeCluster(net_cores,
+                                                              outfile="")#logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
                        # send specific functions/packages to other threads
                        parallel::clusterEvalQ(ml_session_cl, {
                          library(data.table)
@@ -468,7 +468,7 @@ shiny::observe({
                          library(MetaDBparse)
                        })  
                      }else{
-                       ml_session_cl = 0
+                       ml_session_cl <<- 0
                      }
                      
                      mSet_loc <- tempfile()
@@ -478,7 +478,7 @@ shiny::observe({
                      ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
                                                      jobs = ml_queue$jobs,
                                                      gbl=gbl,
-                                                     ml_session_cl = parallel::makeCluster(1))#ml_session_cl)
+                                                     ml_session_cl = ml_session_cl)
                    }
                    
                    print("Done!")

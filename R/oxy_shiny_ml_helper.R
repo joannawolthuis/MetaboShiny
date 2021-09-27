@@ -415,7 +415,15 @@ ml_prep_data <- function(settings, mSet, input, cl){
         curr.subset = curr.subset[keep.samps,,drop=F]
       }
       
-      # total group size within this loop?
+      # equal groups but still upsampling wanted...
+      if(length(unique(curr.group.sizes))==1 & settings$ml_sampling == "rose"){
+        if(group.size > unique(curr.group.sizes)){
+          # remove first sample
+          rmv.smp = 1 #sample(1:nrow(curr.subset),size = 1)
+          curr.subset = curr.subset[-rmv.smp,,drop=F]
+          config.subset = config.subset[-rmv.smp,, drop=F]   
+        }
+      }
       
       ## K for the k-fold methods
       K = min(min(table(config.subset$label))-1, 10)
@@ -493,6 +501,7 @@ ml_run <- function(settings, mSet, input, cl){
   res = list()
   #({
   {
+    
     if("for_ml" %in% names(mSet$dataSet)){
       jobi = mSet$dataSet$for_ml$mapper[ml_name == settings$ml_name,]$unique_data_id
       training_data = mSet$dataSet$for_ml$datasets[[jobi]]$train
@@ -506,7 +515,7 @@ ml_run <- function(settings, mSet, input, cl){
     }
     
     if(settings$ml_specific_mzs != "no"){
-      if(pickedTbl != "pca"){
+      if(settings$ml_used_table != "pca"){
         msg = "Using user-specified m/z set."
         if(settings$ml_specific_mzs != "none"){
           if(length(settings$ml_mzs) > 0){

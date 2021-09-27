@@ -40,7 +40,7 @@ output$browse_tab <-DT::renderDataTable({
               ))
 }, server=T)
 
-output$ml_queue <- DT::renderDataTable({
+output$ml_queue_all <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = data.table::data.table(name = names(ml_queue$jobs)))
 }, server = T)
 
