@@ -335,7 +335,6 @@ lapply(c("prematch","search_mz"), function(search_type){
       content = unique(data.table::rbindlist(lapply(matches, function(x) x$content),fill = T))
       
       if(nrow(mapper)>0){
-        print("...")
         RSQLite::dbWriteTable(conn, 
                               "match_mapper", 
                               mapper, 
@@ -460,10 +459,11 @@ shiny::observe({
     shiny::withProgress({
       if(input$tab_iden_2 == "mzmol"){
         if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list) & my_selection$mz != ""){
-          print("!")
-          matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
-                                                                        pattern="/.*$|RT.*$", 
-                                                                        replacement=""),
+          mz = gsub(my_selection$mz, 
+                    pattern="/.*$|RT.*$", 
+                    replacement="")
+          mz = gsub("0$", "", mz)
+          matches = data.table::as.data.table(get_prematches(who = mz,
                                                              what = "map.query_mz",
                                                              patdb = lcl$paths$patdb,
                                                              showadd = c(),
@@ -484,7 +484,7 @@ shiny::observe({
         
         mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
         
-        matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
+        matches = data.table::as.data.table(get_prematches(who = mz,
                                                            what = "map.query_mz",
                                                            patdb = lcl$paths$patdb,
                                                            showadd = result_filters$add[[mzMode]],
@@ -513,7 +513,9 @@ shiny::observe({
                                         "structure", 
                                         "description",
                                         "identifier"),with=F])
-          info_only$description <- paste0("Database ID: ", info_only$identifier, ". ", info_only$description)
+          info_only$description <- paste0("Database ID: ", 
+                                          info_only$identifier, ". ", 
+                                          info_only$description)
           info_only <- unique(info_only[,-"identifier"])
           
           info_no_na <- info_only[!is.na(info_only$structure)]

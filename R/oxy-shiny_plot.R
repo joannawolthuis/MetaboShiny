@@ -1181,11 +1181,11 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   
   if(nrow(inset.df)>0){
     myplot = myplot +
-      ggpmisc::geom_plot_npc(data = inset.df,
-                             vp.width = 1/4, vp.height = 1/4,
-                             ggplot2::aes(npcx = x,
-                                          npcy = y,
-                                          label = plot))    
+      ggpp::geom_plot_npc(data = inset.df,
+                          vp.width = 1/4, vp.height = 1/4,
+                          mapping=ggplot2::aes(npcx = x,
+                                               npcy = y,
+                                               label = plot)) 
   }
 
   #-----------------------

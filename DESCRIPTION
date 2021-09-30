@@ -105,7 +105,7 @@ Imports:
   ggupset,
   missRanger,
   doSNOW,
-  ggpmisc,
+  ggpp,
   pdftools,
   magick,
   ggrepel
