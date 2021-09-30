@@ -7,8 +7,12 @@ function(input, output, session) {
   library(ggplot2)
   library(SPARQL)
   library(MetaboShiny)
+  library(MetaDBparse)
+  library(plyr)
+  library(dplyr)
   
   options(shiny.maxRequestSize=50000*1024^2)
+  setTimeLimit(cpu = Inf)
   
   # EMPTY DEBUG
   debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
@@ -34,7 +38,6 @@ function(input, output, session) {
   assignInNamespace("AddErrMsg", AddErrMsg, ns="MetaboAnalystR", 
                     envir=as.environment("package:MetaboAnalystR"))
   
-  # ====
   shiny::showNotification("Starting server process...")
   
   # detach("package:MetaboShiny", unload=T)
@@ -69,7 +72,7 @@ function(input, output, session) {
     lists = list(),
     prev_mz = "",
     prev_struct = "",
-    beep=F,
+    beep = F,
     tables = list(last_matches = data.table::data.table(query_mz = "none"),
                   prev_pie = data.table::data.table()),
     functions = list(),
@@ -108,13 +111,15 @@ function(input, output, session) {
                                          forward_unique = data.table::data.table(),
                                          reverse = data.table::data.table())
   
+  ml_queue <- shiny::reactiveValues(jobs = list())
+  
   enrich <- shiny::reactiveValues(overview =data.table::data.table("not run" = "run enrichment in sidebar :)"),
                                   current = data.table::data.table("nothing selected" = "please select a pathway to see selected m/z!"))
   
   browse_content <- shiny::reactiveValues(table = data.table::data.table())
   
   result_filters <- shiny::reactiveValues(add = list(positive = c(),
-                                                     negative = c()), 
+                                                     negative = c()),
                                           db = c(), 
                                           iso = c())
   
@@ -143,21 +148,79 @@ function(input, output, session) {
     
     if(exists("lcl")){
       # - - - 
-      userfolder = "~/MetaboShiny/saves/admin"
-      dbdir = "~/MetaboShiny/databases"
-      # - - - 
-      if(!dir.exists(userfolder)) dir.create(userfolder,recursive = T)
-      if(!dir.exists(dbdir)) dir.create(dbdir,recursive = T)
-      lcl$paths$opt.loc <<- file.path(userfolder, "options.txt")
+      home = path.expand('~')
+
+      # create dir for options
+      basedir=gsubfn::fn$paste("$home/MetaboShiny")
+      if(!dir.exists(basedir)) dir.create(basedir,recursive = T)
+      
+      lcl$paths$opt.loc <<- file.path(basedir, "options.txt")
+      old.wd = getwd()
+      
+      # == LOAD OPTIONS ==
+      # look for existing source folder that DOESN'T MATCH the files
+      if(!file.exists(lcl$paths$opt.loc)){
+        shiny::showNotification("Welcome! Creating new user options file...")
+        contents = gsubfn::fn$paste('db_dir = $home/MetaboShiny/databases
+work_dir = $home/MetaboShiny/saves/admin
+proj_name = MY_METSHI
+ppm = 2
+packages_installed = Y
+font1 = Dosis
+font2 = Dosis
+font3 = Open Sans
+font4 = Open Sans
+col1 = #1961AB
+col2 = #FFFFFF
+col3 = #FFFFFF
+col4 = #000000
+size1 = 40
+size2 = 20
+size3 = 15
+size4 = 11
+taskbar_image = metshi_logo.png
+gtheme = classic
+gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
+gspec = RdBu
+gfont = 15
+mode = complete
+cores = 1
+apikey =  
+dbfavs =  
+omit_unknown = yes
+beep = no')
+        writeLines(contents, lcl$paths$opt.loc)
+      }
+    
+      opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
+
+      # ==================
+      
+      if(opts$work_dir == ""){
+        userfolder = file.path(home, "/MetaboShiny/saves")
+      }else{
+        userfolder = opts$work_dir
+      }
+      
+      if(opts$db_dir == ""){
+        dbdir = file.path(home, "/MetaboShiny/saves")
+      }else{
+        dbdir = opts$db_dir
+      }
+      
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
-      old.wd = getwd()
-      setwd(lcl$paths$work_dir)
-      
-      on.exit({
-        setwd(old.wd)
-      })
+      # - - - 
+      if(!grepl("^//root", lcl$paths$work_dir)){
+        print("Can't find 'root' directory -  activating docker > R autofix...")
+        for(path in names(lcl$paths)){
+          lcl$paths[[path]] <<- gsub("/root", "~", lcl$paths[[path]])
+        }
+      }else{
+        if(!dir.exists(lcl$paths$work_dir)) dir.create(lcl$paths$work_dir,recursive = T)
+        if(!dir.exists(lcl$paths$db_dir)) dir.create(lcl$paths$db_dir,recursive = T)
+      }
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
@@ -244,48 +307,20 @@ function(input, output, session) {
       
       db_section$load <- TRUE
       
-      # look for existing source folder that DOESN'T MATCH the files
-      if(!file.exists(lcl$paths$opt.loc)){
-        shiny::showNotification("Welcome! Creating new user options file...")
-        contents = gsubfn::fn$paste('db_dir = $dbdir
-work_dir = $userfolder
-proj_name = MY_METSHI
-ppm = 2
-packages_installed = Y
-font1 = Dosis
-font2 = Dosis
-font3 = Open Sans
-font4 = Open Sans
-col1 = #1961AB
-col2 = #FFFFFF
-col3 = #FFFFFF
-col4 = #000000
-size1 = 40
-size2 = 20
-size3 = 15
-size4 = 11
-taskbar_image = metshi_logo.png
-gtheme = classic
-gcols = #1C1400&#FFE552&#D49C1A&#EBC173&#8A00ED&#00E0C2&#95C200&#FF6BE4&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF&#FFFFFF
-gspec = RdBu
-mode = complete
-cores = 1
-apikey =  
-dbfavs =  
-omit_unknown = yes
-beep = no')
-        writeLines(contents, lcl$paths$opt.loc)
-      }
-      
-      # = = = = = = =
-      
-      shiny::showNotification("Loading interface...")
-      opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-      
       if(!("beep" %in% names(opts))){
         opts$beep <- "none"
         MetaboShiny::setOption(lcl$paths$opt.loc, "beep", "none")
       }
+      
+      seeb = 1337
+      if("seed" %in% names(opts)){
+        shiny::showNotification("Setting user-defined seed...")
+        seeb <- as.numeric(opts$seed)
+      }
+      
+      set.seed(seeb)
+      lcl$seed <<- seeb
+      shiny::updateNumericInput(session, "seed", value = seeb)
       
       options('unzip.unzip' = getOption("unzip"),
               'download.file.extra' = switch(runmode, 
@@ -294,9 +329,15 @@ beep = no')
               'download.file.method' = 'curl',
               width = 1200, height=800)
       
-      shiny::updateSliderInput(session, "ncores", value = as.numeric(opts$cores))
-      # send specific functions/packages to other threads
+      maxcores = if(Sys.getenv("SLURM_CPUS_ON_NODE") != ""){
+        as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
+      }else parallel::detectCores()
       
+      shiny::updateSliderInput(session, "ncores",
+                               value = min(maxcores-1, as.numeric(opts$cores)), 
+                               min = 1, 
+                               max = maxcores)
+
       if("adducts" %in% names(opts)){
         fav_adducts <- opts$adducts
         fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]  
@@ -314,10 +355,10 @@ beep = no')
 
       # Download a webfont
       if(online){
-        lapply(c(opts[grepl(pattern = "font", names(opts))]), function(font){
-          try({
+        try({
+          lapply(c(opts[grepl(pattern = "^font", names(opts))]), function(font){
             showtextdb::font_install(showtextdb::google_fonts(font))
-          })
+          })  
         })
       }
       
@@ -357,9 +398,18 @@ beep = no')
       
       # init stuff that depends on opts file
       lcl$proj_name <<- opts$proj_name
-      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
-      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
-      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
+      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, 
+                                       lcl$proj_name)
+      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir,
+                                    paste0(opts$proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir,
+                                      paste0(opts$proj_name, ".csv"))
+      
+      old.dir = getwd()
+      on.exit({
+        setwd(old.dir)
+      })
+      setwd(lcl$paths$work_dir)
       
       lcl$texts <<- list(
         list(name='curr_exp_dir', 
@@ -409,20 +459,26 @@ beep = no')
         output[[default$name]] = shiny::renderText(default$text)
       })
       
+      # fix for new font size in plots setting not being in options file yet
+      if(!("gfont" %in% names(opts))){
+        opts$gfont="15"
+      }
+      
       lcl$aes$font <<- list(family = opts$font4,
                             ax.num.size = as.numeric(opts$size4),
                             ax.txt.size = as.numeric(opts$size3),
                             ann.size = as.numeric(opts$size4),
-                            title.size = as.numeric(opts$size2))
+                            title.size = as.numeric(opts$size2),
+                            plot.font.size = as.numeric(opts$gfont))
       
-      # create color pickers based on amount of colours allowed in global
+      # create color pickers based on amount of colors allowed in global
       output$colorPickers <- shiny::renderUI({
         lapply(c(1:gbl$constants$max.cols), function(i) {
           colourpicker::colourInput(inputId = paste("col", i, sep="_"),
                                     label = paste("Choose colour", i),
                                     value = lcl$aes$mycols[i],
                                     allowTransparent = F)
-        })
+          })
       })
       
       # create color1, color2 etc variables to use in plotting functions
@@ -490,7 +546,8 @@ beep = no')
       list("permz", "corr"),#15
       list("overview", "enrich"),#16
       list("dimred", "umap"),#17
-      list("dimred", "ica")#18
+      list("dimred", "ica"),#18
+      list("overview", "featsel")#19
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -498,22 +555,22 @@ beep = no')
     if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
     }else if(interface$mode == '1fm'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18)]
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18,19)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(setdiff(gbl$constants$ml.models,
                                                          gbl$constants$ml.twoonly)))
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18,19)]
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18,19)]
     }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18)]
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18,19)]
     }else{
       show.tabs <- hide.tabs[1]
     }
@@ -523,16 +580,16 @@ beep = no')
       for(bigtab in c("dimred", "permz", "overview", "ml")){
         shiny::showTab("statistics", bigtab)  
       }
-      for(bigtab in c("search", "plot_aes", "switchset", "metadata")){
+      for(bigtab in c("search", "plot_aes", "switch", "subset", "metadata")){
         shiny::showTab("anal_sidebar", bigtab)  
       }
       shiny::hideTab("anal_sidebar", "start")
-      shiny::updateTabsetPanel(session, "anal_sidebar", "switchset")
+      shiny::updateTabsetPanel(session, "anal_sidebar", "switch")
     }else{
       for(bigtab in c("dimred", "permz", "overview", "ml")){
         shiny::hideTab("statistics", bigtab)  
       }
-      for(bigtab in c("search", "plot_aes", "switchset", "metadata")){
+      for(bigtab in c("search", "plot_aes", "switch", "subset", "metadata")){
         shiny::hideTab("anal_sidebar", bigtab)
       }
     }
@@ -566,19 +623,28 @@ beep = no')
   })
   
   shiny::observeEvent(input$ncores, {
-    if(!is.null(session_cl)){
+    try({
       shiny::showNotification("Stopping threads...")
       parallel::stopCluster(session_cl)
+    })
+    net_cores = input$ncores# - 1
+    if(net_cores > 0){
+      shiny::showNotification("Starting new threads...")
+      logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
+      #if(file.exists(logfile)) file.remove(logfile)
+      session_cl <<- parallel::makeCluster(net_cores,
+                                           outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+      # send specific functions/packages to other threads
+      parallel::clusterEvalQ(session_cl, {
+        library(data.table)
+        library(iterators)
+        library(MetaboShiny)
+        library(MetaDBparse)
+      })  
+    }else{
+      session_cl <<- 0
     }
-    shiny::showNotification("Starting new threads...")
     
-    session_cl <<- parallel::makeCluster(input$ncores)#,outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
-    # send specific functions/packages to other threads
-    parallel::clusterEvalQ(session_cl, {
-      library(data.table)
-      library(iterators)
-      library(MetaboShiny)
-      library(MetaDBparse)})
     MetaboShiny::setOption(lcl$paths$opt.loc, "cores", input$ncores)
   })
   
@@ -586,6 +652,14 @@ beep = no')
     MetaboShiny::setOption(lcl$paths$opt.loc, "apikey", input$apikey)
     lcl$apikey <<- input$apikey
     output$api_set <- shiny::renderText("key saved!")
+  })
+  
+  shiny::observeEvent(input$set_seed, {
+    shiny::showNotification("Setting RNG seed...")
+    MetaboShiny::setOption(lcl$paths$opt.loc, "seed", input$seed)
+    lcl$seed <<- input$seed
+    set.seed(as.numeric(lcl$seed))
+    output$curr_seed <- shiny::renderText(as.character(lcl$seed))
   })
   
   shiny::observeEvent(input$beep, {
@@ -621,10 +695,28 @@ beep = no')
     }
   })
   
+  output$combi_anal1_picker <- shiny::renderUI({
+    if(!is.null(input$combi_anal1)){
+      anal = mSet$analSet[[input$combi_anal1]]
+      target.mat = grep("\\.mat", names(anal),value = T)
+      choices = colnames(anal[[target.mat]])
+      shiny::selectInput("combi_anal1_var",label = "A result column:", choices=choices,selected = 1)
+      }else{list()}
+  })
+  
+  output$combi_anal2_picker <- shiny::renderUI({
+    if(!is.null(input$combi_anal2)){
+      anal = mSet$analSet[[input$combi_anal2]]
+      target.mat = grep("\\.mat", names(anal),value = T)
+      choices = colnames(anal[[target.mat]])
+      shiny::selectInput("combi_anal2_var",label = "B result column:", choices=choices,selected = 1)
+    }else{list()}
+    })
+  
   shiny::observeEvent(input$debug_metshi, {
     assign("lcl", lcl, envir = .GlobalEnv)
     assign("mSet", mSet, envir = .GlobalEnv)
-    assign("clientData", shiny::isolate(shiny::reactiveValuesToList(session$clientData)), envir = .GlobalEnv)
+    #assign("clientData", shiny::isolate(shiny::reactiveValuesToList(session$clientData)), envir = .GlobalEnv)
     assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
     assign("enrich", shiny::isolate(shiny::reactiveValuesToList(enrich)), envir = .GlobalEnv)
     assign("shown_matches", shiny::isolate(shiny::reactiveValuesToList(shown_matches)), envir = .GlobalEnv)
@@ -634,6 +726,7 @@ beep = no')
     assign("result_filters",  shiny::isolate(shiny::reactiveValuesToList(result_filters)), envir = .GlobalEnv)
     assign("report_yes",  shiny::isolate(shiny::reactiveValuesToList(report_yes)), envir = .GlobalEnv)
     assign("venn_yes",  shiny::isolate(shiny::reactiveValuesToList(venn_yes)), envir = .GlobalEnv)
+    assign("ml_queue",  shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
   })
   
   shiny::observeEvent(input$export_plot,{
@@ -654,24 +747,6 @@ beep = no')
                                               }
                                             });')
   
-  observeEvent(input$save_fav_adducts,{
-    # save to options
-    pasted_adducts <- paste0(input$fav_adducts, collapse = "&")
-    MetaboShiny::setOption(lcl$paths$opt.loc, 
-                           "adducts", 
-                           pasted_adducts)
-    uimanager$refresh <- "adducts"
-  })
-  
-  observeEvent(input$nav_general, {
-    if(!is.null(mSet)){
-      if(input$nav_general == "report"){
-        statsmanager$calculate <- "vennrich"
-        tablemanager$make <- "vennrich"
-        uimanager$refresh <- "vennrich"
-      }}
-  })
-  
   observeEvent(input$statistics, { 
     if(!is.null(mSet)){
       if(!is.null(input$statistics)){
@@ -679,9 +754,10 @@ beep = no')
         uimanager$refresh <- input$statistics
         
         if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
+          print("vennrich")
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
-          uimanager$refresh <- "vennrich"
+          uimanager$refresh <- c(input$statistics, "vennrich")
         }
         
         checkMe = input$statistics
@@ -690,9 +766,9 @@ beep = no')
         
         if(checkMe %in% names(mSet$analSet)){
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_tables]"))
-          tablemanager$make <- input$statistics
+          tablemanager$make <- c(tablemanager$make, input$statistics)
           shinyjs::show(selector = paste0("div.panel[value=collapse_", input$statistics, "_plots]"))
-          plotmanager$make <- input$statistics
+          plotmanager$make <- c(plotmanager$make, input$statistics)
           shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
                                                                                               input$statistics, 
                                                                                               c("_tables","_plots")))
@@ -708,21 +784,23 @@ beep = no')
   })
   
   analyses <- c("ml", "wordcloud", "plsda", 
-                "pca", "tsne", "tt", "aov",
+                "pca", "tsne", "tt", "aov","combi",
                 "fc", "volcano", "heatmap", 
                 "meba", "asca", "corr", 
                 "enrich", "network", "power",
-                "umap", "ica")
+                "umap", "ica", "featsel")
   
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
       try({
-        statsmanager$calculate <- an
+        statsmanager$calculate <- c(statsmanager$calculate, an)
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_tables]"))
-        tablemanager$make <- an
+        tablemanager$make <- c(tablemanager$make, an)
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_plots]"))
-        plotmanager$make <- an
-        uimanager$refresh <- an
+        if(an != "featsel"){
+          plotmanager$make <- c(plotmanager$make, an)
+        }
+        uimanager$refresh <- c(uimanager$refresh, an)
       })
     })    
   })
@@ -857,12 +935,74 @@ beep = no')
     }
   })
   
+  lapply(c("mummi_adducts", 
+           "score_adducts",
+           "filter_adducts"), function(id){
+             cats = setdiff(colnames(adducts), colnames(MetaDBparse::adducts))
+             pickerID = paste0(id, "_cat_picker")
+             output[[paste0(id, "_cats")]] <- shiny::renderUI(if(length(cats) > 0){
+               shinyWidgets::checkboxGroupButtons(
+                 inputId = pickerID,
+                 label = "Adduct categories:",
+                 choices = cats,
+                 justified = TRUE,
+                 checkIcon = list(
+                   yes = icon("plus", 
+                              lib = "glyphicon"))
+               )
+             }else{
+               list()
+             })
+             # observers
+             shiny::observeEvent(input[[pickerID]],{
+               if(length(input[[pickerID]]) > 0){
+                 sel_adducts = lapply(input[[pickerID]], function(colu){
+                   col = adducts[[colu]] == "v"
+                   col[is.na(col)] <- FALSE
+                   col
+                 })
+                 if(length(sel_adducts) == 1){
+                   sel_adducts = sel_adducts[[1]]
+                 }else{
+                   sel_adducts = lapply(sel_adducts, as.list)
+                   sel_adduct_table = data.table::rbindlist(sel_adducts)
+                   sel_adduct_sums = colSums(sel_adduct_table)
+                   sel_adducts = sel_adduct_sums > 0
+                 }
+                 if(!grepl("filter", pickerID)){
+                   shinyWidgets::updatePickerInput(session, id, selected = adducts$Name[sel_adducts])
+                 }else{
+                   # also do pie chart filter?
+                   if(!is.null(pieinfo)){
+                     adds_in_search = as.character(pieinfo$add$Var.1)
+                     for(mzMode in c("positive", "negative")){
+                       sel_adducts_mode = sel_adducts & adducts$Ion_mode == mzMode
+                       keep_sel_adducts <- intersect(adducts$Name[sel_adducts_mode], adds_in_search)
+                       result_filters$add[[mzMode]] <- keep_sel_adducts
+                       search$go <- T
+                     }  
+                   }
+                 }  
+               }else{
+                 if(grepl("filter", pickerID)){
+                   if(!is.null(pieinfo) & my_selection$mz != ""){
+                     result_filters$add$positive <- result_filters$add$negative <- character(0)
+                     search$go <- T 
+                   }  
+                 }else{
+                   shinyWidgets::updatePickerInput(session, id, selected = character(0))
+                 }
+               }
+             },ignoreNULL = FALSE)
+           })
+  
   onStop(function() {
     print("- - - Closing MetaboShiny - - -")
     if(!is.null(session_cl)){
       parallel::stopCluster(session_cl)
     }
     session_cl <<- NULL
+    gc()
     rmv <- list.files(".", pattern = ".csv|.log", full.names = T)
     if(all(file.remove(rmv))) NULL
   })

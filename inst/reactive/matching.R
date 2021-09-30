@@ -1,3 +1,35 @@
+shiny::observeEvent(input$match_search_query, {
+  if(input$match_search_query != ""){
+    if(nrow(shown_matches$forward_unique) > 0){
+      # remove existing highlights
+      shown_matches$forward_full$description <- gsub("(<.*?>)",
+                                                     "",
+                                                     shown_matches$forward_full$description)
+      
+      # allow lowercase but no fuzzy matching for now
+      hits = stringr::str_locate_all(string = tolower(shown_matches$forward_full$description),
+                                     pattern = paste0("(", input$match_search_query, ")"))
+      has.hits = which(sapply(hits, function(x) nrow(x) > 0))
+      
+      # adjust descriptions to highlight matches
+      template = '<span style="color:white; background-color:black;">$exact.word</span>'
+
+      for(i in has.hits){
+        exact.word <- stringr::str_extract(string = shown_matches$forward_full$description[i],
+                                           pattern = stringr::fixed(input$match_search_query,
+                                                                    ignore_case=TRUE))
+        shown_matches$forward_full$description[i] <- gsub(pattern = paste0("(", exact.word, ")"),
+                                                          replacement = gsubfn::fn$paste(template),
+                                                          x = shown_matches$forward_full$description[i])  
+      }
+      
+      name.hits = unique(shown_matches$forward_full$compoundname[has.hits])
+      shown_matches$forward_unique$`search hit` <- c('<i class=\"fa fa-times\" role=\"presentation\" aria-label=\"times icon\" style=\"color:red\")><div style="display: none;">1</div></i>')
+      shown_matches$forward_unique[compoundname %in% name.hits]$`search hit` <- c('<i class=\"fa fa-check\" role=\"presentation\" aria-label=\"times icon\" style=\"color:lime\")><div style="display: none;">0</div></i>')
+    }  
+  }
+})
+
 output$manual_search <- renderUI({
   if(search_button$on){
     tags$button(
@@ -10,7 +42,14 @@ output$manual_search <- renderUI({
     fluidRow(align="center", 
              shiny::img(src = "pawprint.png",height = "50px"),
              br(),
-             tags$h2("pre-matched")
+             tags$h2("pre-matched"),
+             br(),
+             tags$button(
+               id = "search_mz",
+               class = "btn btn-default action-button",
+               img(src = "detective.png",
+                   height = "50px")
+             )
     )
   }
 })
@@ -150,11 +189,14 @@ lapply(c("prematch","search_mz"), function(search_type){
                 ppm <- as.numeric(mSet$ppm)
               }
               
-              res.predict = MetaDBparse::getPredicted(mz = as.numeric(mz),
-                                                      ppm = ppm,
-                                                      mode = ionmode,
-                                                      rules = input$predict_rules,
-                                                      elements = input$predict_elements)
+              res.predict = getPredicted(mz = as.numeric(mz),
+                                         ppm = ppm,
+                                         mode = ionmode,
+                                         calc_adducts = adducts[Ion_mode == ionmode]$Name,
+                                         rules = input$predict_rules,
+                                         elements = input$predict_elements,
+                                         adduct_table = adducts)
+              
               if(length(pred_dbs) == 1){
                 if(pred_dbs == "magicball"){
                   search_db = F
@@ -198,6 +240,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                 results_full[is.na(source),]$compoundname <- results_full[is.na(source),]$baseformula
                 results_full[is.na(source),]$source <- c("magicball")
                 withSmi = which(results_full$structure != "")
+                
                 if(length(withSmi) > 0){
                   results_nosmi <- results_full[ -withSmi ]
                   results_nosmi$structure = paste0("[",results_nosmi$fullformula,"]0")
@@ -241,6 +284,7 @@ lapply(c("prematch","search_mz"), function(search_type){
                                    perl=T), gbl$vectors$db_no_build)
           if(length(dbs.local)>0){
             res.local = MetaDBparse::searchMZ(mzs = mzs,
+                                              addtable = adducts,
                                               ionmodes = ionmode,
                                               base.dbname = dbs.local,
                                               ppm = ppm,
@@ -287,25 +331,34 @@ lapply(c("prematch","search_mz"), function(search_type){
         })
       }, min=0, max=length(blocks))
       
-      mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper)))
-      content = unique(data.table::rbindlist(lapply(matches, function(x) x$content)))
+      mapper = unique(data.table::rbindlist(lapply(matches, function(x) x$mapper),fill = T))
+      content = unique(data.table::rbindlist(lapply(matches, function(x) x$content),fill = T))
       
       if(nrow(mapper)>0){
-        
         RSQLite::dbWriteTable(conn, 
                               "match_mapper", 
-                              mapper, overwrite=T, use.names = T)
+                              mapper, 
+                              overwrite = !mSet$metshiParams$prematched, 
+                              append = mSet$metshiParams$prematched, 
+                              use.names = T)
         RSQLite::dbWriteTable(conn, 
                               "match_content", 
-                              content, overwrite=T, use.names = T)
-        RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
-        RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
-        RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
-        RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")
+                              content, 
+                              overwrite = !mSet$metshiParams$prematched,
+                              append = mSet$metshiParams$prematched,
+                              use.names = T)
+        
+        if(!mSet$metshiParams$prematched){
+          RSQLite::dbExecute(conn, "CREATE INDEX map_mz ON match_mapper(query_mz)")
+          RSQLite::dbExecute(conn, "CREATE INDEX map_ba ON match_mapper(baseformula, adduct)")
+          RSQLite::dbExecute(conn, "CREATE INDEX cont_ba ON match_content(baseformula, adduct)")
+          RSQLite::dbExecute(conn, "CREATE INDEX cont_str ON match_content(structure)")  
+        }
+        
         if(search_type == "prematch"){
-          mSet$metshiParams$prematched<<-T
+          mSet$metshiParams$prematched <<- T
           filemanager$do <- "save"
-          search_button$on <- FALSE   
+          search_button$on <- TRUE #FALSE
         }else{
           search$go <- TRUE
         }
@@ -357,7 +410,10 @@ shiny::observeEvent(input$score_iso, {
                               intprec = as.numeric(input$int_prec),
                               rtmode = input$iso_use_rt,
                               rtperc = input$iso_rt_perc,
-                              useint = input$iso_use_int)
+                              useint = input$iso_use_int,
+                              corronly = input$score_use_corr,
+                              corrmin = input$score_corr_min,
+                              corrmethod = input$score_corr_meth)
     colnames(score_table)[ colnames(score_table) == "score"] <- "isoScore"
     })
   shown_matches$forward_unique <- shown_matches$forward_unique[unique(score_table), on = c("fullformula")]
@@ -382,7 +438,10 @@ shiny::observeEvent(input$score_add, {
                             rtmode=input$add_use_rt,
                             mzppm = mSet$ppm,
                             dbdir = lcl$paths$db_dir,
-                            inshiny = T)
+                            inshiny = T,
+                            corronly = input$score_use_corr,
+                            corrmin = input$score_corr_min,
+                            corrmethod = input$score_corr_meth)
   })
   colnames(score_table)[ colnames(score_table) == "score"] <- "addScore"
   shown_matches$forward_unique <- shown_matches$forward_unique[score_table, on = c("structure")]
@@ -396,12 +455,15 @@ shiny::observeEvent(input$search_pubmed,{
 shiny::observe({
   # - - filters - -
   if(search$go){
+    print("searching")
     shiny::withProgress({
       if(input$tab_iden_2 == "mzmol"){
-        if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list)){
-          matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, 
-                                                                        pattern="/.*$|RT.*$", 
-                                                                        replacement=""),
+        if(lcl$prev_mz != my_selection$mz & !identical(lcl$vectors$prev_dbs, lcl$vectors$db_search_list) & my_selection$mz != ""){
+          mz = gsub(my_selection$mz, 
+                    pattern="/.*$|RT.*$", 
+                    replacement="")
+          mz = gsub("0$", "", mz)
+          matches = data.table::as.data.table(get_prematches(who = mz,
                                                              what = "map.query_mz",
                                                              patdb = lcl$paths$patdb,
                                                              showadd = c(),
@@ -422,7 +484,7 @@ shiny::observe({
         
         mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
         
-        matches = data.table::as.data.table(get_prematches(who = gsub(my_selection$mz, pattern="/.*$|RT.*$", replacement=""),
+        matches = data.table::as.data.table(get_prematches(who = mz,
                                                            what = "map.query_mz",
                                                            patdb = lcl$paths$patdb,
                                                            showadd = result_filters$add[[mzMode]],
@@ -434,7 +496,7 @@ shiny::observe({
           
           shiny::setProgress(0.2)
           
-          matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
+          #matches$compoundname[matches$source != "magicball"] <- tolower(matches$compoundname[matches$source != "magicball"])
           
           # =====
           
@@ -451,7 +513,9 @@ shiny::observe({
                                         "structure", 
                                         "description",
                                         "identifier"),with=F])
-          info_only$description <- paste0("Database ID: ", info_only$identifier, ". ", info_only$description)
+          info_only$description <- paste0("Database ID: ", 
+                                          info_only$identifier, ". ", 
+                                          info_only$description)
           info_only <- unique(info_only[,-"identifier"])
           
           info_no_na <- info_only[!is.na(info_only$structure)]

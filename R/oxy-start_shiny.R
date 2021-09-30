@@ -17,8 +17,8 @@ start_metshi <- function(port=8080, inBrowser=F,
   ## make metaboshiny_storage dir in home first..
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/userfiles/:cached --rm -it metaboshiny/master /bin/bash
   # NEWEST
-  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:latest /bin/bash
-  
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:dev /bin/bash
+  # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:dev Rscript -e "MetaboShiny::start_metshi()"
   packages = installed.packages()
   if(!("MetaboAnalystR" %in% rownames(packages))){
     devtools::install_github("xia-lab/MetaboAnalystR",quiet = F, ref = "0d61192c")
@@ -31,6 +31,10 @@ start_metshi <- function(port=8080, inBrowser=F,
   }
   if(!("ggVennDiagram" %in% rownames(packages))){
     devtools::install_github("joannawolthuis/ggVennDiagram",quiet = T, upgrade = F)
+  }
+  if(!("BatchCorrMetabolomics" %in% rownames(packages))){
+    devtools::install_github("rwehrens/ChemometricsWithR", quiet = T, upgrade = F)
+    devtools::install_github("rwehrens/BatchCorrMetabolomics", quiet = T, upgrade = F)
   }
   
   #library(httr)

@@ -76,7 +76,6 @@ shiny::observe({
                            })
                          }
                        }
-                       
                        # --- MZ PICKER ---
                        neededForChoices = lapply(colnames(mSet$dataSet$norm), function(mzfull){
                          if(grepl("RT", mzfull)){
@@ -89,7 +88,7 @@ shiny::observe({
                          }
                          list(full = mzfull, mz = mz, rt = rt)
                        })
-
+                       
                        allMz = lapply(neededForChoices, function(x) x$full)
                        names(allMz) = lapply(neededForChoices, function(x) paste(x$mz, "m/z"))
                        subtext = lapply(neededForChoices, function(x) x$rt)
@@ -103,7 +102,7 @@ shiny::observe({
                                                                          icon = c(rep('',length(subtext)), "fa-cat"),
                                                                          style = c(rep('text-align:center;',length(subtext) + 1))),
                                                        selected = "fa-cat"
-                                                       )
+                       )
                        
                        shinyWidgets::updatePickerInput(session, 
                                                        "ml_mzs",
@@ -121,17 +120,22 @@ shiny::observe({
                          paste0(as.character(nrow(mSet$dataSet$norm)),
                                 if(nrow(mSet$dataSet$norm) == origcount) "" else paste0("/",as.character(origcount)))
                        })
+                       
+                       output$mz_count <- shiny::renderText({
+                         as.character(ncol(mSet$dataSet$norm))
+                       })
+                       
                        if(length(mSet$storage) > 0){
                          storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
                          subtext = sapply(storeNames, function(storeName){
                            sz=format(object.size(mSet$storage[[storeName]]), unit="Mb")
-                               if(sz != "0 Mb"){
-                                 sz
-                               }else{
-                                 ""
-                               }
+                           if(sz != "0 Mb"){
+                             sz
+                           }else{
+                             ""
+                           }
                          })
-                        }else{
+                       }else{
                          storeNames=c(" ")
                          subtext=c(" ")
                        }
@@ -143,18 +147,19 @@ shiny::observe({
                                                                          style = c(rep('text-align:center;',length(subtext))))
                        )
                        
-                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset","fill"), "_var")
+                       usesCovars <- paste0(c("stats","time","shape","col","txt","subset","fill","ml_mistake"), "_var")
                        lapply(usesCovars, function(inputId){
-                         shiny::updateSelectInput(session, inputId,  
-                                                  choices = c("label", 
-                                                              colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
-                                                                                                        MARGIN = 2, 
-                                                                                                        function(col) length(unique(col)) < gbl$constants$max.cols))]))
+                         shiny::updateSelectizeInput(session, inputId,  
+                                                  choices = c(#"label", 
+                                                    colnames(mSet$dataSet$covars)[which(apply(mSet$dataSet$covars, 
+                                                                                              MARGIN = 2, 
+                                                                                              function(col) length(unique(col)) < gbl$constants$max.cols))]),
+                                                  selected = mSet$settings$exp.var)
                          
                        })
                      }
                      
-                     shiny::updateSelectInput(session, "stats_type", 
+                     shiny::updateSelectizeInput(session, "stats_type", 
                                               selected = {
                                                 if(grepl(mSet$settings$exp.type, pattern = "^1f\\w")){
                                                   gsub(mSet$settings$exp.type, pattern="^1f\\w", "1f")
@@ -163,7 +168,7 @@ shiny::observe({
                                                 }
                                               })
                      
-                     shiny::updateSelectInput(session, "stats_type", 
+                     shiny::updateSelectizeInput(session, "stats_type", 
                                               choices = if(!any(duplicated(mSet$dataSet$covars$individual))){
                                                 list("one factor"="1f", 
                                                      "two factors"="2f")
@@ -181,10 +186,7 @@ shiny::observe({
                      }else{
                        search_button$on <- TRUE}
                      
-                     opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-                     if("adducts" %in% names(opts)){
-                       uimanager$refresh <- "adds"
-                     }
+                     ml_queue$jobs = list()
                      
                      shiny::updateNavbarPage(session, "statistics", selected = "inf")
                    },
@@ -199,7 +201,7 @@ shiny::observe({
                        names(items) <- itemNames
                        gbl$vectors$wordcloud$filters <<- append(gbl$vectors$wordcloud$filters, items)
                        shiny::updateTabsetPanel(session, "wordclouds", selected = "plot")
-                       shiny::updateSelectInput(session, 
+                       shiny::updateSelectizeInput(session, 
                                                 inputId = "wordcloud_filter", 
                                                 #selected="stopwords",
                                                 choices = c("stopwords","metabolomics","default", itemNames))
@@ -221,14 +223,15 @@ shiny::observe({
                        }
                      }) 
                    },
-                   adds = {
-                     opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-                     fav_adducts <- opts$adducts
-                     fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]
-                     for(id in c("mummi_adducts", 
-                                 "score_adducts",
-                                 "fav_adducts")){
-                       shinyWidgets::updatePickerInput(session, id, selected = intersect(fav_adducts,adducts$Name))
+                   combi = {
+                     combi_opts = setdiff(names(mSet$analSet)[sapply(mSet$analSet,function(anal) any(grepl("\\.mat", names(anal))))], "combi")
+                     if(length(combi_opts)>1){
+                       shiny::updateSelectizeInput(session, "combi_anal1",  
+                                                choices = combi_opts,
+                                                selected = combi_opts[1])
+                       shiny::updateSelectizeInput(session, "combi_anal2",  
+                                                choices = combi_opts,
+                                                selected = combi_opts[2])
                      }
                    },
                    venn = {
@@ -238,34 +241,63 @@ shiny::observe({
                    },
                    corr = {
                      output$jqui_ui <- shiny::renderUI(suppressWarnings(shinyjqui::orderInput(inputId = 'corr_seq',
-                                                                             label = 'Drag panels to select pattern for correlation (low-high)', 
-                                                                             items = {
-                                                                               lvls = levels(mSet$dataSet$cls)
-                                                                               numconv = as.numeric(as.character(lvls))
-                                                                               if(all(!is.na(numconv))){
-                                                                                 order = order(numconv)
-                                                                               }else{
-                                                                                 order = order(as.character(lvls))
-                                                                               }
-                                                                               as.character(lvls)[order]
-                                                                             }))
+                                                                                              label = 'Drag panels to select pattern for correlation (low-high)', 
+                                                                                              items = {
+                                                                                                lvls = levels(mSet$dataSet$cls)
+                                                                                                numconv = as.numeric(as.character(lvls))
+                                                                                                if(all(!is.na(numconv))){
+                                                                                                  order = order(numconv)
+                                                                                                }else{
+                                                                                                  order = order(as.character(lvls))
+                                                                                                }
+                                                                                                as.character(lvls)[order]
+                                                                                              }))
                      )
                      storeNames = c(names(mSet$storage)[sapply(mSet$storage, function(x) "settings" %in% names(x))])
-                     shiny::updateSelectInput(session, "storage_choice", 
+                     shiny::updateSelectizeInput(session, "storage_choice", 
                                               choices = if(!is.null(storeNames[[1]])) storeNames else c()
                      ) 
                    },
                    ml = {
-                     shiny::updateSelectInput(session, "ml_include_covars", 
+                     shiny::updateSelectizeInput(session, "ml_include_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                      
-                     shiny::updateSelectInput(session, "ml_batch_covars", 
+                     shiny::updateSelectizeInput(session, "ml_batch_covars", 
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
+                     # --- ML PCA ---
+                     npc = nrow(mSet$dataSet$norm) - 1
+                     shiny::updateSliderInput(session, "ml_keep_pcs", max = npc)
                      
-                     if("ml" %in% names(mSet$analSet)){
+                     if(length(mSet$analSet$ml) > 0){
+                       
                        shiny::showTab(session = session, 
                                       inputId = "ml2", 
                                       target = "res")
+                       
+                       ###
+                       data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                       classes = if(!is.null(data$res$prediction)){
+                         colnames(data$res$prediction)
+                       }else{
+                         colnames(data$res[[1]]$prediction)
+                       }
+                       
+                       # try both options and check higher AUC
+                       perf.per.posclass = sapply(classes, function(pos.class.test){
+                         perf = getMLperformance(ml_res = data$res[[1]], 
+                                                 pos.class = pos.class.test,
+                                                 x.metric = input$ml_plot_x,
+                                                 y.metric = input$ml_plot_y)
+                         t = perf$coords
+                         pracma::trapz(t[`Test set` == "Test"]$x, 
+                                       t[`Test set` == "Test"]$y)
+                       })
+                       pos.class <- names(which.max(perf.per.posclass))
+                       
+                       shiny::updateSelectizeInput(session, "ml_plot_posclass", 
+                                                choices = classes, 
+                                                selected = pos.class)
+                       ###
                        
                        choices = c()
                        methods <- setdiff(names(mSet$analSet$ml), "last")
@@ -274,12 +306,15 @@ shiny::observe({
                          choices <- c(choices, paste0(method, " - ", paste0(model.names)))
                        }
                        
-                       shiny::updateSelectInput(session, "ml_samp_distr", 
+                       shiny::updateSelectizeInput(session, "ml_samp_distr", 
                                                 choices = c(" ", choices))
                        
-                       shiny::updateSelectInput(session, "show_which_ml", 
+                       shiny::updateSelectizeInput(session, "show_which_ml", 
                                                 choices = choices, 
-                                                selected = paste0(mSet$analSet$ml$last$method, " - ", mSet$analSet$ml$last$name))
+                                                selected = paste0(mSet$analSet$ml$last$method, 
+                                                                  " - ", 
+                                                                  mSet$analSet$ml$last$name),
+                                                server = T)
                        
                      }else{
                        shiny::hideTab(session = session, inputId = "ml2", target = "res")
@@ -294,14 +329,14 @@ shiny::observe({
                    },
                    heatmap = 
                      {
-                     NULL
+                       NULL
                      }, 
                    power = {
                      if(grepl(mSet$settings$exp.type, pattern = "1f.")){
                        pairs = MetaboShiny::expand.grid.unique(levels(mSet$dataSet$cls), 
                                                                levels(mSet$dataSet$cls))
                        pairs = paste(pairs[,1], "vs.", pairs[,2])
-                       shiny::updateSelectInput(session, inputId = "power_comps", choices = pairs, selected = pairs[1])
+                       shiny::updateSelectizeInput(session, inputId = "power_comps", choices = pairs, selected = pairs[1])
                      }
                    }
             )

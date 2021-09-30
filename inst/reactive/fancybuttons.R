@@ -13,27 +13,42 @@ lapply(scatters, function(anal){
   })
 })
 
-shiny::observeEvent(input$corr_topn, {
-  plotmanager$make <- "corr"
-}, ignoreNULL = T)
+topn_sliders <- c("corr", "fc", "tt", "aov", "heatmap")
 
-update_heatmap = shiny::reactive({
-  input$heatmap_topn
-}) %>% shiny::debounce(1000)
-
-shiny::observeEvent(update_heatmap(), {
-  if(!is.null(mSet$analSet$heatmap)){
-    plotmanager$make <- "heatmap" # just reload
-  }
+lapply(topn_sliders, function(anal){
+  r <- shiny::reactive({
+    input[[paste0(anal,"_topn")]]
+  }) %>% shiny::debounce(2000)
+  shiny::observeEvent(r(), { # so it doesn't constantly update
+    if(anal == "heatmap"){
+      statsmanager$calculate <- anal
+    }
+    plotmanager$make <- anal
+  }, ignoreNULL = T)
 })
 
+lapply(c("x", "y", "posclass"), function(axis){
+  shiny::observeEvent(input[[paste0("ml_plot_", axis)]], {
+    if(!is.null(mSet$analSet$ml)){
+      plotmanager$make <- "ml" # just reload  
+    }
+  })  
+})
+
+shiny::observeEvent(input$reload_ml_stats, {
+  if(!is.null(mSet$analSet$ml)){
+    plotmanager$make <- tablemanager$make <- "ml" # just reload
+  }
+},ignoreInit = T, ignoreNULL = T)
+
 update_ml = shiny::reactive({
-  input$ml_top_x
+  input$ml_topn
+  input$ml_curve_type
 }) %>% shiny::debounce(1000)
 
 shiny::observeEvent(update_ml(), {
   if(!is.null(mSet$analSet$ml)){
-    plotmanager$make <- "ml" # just reload
+    plotmanager$make <- tablemanager$make <- "ml" # just reload
   }
 })
 

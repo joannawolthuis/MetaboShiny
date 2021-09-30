@@ -8,7 +8,7 @@ library(shinyBS)
 if(Sys.getenv('SHINY_PORT') == "") options(shiny.maxRequestSize=10000*1024^2)
 
 # set the home path
-home = normalizePath("~")
+home = path.expand('~')
 
 #TODO: add option to put user custom tables in user directory
 if("adducts.csv" %in% list.files(file.path(home, "MetaboShiny", "saves", "admin"))){
@@ -25,8 +25,6 @@ if("adduct_rules.csv" %in% list.files(file.path(home, "MetaboShiny", "saves", "a
   adduct_rules <- data.table::as.data.table(adduct_rules)
 }
 
-caret.mdls <- caret::getModelInfo()
-
 # === THE BELOW LIST CONTAINS ALL GLOBAL VARIABLES THAT METABOSHINY CALLS UPON LATER ===
 gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people importing their data through csv
                              ml.twoonly = c("adaboost","logicBag","bartMachine","binda",
@@ -39,12 +37,18 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                             "plsRglm","rotationForest","rotationForestCp",
                                             "svmRadialWeights","nodeHarvest"),
                              # get all caret models that can do classification and have some kind of importance metric
-                             ml.models = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
-                               curr.mdl = caret.mdls[[i]]
-                               can.classify = if("Classification" %in% curr.mdl$type) TRUE else FALSE
-                               has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
-                               can.classify & has.importance
-                             })],
+                             ml.models = {
+                               caret.mdls <- caret::getModelInfo()
+                               fin = names(caret.mdls)[sapply(1:length(caret.mdls), function(i){
+                                 curr.mdl = caret.mdls[[i]]
+                                 can.classify = if("Classification" %in% curr.mdl$type) TRUE else FALSE
+                                 has.importance = if("varImp" %in% names(curr.mdl)) TRUE else FALSE
+                                 can.classify & has.importance
+                               })]
+                               fin = c(fin, "glm (logistic)")
+                               caret.mdls <- NULL
+                               fin
+                               },
                              max.cols = 30,
                              images = list(list(name = 'load_icon', path = 'www/cute.png', dimensions = c(100, 100)),
                                            list(name = 'empty', path = 'www/empty.png', dimensions = c("100%", 1)),
@@ -106,7 +110,9 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                            list(name = 'reactome_logo', path = 'www/reactome_logo.png', dimensions = c(250, 130)),
                                            list(name = 'knapsack_logo', path = 'www/knapsack_logo.gif', dimensions = c(200, 100)),
                                            list(name = 'laptop_icon', path = 'www/laptop.png', dimensions = c(150, 150)),
-                                           list(name = 'metabolomicsworkbench_logo', path = 'www/metworkbench_logo.png', dimensions = c(140, 140))
+                                           list(name = 'metabolomicsworkbench_logo', path = 'www/metworkbench_logo.png', dimensions = c(140, 140)),
+                                           list(name = 'npa_logo', path = 'www/npa_logo.png', dimensions = c(140, 140)),
+                                           list(name = 'markerdb_logo', path = 'www/markerdb_logo.jpeg', dimensions = c(150,150))
                                            
                                            
                              ),# all image paths, if you add an image you can add it here
@@ -214,8 +220,14 @@ gbl <- list(constants = list(ppm = 2, # TODO: re-add ppm as option for people im
                                                description = "Reactome is a free, open-source, curated and peer-reviewed pathway database.",
                                                image_id = "reactome_logo"),
                                metabolomicsworkbench = list(title = "Metabolomics Workbench",
-                                            description = "The Metabolomics Workbench Metabolite Database contains structures and annotations of biologically relevant metabolites. As of August, 2020, the database contains about 136,000 entries, collected from public sources such as LIPID MAPS, ChEBI, HMDB, PubChem, NP Atlas , CHEMBL and KEGG. The Metabolite Database is integrated with the NMDR data repository, providing links to studies reporting each metabolite. ",
+                                            description = "The Metabolomics Workbench Metabolite Database contains structures and annotations of biologically relevant metabolites. As of August, 2020, the database contains about 136,000 entries, collected from public sources such as LIPID MAPS, ChEBI, HMDB, PubChem, NP Atlas , CHEMBL and KEGG. The Metabolite Database is integrated with the NMDR data repository, providing links to studies reporting each metabolite.",
                                             image_id = "metabolomicsworkbench_logo"),
+                               npa = list(title = "Natural Products Atlas",
+                                          description = "The Natural Products Atlas is designed to cover all microbially-derived natural products published in the peer-reviewed primary scientific literature. This encompasses bacterial, fungal and cyanobacterial compounds, but does not include compounds from plants, invertebrates or other higher organisms unless these compounds have also been explicitly identified from a microbial source. Compounds from lichens and mushrooms and other higher fungi are included. Compounds from marine macro algae and diatoms are excluded.",
+                                          image_id = "npa_logo"),
+                               markerdb = list(title = "MarkerDB",
+                                               description = "MarkerDB is a freely available electronic database that attempts to consolidate information on all known clinical and a selected set of pre-clinical biomarkers into a single resource. The database includes five major types of biomarkers (condition-specific, protein, chemical, karyotypic and genetic) and four biomarker categories (diagnostic, predictive, prognostic and exposure).",
+                                               image_id = "markerdb_logo"),
                                # - - leave magicball last - -
                                cmmmediator = list(title = "CEU Mass Mediator",
                                                   description = "(ONLINE ONLY) CEU Mass Mediator is a tool for searching metabolites in different databases (Kegg, HMDB, LipidMaps, Metlin, MINE and an in-house library).",
@@ -287,7 +299,9 @@ functions = list(# default color functions at startup, will be re-loaded from op
                       "bw"=MetaboShiny::blackwhite.colors)
     
     # add into a single list for use in interface
-    append(base.opts, brew.opts)
+    fin = append(base.opts, brew.opts)
+    brew.cols <- brew.opts <- base.opts <- NULL
+    fin
   }),
 # set default paths
 paths = list(
@@ -299,11 +313,13 @@ paths = list(
              "Documents",
              "Downloads",
              "Desktop",
-             "Examples")
-    home = normalizePath("~")
+             "Examples",
+             "System Root")
+    home = path.expand('~')
     folders = lapply(vols, 
                      FUN = function(folder){
                        switch(folder,
+                              `System Root` = "/",
                               Recent = system.file("examples",
                                                    package = "MetaboShiny"),
                               Home = home,
@@ -344,10 +360,10 @@ vectors = list(
                   "custom",
                   "pubchem"),
   db_categories = list(versatile = c("wikidata", "dimedb", "metacyc", "chebi", "massbank", "cmmediator"),
-                       verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb", "metabolomicsworkbench"),
-                       livestock = c("lmdb", "rmdb", "bmdb", "metacyc", "mcdb"),
-                       human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome", "pharmgkb"),
-                       microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc"),
+                       verbose = c("hmdb", "chebi", "t3db", "metabolights", "ymdb", "ecmdb", "pamdb", "metabolomicsworkbench", "markerdb"),
+                       livestock = c("lmdb", "bmdb", "metacyc", "mcdb"),
+                       human = c("hmdb", "metacyc", "expoexplorer", "t3db", "bloodexposome", "pharmgkb", "markerdb"),
+                       microbial = c("ymdb", "ecmdb", "pamdb", "vmh", "mvoc", "npa"),
                        pathway = c("vmh", "smpdb", "kegg", "reactome"),
                        food = c("foodb", "phenolexplorer"),
                        plant = c("anpdb", "respect", "metacyc", "supernatural2", "knapsack"),
@@ -385,7 +401,7 @@ vectors = list(
     'lmdb',
     'ymdb',
     'ecmdb',
-    'rmdb',
+    #'rmdb',
     'bmdb',
     'stoff',
     'anpdb',
@@ -393,6 +409,8 @@ vectors = list(
     'reactome',
     'metabolomicsworkbench',
     'phenolexplorer',
+    'npa',
+    'markerdb',
     "magicball",
     'cmmmediator',
     'pubchem',
@@ -413,6 +431,7 @@ vectors = list(
 )
 )
 
+gbl$vectors$kegg_pathways <- KEGGREST::keggList("pathway")
 gbl$vectors$db_categories$all <- gbl$vectors$db_list
 gbl$vectors$example_sizes <- file.size(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
 gbl$vectors$example_md5s <- tools::md5sum(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
@@ -453,9 +472,9 @@ radioTooltip <- function(id, choice, title, placement = "bottom", trigger = "hov
 add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
 sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
 
-session_cl <- NULL
-debug_mSet <- NULL
-debug_lcl <- NULL
-debug_input <- NULL
+session_cl <- parallel::makeCluster(1)
+debug_mSet <- list()
+debug_lcl <- list()
+debug_input <- list()
 
 msg.vec <- c()

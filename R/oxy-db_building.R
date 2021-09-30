@@ -1,21 +1,20 @@
 getMissing <- function(peakpath, nrow=NULL){
+  
   bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
   reallyBig = if(bigFile == "0 Gb") F else T
   
-  if(is.null(nrow)){
-    nrow = length(vroom::vroom_lines(peakpath, altrep = TRUE, progress = TRUE)) - 1L
-  }
-
+  nrow = length(vroom::vroom_lines(peakpath)) - 1L
+  
   print("Checking missing values...")
   
   skipCols=c("sample","label")
   
-  con = file(peakpath, "r")
-  line = readLines(con, n = 1)
-  cols = stringr::str_split(line, ",")[[1]]
-  
+  con <- file(peakpath, "r")#, blocking = FALSE)
+  header = readLines(con, n = 1) # empty
+  cols = stringi::stri_split(header, fixed=",")[[1]]
+
   if(any(grepl("mass_to_charge", cols))){
-    peaklist = data.table::fread(peakpath)
+    peaklist = data.table::fread(peakpath,fill=TRUE)
     data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
     if(!is.na(peaklist$retention_time[1])){
       hasRT = TRUE
@@ -35,33 +34,27 @@ getMissing <- function(peakpath, nrow=NULL){
   }else{
     if(!reallyBig){
       peaklist <- data.table::fread(peakpath,
-                                    header=T)
+                                    header=T,
+                                    fill=TRUE)
       considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
       peaklist = peaklist[, ..considerMe]
       totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
     }else{
       considerMe=which(!(tolower(cols) %in% skipCols))
-      mzs = cols[considerMe]
+      mzs = cols[3:length(cols)]
       totalMissing <- rep(0, length(mzs))
-      pb = pbapply::startpb(2, nrow)
-      
-      # get missing count
-      for(i in 1:nrow){
-        pbapply::setpb(pb, i)
-        line = readLines(con, n = 1)
-        splRow = stringr::str_split(line, ",")[[1]]
+      names(totalMissing) = mzs
+      pbapply::pbsapply(2:nrow, function(i){
+        line = readLines(con, n = 1) # empty
+        splRow = stringr::str_split(line, pattern=",")[[1]]
         sampName = splRow[1]
         splRow = splRow[3:length(splRow)]
-        if(i > 1){
-          isMissing = which(splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow))
-          totalMissing[isMissing] <- totalMissing[isMissing] + 1
-        }
-      }
-      close.connection(con)
-      names(totalMissing) = mzs
+        isMissing = splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow)
+        totalMissing[isMissing] <<- totalMissing[isMissing] + 1
+        NULL
+      })
     }
   }
-  
   list(missPerc = totalMissing, isMz = considerMe, nrows=nrow)
 }
 
@@ -104,7 +97,7 @@ import.pat.csvs <- function(metapath,
 
   metadata = NULL
   try({
-    metadata <- data.table::fread(metapath)
+    metadata <- data.table::fread(metapath,fill=TRUE)
     metadata <- reformat.metadata(metadata)
     keep.cols = colSums(is.na(metadata)) < nrow(metadata) & sapply(colnames(metadata), function(x) length(unique(metadata[,..x][[1]])) > 1) 
     metadata$sample <- gsub(metadata$sample, 
@@ -119,10 +112,10 @@ import.pat.csvs <- function(metapath,
   
   if(is.null(metadata)){
     try({
-      peaklist = data.table::fread(pospath)
+      peaklist = data.table::fread(pospath,fill=TRUE)
     })
     try({
-      peaklist = data.table::fread(negpath)
+      peaklist = data.table::fread(negpath,fill=TRUE)
     })
     metadata = data.table::data.table(sample = peaklist$Sample,
                                       individual = peaklist$Sample,
@@ -148,6 +141,10 @@ import.pat.csvs <- function(metapath,
   # metadata = metadata[, ..keep_meta_cols]
   
   samplesIn <- metadata$sample
+  if(any(duplicated(samplesIn))){
+    warning("'sample' column must be unique! Last instance will be used. Please correct to avoid unpredictable results.")
+    metadata = metadata[!duplicated(sample)]
+  }
 
   zeros_after_period <- function(x) {
     if (isTRUE(all.equal(round(x),x))) return (0) # y would be -Inf for integer values
@@ -162,8 +159,8 @@ import.pat.csvs <- function(metapath,
     
     if(length(peakpath) == 0){
       return( list(ionMode = ionMode, 
-           peaktbl = data.table::data.table()))
-      }
+                   peaktbl = data.table::data.table()))
+    }
     
     print(paste("Importing", ionMode, "mode peaks!"))
     
@@ -191,7 +188,7 @@ import.pat.csvs <- function(metapath,
     
     # PIVOT IF WRONG SIDE AROUND - METABOLIGHTS DATA
     if(any(grepl("mass_to_charge", cols))){
-      peaklist = data.table::fread(peakpath)
+      peaklist = data.table::fread(peakpath,fill=TRUE)
       data.table::setnames(peaklist, "mass_to_charge", "mzmed", skip_absent = T)
       if(!is.na(peaklist$retention_time[1])){
         hasRT = TRUE
@@ -227,20 +224,19 @@ import.pat.csvs <- function(metapath,
         label = splRow[2]
         splRow = splRow[missCounts$isMz]
         splRow[splRow == "0" | splRow == 0 | splRow == ""] <- NA
-        if(sampName %in% if(typeof(metadata) == "list") samplesIn else sampName){
+        try({
           row = c(metadata[sample == as.character(sampName), ..meta_col_order],
                   splRow[qualifies])
-          write(paste0(row, collapse=","),file=write_loc,append=TRUE)
-        }else{
-          NULL
-        }
+          write(paste0(row, collapse=","),
+                file = write_loc,append=TRUE)
+        })
       }, con = con_read, qualifies = qualifies)
       
       close.connection(con_read)
       
       peaklist = data.table::fread(file = write_loc, 
                                    sep = ",",
-                                   key = "sample",
+                                   #key = "sample",
                                    header = T)
     }
     
@@ -318,6 +314,8 @@ import.pat.csvs <- function(metapath,
                          if(hasPPM|hasRT) paste0(if(hasPPM) "/" else "RT", roundedPpm) else "") 
         return(newName)
       })
+    }else{
+      colnames(peaklist)[ismz] <- paste0(colnames(peaklist)[ismz], ifelse(ionMode == "pos", "+", "-"))
     }
     
     peaklist <- peaklist[sample %in% keep.samples.peak,]

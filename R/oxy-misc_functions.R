@@ -490,6 +490,7 @@ moveme <- function (invec, movecommand) {
 
 downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(table(y))) 
 {
+  library(plyr)
   if (!is.data.frame(x)) {
     x <- as.data.frame(x, stringsAsFactors = TRUE)
   }
@@ -499,7 +500,7 @@ downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(tab
   }
   x$.outcome <- y
   x <- plyr::ddply(x, .(y), function(dat, n) dat[sample(seq(along = dat$.outcome), 
-                                                  n), , drop = FALSE], n = minClass)
+                                                        n), , drop = FALSE], n = minClass)
   y <- x$.outcome
   x <- x[, !(colnames(x) %in% c("y", ".outcome")), drop = FALSE]
   if (list) {
@@ -517,6 +518,7 @@ downsample.adj = function (x, y, list = FALSE, yname = "Class", minClass=min(tab
 
 upsample.adj = function (x, y, list = FALSE, yname = "Class", maxClass=max(table(y))) 
 {
+  library(plyr)
   if (!is.data.frame(x)) {
     x <- as.data.frame(x, stringsAsFactors = TRUE)
   }
@@ -547,3 +549,238 @@ upsample.adj = function (x, y, list = FALSE, yname = "Class", maxClass=max(table
   }
   out
 }
+
+img2clip <- function(pngloc){
+  if(".dockerenv" %in% list.files("/", all.files=T)){
+    print("clipboard access not available in Docker!")
+  }else{
+  system(switch(MetaboShiny::get_os(), 
+                osx = gsubfn::fn$paste("osascript -e 'set the clipboard to (read (POSIX file \"$pngloc\") as JPEG picture)'"),
+                win = gsubfn::fn$paste('clipboard copyimage "$pngloc"'),
+                linux = gsubfn::fn$paste("xclip -selection clipboard -t image/png -i $pngloc")
+  ))  
+  }
+}
+
+# credits to:
+# https://stackoverflow.com/questions/47916307/specify-position-of-geom-text-by-keywords-like-top-bottom-left-right
+annotation_compass <- function(label,
+                               position = c('N','NE','E','SE','S','SW','W','NW'),
+                               padding = grid::unit(c(0.5,0.5),"line"), ...){
+  position <- match.arg(position)
+  x <- switch (position,
+               N = 0.5,
+               NE = 1,
+               E = 1,
+               SE = 1,
+               S = 0.5, 
+               SW = 0,
+               W = 0, 
+               NW = 0
+  )
+  y <- switch (position,
+               N = 1,
+               NE = 1,
+               E = 0.5,
+               SE = 0,
+               S = 0, 
+               SW = 0,
+               W = 0.5, 
+               NW = 1
+  )
+  hjust <- switch (position,
+                   N = 0.5,
+                   NE = 1,
+                   E = 1,
+                   SE = 1,
+                   S = 0.5, 
+                   SW = 0,
+                   W = 0, 
+                   NW = 0
+  )
+  vjust <- switch (position,
+                   N = 1,
+                   NE = 1,
+                   E = 0.5,
+                   SE = 0,
+                   S = 0, 
+                   SW = 0,
+                   W = 0.5, 
+                   NW = 1
+  )
+  f1 <- switch (position,
+                N = 0,
+                NE = -1,
+                E = -1,
+                SE = -1,
+                S = 0, 
+                SW = 1,
+                W = 1, 
+                NW = 1
+  )
+  f2 <- switch (position,
+                N = -1,
+                NE = -1,
+                E = 0,
+                SE = 1,
+                S = 1, 
+                SW = 1,
+                W = 0, 
+                NW = -1
+  )
+  ggplot2::annotation_custom(ggpubr::text_grob(label, 
+                                   x=grid::unit(x,"npc") + f1*padding[1] , 
+                                   y=grid::unit(y,"npc") + f2*padding[2],
+                                   hjust=hjust,vjust=vjust, ...))
+}
+
+#' @export 
+venn_sample_3 <- function(nrepl, intersectn, n, a, b, c){
+  # https://stats.stackexchange.com/questions/199654/p-value-for-intersection-of-three-circle-venn-diagram
+  res = pbapply::pblapply(1:nrepl, function(i){
+    w <- sample(n,a)
+    x <- sample(n,b)
+    y <- sample(n,c)
+    m <- c(c(w,x)[duplicated(c(w,x))],
+           y)
+    sum(duplicated(m))
+  })
+  expected = sum(unlist(res) > intersectn)
+  p = expected / nrepl
+  p
+}
+
+#' @export
+venn_sample_4 <- function(nrepl, intersectn, n, a, b, c, d){
+  res = pbapply::pblapply(1:nrepl, function(i){
+    w <- sample(n,a)
+    x <- sample(n,b)
+    y <- sample(n,c)
+    z <- sample(n,d)
+    m <- c(c(w,x)[duplicated(c(w,x))],
+           c(x,y)[duplicated(c(x,y))],
+           z)
+    sum(duplicated(m))
+  })
+  expected = sum(unlist(res) > intersectn)
+  p = expected / nrepl
+  p
+}
+
+
+missRanger.joanna <- function (data, formula = . ~ ., pmm.k = 0L, maxiter = 10L, with.pb=T, ncl=0,
+                               seed = NULL, verbose = 1, returnOOB = FALSE, case.weights = NULL, 
+                               ...) 
+{
+  if (verbose) {
+    cat("\nMissing value imputation by random forests\n")
+  }
+  stopifnot(is.data.frame(data), dim(data) >= 1L, inherits(formula, 
+                                                           "formula"), length(formula <- as.character(formula)) == 
+              3L, is.numeric(pmm.k), length(pmm.k) == 1L, pmm.k >= 
+              0L, is.numeric(maxiter), length(maxiter) == 1L, maxiter >= 
+              1L, !(c("write.forest", "probability", "split.select.weights", 
+                      "dependent.variable.name", "classification") %in% names(list(...))))
+  if (!is.null(case.weights)) {
+    stopifnot(length(case.weights) == nrow(data), !anyNA(case.weights))
+  }
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+  relevantVars <- lapply(formula[2:3], function(z) attr(terms.formula(reformulate(z), 
+                                                                      data = data[1, ]), "term.labels"))
+  toImpute <- relevantVars[[1]][vapply(data[, relevantVars[[1]], 
+                                            drop = FALSE], FUN.VALUE = TRUE, function(z) anyNA(z) && 
+                                         !all(is.na(z)))]
+  converted <- missRanger:::convert(data[, toImpute, drop = FALSE], check = TRUE)
+  data[, toImpute] <- converted$X
+  visitSeq <- setdiff(toImpute, converted$bad)
+  if (verbose) {
+    cat("\n  Variables to impute:\t\t")
+    cat(visitSeq, sep = ", ")
+  }
+  if (!length(visitSeq)) {
+    if (verbose) {
+      cat("\n")
+    }
+    return(data)
+  }
+  dataNA <- is.na(data[, visitSeq, drop = FALSE])
+  visitSeq <- names(sort(colSums(dataNA)))
+  imputeBy <- relevantVars[[2]][relevantVars[[2]] %in% visitSeq | 
+                                  !vapply(data[, relevantVars[[2]], drop = FALSE], anyNA, 
+                                          TRUE)]
+  completed <- setdiff(imputeBy, visitSeq)
+  if (verbose) {
+    cat("\n  Variables used to impute:\t")
+    cat(imputeBy, sep = ", ")
+  }
+  j <- 1L
+  crit <- TRUE
+  verboseDigits <- 4L
+  predError <- setNames(rep(1, length(visitSeq)), visitSeq)
+  if (verbose >= 2) {
+    cat("\n", abbreviate(visitSeq, minlength = verboseDigits + 
+                           2L), sep = "\t")
+  }
+  while (crit && j <= maxiter) {
+    #if (verbose) {
+    cat(paste0("current: iter ", j, sep = ""))
+    #}
+    dataLast <- data
+    predErrorLast <- predError
+    pb = pbapply::startpb(min = 0, max = length(visitSeq))
+    currv=0
+    for (v in visitSeq) {
+      currv = currv + 1
+      v.na <- dataNA[, v]
+      if (length(completed) == 0L) {
+        data[[v]] <- missRanger::imputeUnivariate(data[[v]])
+      }
+      else {
+        fit <- ranger::ranger(formula = reformulate(completed, 
+                                                    response = v), data = data[!v.na, union(v, 
+                                                                                            completed), drop = FALSE], 
+                              case.weights = case.weights[!v.na],
+                              ...)
+        pred <- predict(fit, data[v.na, completed, drop = FALSE])$predictions
+        data[v.na, v] <- if (pmm.k) 
+          pmm(xtrain = fit$predictions, xtest = pred, 
+              ytrain = data[[v]][!v.na], k = pmm.k)
+        else pred
+        predError[[v]] <- fit$prediction.error/(if (fit$treetype == 
+                                                    "Regression") 
+          var(data[[v]][!v.na])
+          else 1)
+        if (is.nan(predError[[v]])) {
+          predError[[v]] <- 0
+        }
+      }
+      if (j == 1L && (v %in% imputeBy)) {
+        completed <- union(completed, v)
+      }
+      if (verbose == 1) {
+        cat(".")
+      }
+      else if (verbose >= 2) {
+        cat(format(round(predError[[v]], verboseDigits), 
+                   nsmall = verboseDigits), "\t")
+      }
+      pbapply::setpb(pb, currv)
+    }
+    j <- j + 1L
+    crit <- mean(predError) < mean(predErrorLast)
+  }
+  #if (verbose) {
+    cat("\n")
+  #}
+  if (j == 2L || (j == maxiter && crit)) {
+    dataLast <- data
+    predErrorLast <- predError
+  }
+  if (returnOOB) {
+    attr(dataLast, "oob") <- predErrorLast
+  }
+  missRanger:::revert(converted, X = dataLast)
+}
+

@@ -14,7 +14,7 @@ footer.css <- function(RGB.bg = "#ffc8c2", font.col="white"){
                     width:100%;
                     height:40px;
                     z-index:1005;
-                    color: white;
+                    color:$font.col;
                     background-color:$RGB.bg;
                     border-style:solid; 
                     border-color:black;

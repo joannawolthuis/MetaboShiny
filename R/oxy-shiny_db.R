@@ -33,6 +33,16 @@ browse_db <- function(chosen.db){
   result
 }
 
+get_prematched_mz = function(patdb, mainisos){
+  conn <- RSQLite::dbConnect(RSQLite::SQLite(), patdb)
+  query = "SELECT DISTINCT map.query_mz 
+                                      FROM match_mapper map"
+  if(mainisos){
+    query = paste(query, "WHERE `%iso` > 99.9999")
+  }
+  RSQLite::dbGetQuery(conn, query)[[1]]
+}
+
 #' @title Get results of a m/z search
 #' @description Search results are stored in a SQLITE table, which can be returned through this function with filters.
 #' @param who Which m/z to return, Default: NA
@@ -117,7 +127,7 @@ get_prematches <- function(who = NA,
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
   
-  who = gsub("0+$", "", who)
+  #who = gsub("0+$", "", who)
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
   res = RSQLite::dbGetQuery(conn, query)
@@ -165,7 +175,8 @@ get_prematches <- function(who = NA,
 #' @importFrom data.table data.table rbindlist
 score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE, 
                        session=0, intprec, ppm, dbdir,
-                       rtmode=F, rtperc=0.1, useint=T){
+                       rtmode=F, rtperc=0.1, useint=T,
+                       corronly = F, corrmin = 0.9, corrmethod = "pearson"){
   
   if(is.null(rtmode)) rtmode = F
   
@@ -192,24 +203,47 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
   isotopies <- unique(isotopies)
   ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
   
+  if(corronly){
+    qmzcol = which(colnames(mSet$dataSet$norm) == qmz)
+    corr = stats::cor(mSet$dataSet$norm[,qmzcol], 
+                      mSet$dataSet$norm[,-qmzcol],method = corrmethod) 
+    correnough = colnames(corr)[which(corr > corrmin)]
+    if(length(correnough) == 0){
+      print("No m/z is correlated enough! Ignoring correlation requirement.")
+      print(paste0("Max corr found: ", max(corr)))
+      sourcetable = mSet$dataSet$norm
+    }else{
+      if(length(correnough) > 1){
+        sourcetable = mSet$dataSet$norm[,correnough]
+      }else{
+        sourcetable = data.table::data.table(mSet$dataSet$norm[,correnough])
+        colnames(sourcetable) = correnough
+      }
+    }
+  }else{
+    sourcetable = mSet$dataSet$norm
+  }
+  
+  print(dim(sourcetable))
+  
   if(rtmode){
     rt = as.numeric(gsub("(.*RT)", "", qmz))
     rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)  
-    splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+    splitMzRt=stringr::str_split(colnames(sourcetable), "RT")
   }else{
     if(grepl("RT", qmz)){
-      splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+      splitMzRt=stringr::str_split(colnames(sourcetable), "RT")
     }else{
-      splitMzRt=lapply(colnames(mSet$dataSet$proc), function(mz) list(mz, NA))
+      splitMzRt=lapply(colnames(sourcetable), function(mz) list(mz, NA))
     }
   }
   
   mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
   
   colnames(mzRtTable) = c("mz", "rt")
-  mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+  mzRtTable$mzfull = colnames(sourcetable)
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
-  mzRtTable <- mzRtTable[mzmode == ionMode]
+  #mzRtTable <- mzRtTable[mzmode == ionMode]
   mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
   mzRtTable$mz <- as.numeric(mzRtTable$mz) 
   mzRtTable$rt <- as.numeric(mzRtTable$rt) 
@@ -220,7 +254,8 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
   
   if(nrow(mzRtTable) == 0){
     if(inshiny) shiny::showNotification("No isotopes within RT range...")
-    return(data.table::data.table(fullformula = mini.table$fullformula, score = c(0)))
+    return(data.table::data.table(fullformula = mini.table$fullformula,
+                                  score = c(0)))
   }
   
   score_rows = pbapply::pblapply(isotopies, function(l){
@@ -246,7 +281,6 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
     
     bound = do.call("cbind", per_mz_cols)
     colnames(bound) = mzs
-    
     
     theor = matrix(c(l$fullmz, l$isoprevalence), nrow=2, byrow = T)
 
@@ -293,7 +327,7 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
     meanScore = mean(scores_persamp, na.rm = T)
     data.table::data.table(fullformula = formula, score = meanScore)
   })
-  data.table::rbindlist(score_rows)
+  data.table::rbindlist(score_rows, fill=T)
 }
 
 
@@ -491,7 +525,8 @@ getSampInt <- function(conn, filename, all_mz){
 #' @export
 score.add <- function(qmz, table, mSet, inshiny=TRUE, 
                      session=0, mzppm, rtperc=0.1, rtmode=F, dbdir, 
-                     adducts_considered = adducts$Name){
+                     adducts_considered = adducts$Name,
+                     corronly = F, corrmin = 0.9, corrmethod = "pearson"){
   
   if(is.null(rtmode)) rtmode = F
   
@@ -512,13 +547,28 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
   
   ionMode = if(grepl("\\-", qmz)) "neg" else "pos"
   
+  if(corronly){
+    qmzcol = which(colnames(mSet$dataSet$norm) == qmz)
+    corr = stats::cor(mSet$dataSet$norm[,qmzcol], 
+                      mSet$dataSet$norm[,-qmzcol],method = corrmethod) 
+    correnough = colnames(corr)[which(corr > corrmin)]
+    if(length(correnough) == 0){
+      print("No m/z is correlated enough! Ignoring correlation threshold for now.")
+      print(paste0("Max corr found: ", max(corr)))
+    }else{
+      sourcetable = mSet$dataSet$norm[,correnough]
+    }
+  }else{
+    sourcetable = mSet$dataSet$norm
+  }
+  
   if(rtmode){
     rt = as.numeric(gsub("(.*RT)", "", qmz))
     rtRange = c(rt - rtperc/100 * rt, rt + rtperc/100 * rt)
-    splitMzRt=stringr::str_split(colnames(mSet$dataSet$proc), "RT")
+    splitMzRt=stringr::str_split(colnames(sourcetable), "RT")
     mzRtTable = data.table::as.data.table(do.call("rbind", splitMzRt))
     colnames(mzRtTable) = c("mz", "rt")
-    mzRtTable$mzfull = colnames(mSet$dataSet$proc)
+    mzRtTable$mzfull = colnames(sourcetable)
     mzRtTable <- mzRtTable[mzmode == ionMode]
     mzRtTable$mz = gsub("\\+|\\-", "", mzRtTable$mz)
     mzRtTable$mz <- as.numeric(mzRtTable$mz) 
@@ -526,7 +576,7 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
     mzRtTable <- mzRtTable[mzRtTable$rt %between% rtRange,] 
   }else{
     mzRtTable <- data.table::data.table(mz = gsub("(RT.*)-?$", "",
-                                                  colnames(mSet$dataSet$proc)))
+                                                  colnames(sourcetable)))
   }
   
   mzRtTable$mzmode = sapply(mzRtTable$mz, function(mz) if(grepl("\\-", mz)) "neg" else "pos")
@@ -544,5 +594,132 @@ score.add <- function(qmz, table, mSet, inshiny=TRUE,
     list(structure = unique(l$smi), 
          score = sum(per_mz_cols)/length(adducts_considered) * 100)
   })
-  data.table::rbindlist(score_rows)
+  data.table::rbindlist(score_rows, fill=T)
+}
+
+metshiRevSearch = function(mSet, structure, ext.dbname, db_dir){
+  rev_all_matches = MetaDBparse::searchRev(structure, ext.dbname, db_dir)
+  user_mzs = list()
+  user_mzs$neg = grep("\\-", colnames(mSet$dataSet$norm))
+  if(length(user_mzs$neg) > 0){
+    user_mzs$pos = setdiff(1:ncol(mSet$dataSet$norm), user_mzs$neg)
+  }else{
+    user_mzs$pos = 1:ncol(mSet$dataSet$norm)
+  }
+  
+  #Mm = measured m/Q.
+  #Me = exact m/Q.
+  #Mass Accuracy = 1e6 * (Mm-Me)/Me.
+  keep_rows = data.table::rbindlist(lapply(1:nrow(rev_all_matches), function(i){
+    row = rev_all_matches[i,]
+    ionmode = if(row$finalcharge > 0) "pos" else "neg" 
+    check_mz_cols = user_mzs[[ionmode]]
+    matches = colnames(mSet$dataSet$norm)[check_mz_cols]
+    sumnum = as.numeric(gsub("\\-","",matches))
+    in_range = which(sumnum %between% ppm_range(row$fullmz, mSet$ppm))
+    if(length(in_range) > 0){
+      isocols = c("n2H", "n13C", "n15N")
+      if(all(isocols %in% colnames(row))){
+        data.table::data.table(query_mz = matches[in_range],
+                               dppm = sapply(sumnum[in_range], function(mz) 1e6 * abs(sumnum[in_range]-row$fullmz)/row$fullmz),
+                               structure=structure,
+                               adduct = row$adduct,
+                               `%iso`=row$isoprevalence,
+                               isocat = if(row$isoprevalence < 100) "minor" else "main",
+                               fullformula = row$fullformula,
+                               finalcharge = row$finalcharge,
+                               n2H = row$n2H,
+                               n13C = row$n13C,
+                               n15N = row$n15N)
+      }else{
+        data.table::data.table(query_mz = matches[in_range],
+                               dppm = sapply(sumnum[in_range], function(mz) 1e6 * abs(sumnum[in_range]-row$fullmz)/row$fullmz),
+                               structure=structure,
+                               adduct = row$adduct,
+                               `%iso`=row$isoprevalence,
+                               isocat = if(row$isoprevalence < 100) "minor" else "main",
+                               fullformula = row$fullformula,
+                               finalcharge = row$finalcharge,)
+      }
+    }else{
+      data.table::data.table()
+    }
+  }), fill=T)
+}
+
+build.enrich.KEGG <- function(map_id){
+  print("Downloading pathway information...")
+  
+  map_info = KEGGREST::keggGet(map_id)
+  use_ko = grepl("map", map_id)
+  
+  print("Finding all compounds...")
+  pw_compound_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
+    pw_name = map_info[[1]]$REL_PATHWAY[i]
+    pw_info = KEGGREST::keggGet(names(pw_name))[[1]]
+    pw_code = if(use_ko) pw_info$KO_PATHWAY else names(pw_name)
+    if(use_ko){
+      pw_info = KEGGREST::keggGet(pw_code)[[1]]
+    }
+    compounds = pw_info$COMPOUND
+    if(length(compounds) > 0){
+      data.table::data.table(pathway_name = pw_name,
+                             pathway_code = pw_code,
+                             compound_name = compounds,
+                             compound_code = names(compounds))  
+    }else if(length(pw_info$MODULE) > 0){
+      # module route
+      data.table::rbindlist(lapply(1:length(pw_info$MODULE), function(j){
+        mod_name = pw_info$MODULE[j]
+        mod_info = KEGGREST::keggGet(names(mod_name))[[1]]
+        compounds = mod_info$COMPOUND
+        data.table::data.table(pathway_name = pw_name,
+                               pathway_code = names(pw_name),
+                               compound_name = compounds,
+                               compound_code = names(compounds))  
+      }))
+    }else{
+      data.table::data.table()
+    }
+  }), fill = T)
+  
+  pw_compound_table = unique(pw_compound_table)
+  
+  uniq_compounds = unique(pw_compound_table[,3:4])
+  compounds = uniq_compounds$compound_code
+  
+  kegg_max = 10
+  batches = split(compounds, ceiling(seq_along(compounds)/kegg_max))
+  
+  print("Finding compound information...")
+  compound_info_rows = pbapply::pblapply(batches, function(batch){
+    compound_info = KEGGREST::keggGet(batch)
+    mws = sapply(compound_info, function(x) x$EXACT_MASS)
+    has.no.mw = sapply(mws, is.null)
+    data.table::data.table(compound_code = batch[!has.no.mw],
+                           mw = as.numeric(mws[!has.no.mw]))
+  })
+  
+  compound_info_table = data.table::rbindlist(compound_info_rows)
+  
+  pathway_info_full_table = merge(compound_info_table, pw_compound_table, by = "compound_code")
+  
+  all_pathways = unique(pathway_info_full_table$pathway_name)
+  colnames(pathway_info_full_table) <- c("id","mw","pathway_name","pathway_code","name")
+  
+  cpd_only_table = unique(pathway_info_full_table[, c("id", "name", "mw"), with = F])
+  
+  pathways = list(cpds = lapply(all_pathways, function(pw) pathway_info_full_table[pathway_name == pw]$id),
+                  name = all_pathways,
+                  code = unique(pathway_info_full_table$pathway_code))
+  
+  cpd.lib = list(id = cpd_only_table$id,
+                 name = cpd_only_table$name,
+                 mw = cpd_only_table$mw,
+                 adducts = data.frame())
+  
+  mummichog.lib <- list(pathways = pathways, #cpd.tree = cpd.tree, 
+                        cpd.lib = cpd.lib)
+  print(paste0(map_id, " mummichog library created!"))
+  mummichog.lib
 }

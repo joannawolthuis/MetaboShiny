@@ -46,6 +46,8 @@ shiny::observeEvent(input$initialize, {
                                      data.table = TRUE,
                                      header = T)
       
+      if("label" %in% colnames(metshiCSV)) colnames(metshiCSV)[colnames(metshiCSV) == "label"] <- "orig_label"
+      
       keep.samps = !duplicated(metshiCSV$sample)
       metshiCSV = metshiCSV[keep.samps,]
       
@@ -60,7 +62,8 @@ shiny::observeEvent(input$initialize, {
       batches <- input$batch_var
       
       # locate qc containing rows in csv
-      qc.rows <- which(grepl("QC", metshiCSV$sample))
+      qc.rows <- which(grepl("QC", 
+                             metshiCSV$sample))
       
       # for the non-qc samples, check experimental variables. Which have at least 2 different factors, but as little as possible?
       condition <- getDefaultCondition(metshiCSV, 
@@ -102,6 +105,7 @@ shiny::observeEvent(input$initialize, {
       metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
                          "label" = metshiCSV[, ..condition][[1]], # set label as the initial variable of interest
                          metshiCSV[,..mz.vars, with=FALSE])
+      
       
       # remove outliers by making a boxplot and going from there
       if(input$remove_outliers){
@@ -150,7 +154,8 @@ shiny::observeEvent(input$initialize, {
                                               paired = FALSE)
       
       anal.type <<- "stat"
-      mSet$dataSet$paired <- mSet$settings$ispaired <- F
+      
+      mSet$dataSet$paired <-  mSet$dataSet$ispaired <- mSet$settings$ispaired <- F
       
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
@@ -167,22 +172,26 @@ shiny::observeEvent(input$initialize, {
         trans_type = input$trans_type,
         scale_type = input$scale_type,
         max.allow = input$maxMz,
-        ref_var = input$ref_var,
+        ref_var = input$ref_mz,
         batch_var = input$batch_var,
         batch_method_a = input$batch_method_a,
         batch_method_b = input$batch_method_b,
         prematched = F,
         rf_norm_parallelize = input$rf_norm_parallel,
         rf_norm_ntree = input$rf_norm_ntree,
+        rf_norm_method = if(input$rf_norm_method) "ranger" else "rf",
         miss_perc = input$miss_perc_2,
-        orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T))
+        orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T)),
+        pca_corr = input$pca_corr,
+        keep_pcs = input$keep_pcs,
+        renorm = input$redo_upon_change
       )
       
       mSet$dataSet$covars <- data.table::as.data.table(covar_table)
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
-      mSet <- metshiProcess(mSet, session=NULL, init=T)
+      mSet <- metshiProcess(mSet, session=NULL, init=T, cl=session_cl)
       
       # save the used adducts to mSet
       mSet$ppm <- ppm
@@ -200,11 +209,12 @@ shiny::observeEvent(input$initialize, {
 
       if(typeof(mSet) != "double"){
         success = T
-        mSet <<- mSet
         qs::qsave(mSet, file = file.path(lcl$paths$proj_dir, 
                                          paste0(lcl$proj_name,"_ORIG.metshi")))
         
         fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
+        mSet$dataSet$missing <- mSet$dataSet$start <- NULL
+        mSet <<- mSet
         filemanager$do <- "save"
         uimanager$refresh <- c("general","statspicker","ml")
         plotmanager$make <- "general"

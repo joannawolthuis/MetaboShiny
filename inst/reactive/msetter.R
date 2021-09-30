@@ -9,15 +9,20 @@ shiny::observe({
     if(!is.null(mSet)){
       
       try({
-        mSet <- store.mSet(mSet) # save analyses
+        mSet <- store.mSet(mSet, proj.folder = file.path(lcl$paths$work_dir,
+                                                         lcl$proj_name)) # save analyses
         success = F
         
-        if(mSetter$do == "load" & !is.null(mSet$storage[[input$storage_choice]]$data)){
-           mSet <- load.mSet(mSet, input$storage_choice)
+        if(mSetter$do == "load"){
+           # more mem friendly??
+          mSet <- load.mSet(mSet, 
+                            input$storage_choice, 
+                            proj.folder = file.path(lcl$paths$work_dir,
+                                                    lcl$proj_name))
         }else{
           
           oldSettings <- mSet$settings
-          
+
           mSet <- reset.mSet(mSet,
                              fn = file.path(lcl$paths$proj_dir, 
                                             paste0(lcl$proj_name,
@@ -57,6 +62,17 @@ shiny::observe({
                            mSet$dataSet$ispaired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
                            mSet
                          },
+                         subset_mz = {
+                           if(input$subset_mzs == "prematched"){
+                             keep.mzs = get_prematched_mz(patdb = lcl$paths$patdb,
+                                                          mainisos = input$subset_mz_iso)
+                           }
+                           
+                           mSet <- subset_mSet_mz(mSet,
+                                                  keep.mzs = keep.mzs)
+                           mSet$dataSet$ispaired <- mSet.settings$ispaired
+                           mSet
+                         },
                          subset = {
                            mSet <- subset_mSet(mSet,
                                                subset_var = input$subset_var, 
@@ -73,12 +89,6 @@ shiny::observe({
           mSet$analSet <- list(type = "stat")
           mSet$analSet$type <- "stat"
           
-          if(input$redo_upon_change){
-            mSet$dataSet$orig <- mSet$dataSet$start
-            mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
-            mSet <- metshiProcess(mSet)
-          }
-          
           if(mSetter$do == "change"){
             if(input$omit_unknown & grepl("^1f", input$stats_type)){
               shiny::showNotification("omitting 'unknown' labeled samples...")
@@ -88,6 +98,8 @@ shiny::observe({
                                     subset_var = "sample", 
                                     subset_group = knowns) 
               }
+            }else{
+              knowns = mSet$dataSet$covars$sample
             }
             mSet <- change.mSet(mSet, 
                                 stats_var = input$stats_var, 
@@ -102,6 +114,8 @@ shiny::observe({
                                     subset_var = "sample", 
                                     subset_group = knowns) 
               }
+            }else{
+              knowns = mSet$dataSet$covars$sample
             }
             mSet <- change.mSet(mSet, 
                                 stats_var = mSet.settings$exp.var, 
@@ -109,20 +123,64 @@ shiny::observe({
                                 stats_type = mSet.settings$exp.type)
           }
           
-          new.name = if(mSetter$do == "load") input$storage_choice else name.mSet(mSet)
+          samps = mSet$dataSet$covars$sample
+          # CHECK IF DATASET WITH SAME SAMPLES ALREADY THERE
+          matching.samps = sapply(mSet$storage, function(saved){
+            samplist = saved$samples
+            if(length(samps) == length(samplist)){
+              all(knowns == samplist)  
+            }else{
+              F
+            }
+          })
           
-          if(new.name %in% names(mSet$storage)){
-            mSet <- load.mSet(mSet, new.name)
+          if(!("renorm" %in% names(mSet$metshiParams))){
+            mSet$metshiParams$renorm <- TRUE
           }
           
-          mSet$settings$cls.name <- new.name
+          # === PAIR ===
           
           if(mSet$dataSet$ispaired){
+            print("Paired analysis a-c-t-i-v-a-t-e-d")
             mSet$settings$ispaired <- TRUE
             mSet <- pair.mSet(mSet)
           }else{
             mSet.settings$ispaired <- FALSE
           }
+          
+          # ============
+          already.normalized = any(matching.samps) & oldSettings$ispaired == input$paired
+          
+          if(already.normalized){
+            tables = c("orig", "norm", "proc", "prebatch", "covars")
+            print("recycling from another meta-dataset!")
+            use.dataset = names(which(matching.samps))[1]
+            use.dataset = gsub(pattern = "[^\\w]", replacement = "_", x = use.dataset, perl = T)
+            recycle.mSet = qs::qread(file.path(lcl$paths$work_dir,
+                                               lcl$proj_name,
+                                               paste0(use.dataset, ".metshi")))
+            for(tbl in tables){
+              mSet$dataSet[[tbl]] <- recycle.mSet$dataSet[[tbl]]
+            }
+            mSet$report <- recycle.mSet$report
+          }else{
+            if(mSet$metshiParams$renorm){
+              mSet$dataSet$orig <- mSet$dataSet$start
+              mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
+              mSet <- metshiProcess(mSet, cl = session_cl) #mSet1
+            }  
+          }
+          
+          new.name = if(mSetter$do == "load") input$storage_choice else name.mSet(mSet)
+          
+          if(new.name %in% names(mSet$storage)){
+            mSet <- load.mSet(mSet, 
+                              new.name, 
+                              proj.folder = lcl$paths$proj_dir)
+          }
+          
+          mSet$settings$cls.name <- new.name
+          
           if(grepl(mSet$settings$exp.type, pattern = "^1f")){
             if(mSet$dataSet$cls.num == 2){
               mSet$settings$exp.type <- "1fb"
@@ -141,16 +199,16 @@ shiny::observe({
             shiny::showNotification(msg) 
           })
           print(msg)
+          mSet <<- mSet
+          lcl$has_changed <<- TRUE
+          uimanager$refresh <- c("general", "ml")
         }else{
-          msg = "ordering went wrong with the mset sample order! :("
+          msg = "mSet class label order incorrect! Restoring... :("
           try({
             shiny::showNotification(msg)
           })
           print(msg)
         }
-        mSet <<- mSet
-        lcl$has_changed <<- TRUE
-        uimanager$refresh <- c("general", "ml")
       }else{
         metshiAlert("Failed! Restoring old mSet...")
       }

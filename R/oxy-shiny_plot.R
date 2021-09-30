@@ -28,11 +28,15 @@ ggplotNormSummary <- function(mSet,
   which_samps <- sample(candidate.samps, sampsize, replace = FALSE, prob = NULL)
   
   # isolate these samples from original table and melt into long format (ggplot needs it!)
-  orig_melt <- reshape2::melt(cbind(which_samps, orig_data[which_samps, which_cpds]))
+  orig_melt <- reshape2::melt(cbind(which_samps, 
+                                    orig_data[which_samps, which_cpds]),
+                              id.vars = "which_samps")
   orig_melt[is.na(orig_melt)] <- 0 # replace NA values with 0
   
   # isolate these samples from normalized table and melt into long format
-  norm_melt <- reshape2::melt(cbind(which_samps, norm_data[which_samps, which_cpds]))
+  norm_melt <- reshape2::melt(cbind(which_samps, 
+                                    norm_data[which_samps, which_cpds]),
+                              id.vars = "which_samps")
   
   # create base plot with base theme and font size for original data
   plot <- ggplot2::ggplot(data=orig_melt)
@@ -268,13 +272,15 @@ blackwhite.colors <- function(n){
 #' @importFrom ggplot2 ggplot geom_boxplot geom_violin geom_point annotate stat_summary scale_color_manual scale_fill_manual xlab
 #' @importFrom Hmisc capitalize
 #' @importFrom ggbeeswarm geom_beeswarm
-ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pink"),
+ggplotSummary <- function(mSet, cpd, 
+                          shape.fac = "label", 
+                          cols = c("black", "pink"),
                           cf = rainbow, 
                           mode = "nm", 
                           styles=c("box", "beeswarm"), add_stats = "mean",
                           color.fac = "label",
                           text.fac = "label",
-                          fill.fac="label"){
+                          fill.fac = "label"){
   
   sourceTable = mSet$dataSet$norm
   
@@ -396,7 +402,11 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                                               shape = Shape,
                                                                                                               color = Color,
                                                                                                               fill = Fill), 
-                                                               position = position_jitterdodge())
+                                                               position = position_jitterdodge()),
+                             sina = p + ggforce::geom_sina(data = prof, position = "identity", ggplot2::aes(x = Group,
+                                                                                                            y = Abundance,
+                                                                                                            color = Color,
+                                                                                                            fill = Fill))
                  )
                },
                multi = {
@@ -413,6 +423,12 @@ ggplotSummary <- function(mSet, cpd, shape.fac = "label", cols = c("black", "pin
                                                                                                                            text = Text,
                                                                                                                            color = Color,
                                                                                                                            fill = Fill)),#GroupB)),
+                             sina = p + ggforce::geom_sina(data = prof, position = "identity", ggplot2::aes(x = GroupB,
+                                                                                                            y = Abundance,
+                                                                                                            group = GroupB,
+                                                                                                            text = Text,
+                                                                                                            color = Color,
+                                                                                                            fill = Fill)),#GroupB)),
                              beeswarm = {
                                p + ggbeeswarm::geom_beeswarm(data = prof, alpha=0.7, size = 2, position = ggplot2::position_dodge(width=.3), ggplot2::aes(x = GroupB,
                                                                                                                                                           y = Abundance,
@@ -520,12 +536,18 @@ ggPlotASCA <- function(mSet, cf, n=20){
 }
 
 #' @export 
-ggPlotMeba <- function(mSet, cf, n=20){
+ggPlotMeba <- function(mSet, cf, n=20, topn=NULL){
   profile = data.table::as.data.table(mSet$analSet$MB$stats, keep.rownames = T)
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
   }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
+  }
+  
   profile$Peak <- c(1:nrow(profile))
   colnames(profile)[1:2] <- c("m/z", "Hotelling-T2")
   scaleFUN <- function(x) sprintf("%.1f", x)
@@ -564,7 +586,7 @@ ggPlotMeba <- function(mSet, cf, n=20){
 #' @importFrom data.table as.data.table
 #' @importFrom shiny showNotification
 #' @importFrom ggplot2 ggplot geom_point aes scale_x_discrete scale_colour_gradientn scale_y_continuous
-ggPlotAOV <- function(mSet, cf, n=20){
+ggPlotAOV <- function(mSet, cf, n=20, topn=NULL){
   
   which_aov = if(mSet$settings$exp.type %in% c("t","2f", "t1f")) "aov2" else "aov"
   
@@ -579,6 +601,11 @@ ggPlotAOV <- function(mSet, cf, n=20){
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = if(which_aov == "aov") T else F)]
+    profile = profile[1:min(topn, nrow(profile)),]
   }
   
   #profile[,2] <- round(profile[,2], digits = 2)
@@ -620,12 +647,17 @@ ggPlotAOV <- function(mSet, cf, n=20){
 #' @importFrom data.table as.data.table
 #' @importFrom shiny showNotification
 #' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
-ggPlotTT <- function(mSet, cf, n=20){
+ggPlotTT <- function(mSet, cf, n=20, topn=NULL){
   profile <- data.table::as.data.table(mSet$analSet$tt$p.log[mSet$analSet$tt$inx.imp],keep.rownames = T)
   
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
   }
   
   profile[,2] <- round(profile[,2], digits = 2)
@@ -636,18 +668,20 @@ ggPlotTT <- function(mSet, cf, n=20){
   xaxis = seq(0,600, 50)
   
   # ---------------------------
-  p = ggplot2::ggplot(data=profile,ggplot2::aes(y=Peak,
-                                                 x=`-log(p)`,
-                                                 text=`m/z`,
-                                                 color=`-log(p)`, 
-                                                 key=`m/z`)) +
-    ggplot2::geom_point(size=2.5) +
-    ggplot2::geom_segment(aes(y = Peak, 
+  
+  p = ggplot2::ggplot() +
+    ggplot2::geom_point(data=profile,ggplot2::aes(y=Peak,
+                                                  x=`-log(p)`,
+                                                  text=`m/z`,
+                                                  color=`-log(p)`, 
+                                                  key=`m/z`),
+                        size=2.5) +
+    ggplot2::geom_segment(data=profile,aes(y = Peak,
                               yend = Peak,
                               color=`-log(p)`,
                               x = 0,
                               xend = `-log(p)`)) +
-    ggplot2::scale_colour_gradientn(colours = cf(n)) + 
+    ggplot2::scale_colour_gradientn(colours = cf(n)) +
     ggplot2::coord_flip()
   #ggplot2::scale_y_continuous()
   p
@@ -720,12 +754,17 @@ ggPlotPattern <- function(mSet, cf, n=20){
 #' @importFrom data.table as.data.table
 #' @importFrom shiny showNotification
 #' @importFrom ggplot2 ggplot geom_point aes geom_vline scale_y_continuous scale_colour_gradientn
-ggPlotFC <- function(mSet, cf, n=20){
+ggPlotFC <- function(mSet, cf, n=20, topn=NULL){
   profile <- data.table::as.data.table(mSet$analSet$fc$fc.log[mSet$analSet$fc$inx.imp],keep.rownames = T)
   
   if(nrow(profile)==0){
     shiny::showNotification("No significant hits")
     return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
   }
   
   colnames(profile) <- c("m/z", "log2fc")
@@ -751,6 +790,82 @@ ggPlotFC <- function(mSet, cf, n=20){
   p
 }
 
+#' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
+ggPlotCombi <- function(mSet,
+                        cf,
+                        n=20,
+                        color_all_vals = F,
+                        pointsize = 2){
+  
+    dt = data.table::as.data.table(mSet$analSet$combi$sig.mat)
+    anal1_trans = mSet$analSet$combi$trans$x
+    anal2_trans = mSet$analSet$combi$trans$y
+    
+    anal1 = mSet$analSet$combi$source$x
+    anal2 = mSet$analSet$combi$source$y
+    
+    anal1_col = colnames(dt)[2]
+    anal2_col = colnames(dt)[3]
+    
+    colnames(dt) <- c("m/z", "x", "y")#anal1_col, anal2_col)
+    dt$col <- abs(dt[,2]*dt[,3])
+    dt$significant <- "YES"
+    
+    if(length(mSet$analSet$combi$all.vals$x) > 0 & length(mSet$analSet$combi$all.vals$y) > 0){
+      x.all = mSet$analSet$combi$all.vals$x
+      x.tbl = data.table::data.table("m/z" = names(x.all),
+                                     x = x.all)
+      y.all = mSet$analSet$combi$all.vals$y
+      y.tbl = data.table::data.table("m/z" = names(y.all),
+                                     x = y.all)
+      dt.merged = merge(x.tbl, y.tbl, by.x="m/z", by.y="m/z")
+      
+      dt.all = data.table::data.table("m/z" = dt.merged$`m/z`,
+                                         x = dt.merged$x.x,
+                                         y = dt.merged$x.y,
+                                         col = c(0),
+                                         significant = "NO")
+      dt.all[`m/z` %in% dt$`m/z`]$significant <- "YES"
+      dt = dt.all
+    }
+    
+    scaleFUN <- function(x) sprintf("%.2f", x)
+    
+    anal1_col = if(anal1_trans != "none") paste0(anal1_trans,"(", anal1_col,")") else anal1_col
+    anal2_col = if(anal2_trans != "none") paste0(anal2_trans,"(", anal2_col,")") else anal2_col
+    
+    dt$V = dt$x * dt$y
+    
+    p <- if(color_all_vals){
+      ggplot2::ggplot() +
+        ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
+                                                  y=y,
+                                                  fill=abs(V),
+                                                  text=`m/z`,
+                                                  key=`m/z`),
+                            linesize = 0.5,
+                            cex = pointsize,shape=21) +
+        ggplot2::scale_fill_gradientn(colours = cf(n)) +
+        ggplot2::scale_x_continuous(labels=scaleFUN) + 
+        ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
+        ggplot2::ylab(paste0(anal2, ": ", anal2_col))
+    }else{
+      ggplot2::ggplot() +
+        ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
+                                                  y=y,
+                                                  fill=significant, #col,
+                                                  text=`m/z`,
+                                                  key=`m/z`), cex=pointsize, shape=21) +
+        scale_fill_manual(values=c("YES" = "red",
+                                    "NO" = "darkgray")) +
+        #ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
+        ggplot2::scale_x_continuous(labels=scaleFUN) + 
+        ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
+        ggplot2::ylab(paste0(anal2, ": ", anal2_col)) 
+    }
+    p
+}
+
 #' @title Generate volcano plot
 #' @description Function to generate ggplot or plotly plot for volcano plot
 #' @param mSet mSet object
@@ -767,7 +882,7 @@ ggPlotFC <- function(mSet, cf, n=20){
 ggPlotVolc <- function(mSet,
                        cf,
                        n=20){
-  
+
   vcn<-mSet$analSet$volcano;
   
   if(nrow(vcn$sig.mat)==0){
@@ -780,14 +895,22 @@ ggPlotVolc <- function(mSet,
   colnames(dt) <- c("m/z", "log2FC", "-log10P")
   dt$col <- with(dt, abs(log2FC*`-log10P`))
   
+  scaleFUN <- function(x) sprintf("%.2f", x)
+  
   p <- ggplot2::ggplot() +
     ggplot2::geom_point(data=dt, ggplot2::aes(x=log2FC,
                                               y=`-log10P`,
                                               color=col,
                                               text=`m/z`,
-                                              key=`m/z`)) +
-    
-    ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) 
+                                              key=`m/z`),cex=3) +
+    ggplot2::geom_segment(data=dt,aes(y = 0,
+                              yend = `-log10P`,
+                              x = 0,
+                              xend = `log2FC`,
+                              color = col 
+                              ),alpha=0.2,linetype=6) +
+    ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
+    ggplot2::scale_x_continuous(labels=scaleFUN)
   
   p
 }
@@ -876,108 +999,199 @@ ggPlotPerm <- function(mSet,
   p
 }
 
-ggPlotMLMistakes <- function(pred, test_sampnames, metadata_focus = c("sample"), rep=1){
+ggPlotMLMistakes <- function(predictions,
+                             labels,
+                             test_sampnames, 
+                             cutoffs,
+                             covars,
+                             metadata_focus = c(), cf=rainbow, 
+                             show_reps=F,smooth_line=T){
   # miss metadata plot
-  predict_test = pred@predictions[[rep]]
-  labels = pred@labels[[rep]]
-  cutoffs = pred@cutoffs[[rep]]
-  metadata_focus = c("sample", "country")
-  wrong_hits = pbapply::pblapply(cutoffs, function(x){
-    predicted_labels = sapply(predict_test, function(y) if(y < x) "classFcs12" else 'classFcs345')
-    correct = predicted_labels == labels
-    test_meta = mSet$dataSet$covars[sample %in% test_sampnames, ..metadata_focus]
-    incorrect = test_sampnames[which(!correct)]
-    tbl = data.table(mistaken = incorrect,
-                     country = test_meta[sample %in% incorrect,"country"][[1]],
-                     cutoff = rep(x, length(incorrect)))
-    tbl$country_total = sapply(tbl$country, function(cntr) nrow(test_meta[country == cntr]))
-    tbl$wrong_perc_country = sapply(tbl$country, function(cntr) (nrow(tbl[country == cntr])/tbl[country == cntr,"country_total"][[1]][1])*100)
-    tbl
-  })
-  res = data.table::rbindlist(wrong_hits)
-  res = res[cutoff != Inf]
-  ggplot2::ggplot(data = res) + geom_line(aes(x = cutoff, 
-                                              y = wrong_perc_country, 
-                                              color = country), cex = 1)
+  metadata_with_sample = c("sample", metadata_focus)
+  test_meta = covars[sample %in% test_sampnames, ..metadata_with_sample]
+  uniqvars = unique(test_meta[[2]])
   
-}
-#' @title Generate ROC plot
-#' @description Function to generate ggplot or plotly ROC plot for machine learning
-#' @param data Model data
-#' @param attempts Number of models that were created, Default: 50
-#' @param cf Function to get plot colors from
-#' @param class_type Binary or multivariate? (b/m), Default: 'b'
-#' @return GGPLOT or PLOTLY object(s)
-#' @seealso 
-#'  \code{\link[shiny]{showNotification}}
-#'  \code{\link[pbapply]{pbapply}}
-#'  \code{\link[ggplot2]{geom_path}},\code{\link[ggplot2]{annotate}},\code{\link[ggplot2]{stat_summary_bin}},\code{\link[ggplot2]{scale_manual}},\code{\link[ggplot2]{coord_fixed}},\code{\link[ggplot2]{coord_cartesian}}
-#' @rdname ggPlotROC
-#' @export 
-#' @importFrom shiny showNotification
-#' @importFrom pbapply pbsapply
-#' @importFrom ggplot2 geom_path annotate stat_summary_bin scale_color_manual coord_fixed coord_cartesian
-ggPlotROC <- function(data,
-                      attempts = 50,
-                      cf,
-                      class_type="b"){
-  
-  mean.auc <- data$m_auc
-  perf.long <- data$perf
-  
-  means.per.comp=perf.long[, lapply(.SD, mean), by = comparison]
-  
-  ncomp = length(unique(means.per.comp$comparison))
-  if(ncomp > 2){
-    cols = cf(ncomp + 1)
-    class_type = "m"
-    try({
-      shiny::showNotification("Calculating AUCs per comparison...")
-    })
-    perf.long$comparison <- pbapply::pbsapply(perf.long$comparison,
-                                              function(comp){
-                                                paste0(comp, " || avg. AUC=", round(means.per.comp[comparison == comp]$AUC_PAIR, digits=3), " ||")
-                                              })  
+  lvls = levels(labels[[1]])
+  if(length(lvls) > 2){
+    data = data.frame(text = "Only available for data with 2 groups!")
+    ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+      ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
   }else{
-    cols = cf(max(as.numeric(perf.long$attempt)))
-    class_type = "b"
+    pred <- ROCR::prediction(lapply(predictions, function(l) l[[1]]), labels)
+    cutoffs = pred@cutoffs
+    predictions = pred@predictions
+    
+    all_reps = pbapply::pblapply(1:length(predictions), function(rep){
+      predict_test = predictions[[rep]]#[[1]]
+      labels = labels[[rep]]
+      cutoffs = cutoffs[[rep]]
+      classes = levels(labels)
+      wrong_hits = lapply(cutoffs, function(x){
+        predicted_labels = sapply(predict_test, function(y) if(y < x) classes[1] else classes[2])
+        correct = predicted_labels == labels
+        incorrect = test_sampnames[which(!correct)]
+        tbl = data.table(mistaken = incorrect,
+                         meta_var = test_meta[sample %in% incorrect, ..metadata_with_sample][[2]],
+                         cutoff = rep(x, length(incorrect)))
+        for(unique_var in uniqvars){
+          ntotal = sum(test_meta[[metadata_focus]] == unique_var)
+          tbl[meta_var == unique_var, "var_total"] <- ntotal
+          in_missing = nrow(tbl[meta_var == unique_var])
+          miss_perc = in_missing/tbl[meta_var == unique_var,"var_total"][[1]][1]*100
+          tbl[meta_var == unique_var, "wrong_perc_var"] <- miss_perc  
+        }
+        tbl
+      })
+      res = data.table::rbindlist(wrong_hits)
+      res$rep = rep
+      res[cutoff != Inf] 
+    })
+    res = data.table::rbindlist(all_reps)
+    
+    line_fun = if(smooth_line) geom_smooth else geom_line
+    p = ggplot2::ggplot(data = res,aes(x = cutoff, 
+                                       y = wrong_perc_var,
+                                       text = meta_var,
+                                       color = meta_var)) + 
+      #geom_point() +
+      line_fun(cex = 1,se = FALSE ) +
+      ggplot2::scale_color_manual(name = metadata_focus, 
+                                  values=cf(length(unique(res$meta_var)))) +
+      ggplot2::xlab("Cutoff") + ggplot2::ylab("% of testing mistakes")
+    if(show_reps) p + facet_grid("rep") else p
+  }
+}
+#' @title Generate ROC/PrecRec plot
+#' @description Function to generate ggplot or plotly ROC/PrecRec plot for machine learning
+#' @rdname ggPlotCurves
+#' @export 
+ggPlotCurves = function(ml_performance, cf = rainbow){
+  
+  perf.long = ml_performance$coords
+  
+  AUC = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
+                      perf.long[`Test set` == "Test" & !(shuffled)]$y)
+
+  cat("Test AUC:")
+  cat(AUC)
+  cat("\n")
+  
+  class_type = "b"
+  scaleFUN <- function(x) sprintf("%.5s", x)
+  
+  uniq = unique(perf.long$`Test set`)
+  colMap = cf(length(uniq))
+  names(colMap) = uniq
+  colMap['Test'] = "black"
+  colMap['Shuffled'] = "red"
+  colMap['Training'] = "cyan"#"blue"
+  
+  shuffleAUCs = NULL
+  
+  needs.ci = list()
+
+  inset.df = data.table::data.table()
+  # shuffled first
+  if(any(perf.long$shuffled)){
+
+    shuffle_data = perf.long[(shuffled)]
+    
+    try({
+      shuffleSplit = split(shuffle_data, shuffle_data$run)
+      shuffleAUCs = sapply(shuffleSplit, function(t){
+        pracma::trapz(t[`Test set` == "Test"]$x, 
+                      t[`Test set` == "Test"]$y)
+      })  
+      if(length(shuffleSplit) > 1){
+        # test normality
+        lbl = "NA"
+        AUC_txt = "NA"
+        try({
+          p = shapiro.test(shuffleAUCs)
+          if(p$p.value > 0.05){
+            # chance of shuffled being better than AUC -> get p value from this
+            tt_res = t.test(shuffleAUCs, mu = AUC, alternative = "less")
+            p = tt_res$p.value
+            stars = MetaboShiny::p2stars(p)
+            sigmeasure = paste0("(",stars,")")
+            lbl = stars  
+            AUC_txt = paste0(stars, "\nAUC: ", sprintf("%.4s",AUC))
+          }else{
+            print("Shuffle AUC distribution isn't normally distributed, need more shuffled runs for p-value...")
+          }  
+        })
+        
+        dens_dat = data.table::data.table(auc = shuffleAUCs)
+        dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
+          ggplot2::geom_density(color="gray",fill="gray") +
+          ggplot2::geom_segment(mapping = aes(y=.3, yend=0, 
+                                              x = AUC, xend = AUC), color = "black", cex=0.5,
+                                arrow = ggplot2::arrow(type = "closed",length = unit(.1, "npc")))+
+          #ggplot2::annotate("text", x = AUC, y = 1.16, label = lbl) +
+          ggplot2::theme_void() + ggplot2::expand_limits(x=c(0.9),y=c(0,1.5))
+        
+        inset.df <- tibble::tibble(x = 0.92, y = 0.1,
+                                   plot = list(dens)) 
+      }else{
+        print("Need more shuffled runs for p-value...")
+        lbl = "NA"
+        AUC_txt = "NA"
+      }
+    })
+    
+    needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
+    needs.ci$shuffled$`Performance` = 'Shuffled'
+  }else{
+    AUC_txt = paste0("AUC: ", sprintf("%.4s", AUC))
   }
   
-  p <- ggplot2::ggplot(perf.long, ggplot2::aes(FPR,TPR,
-                                               key = attempt,
-                                               text = attempt)) +
-    ggplot2::geom_path(alpha=.5,
-                       cex=.7,
-                       ggplot2::aes(color = if(class_type == "m") comparison else as.factor(attempt),
-                                    text = if(class_type == "m") comparison else as.factor(attempt),
-                                    key = if(class_type == "m") comparison else as.factor(attempt),
-                                    group = attempt)) +
-    ggplot2::annotate("text",
-                      label = paste0("Average AUC: ",
-                                     format(mean.auc,
-                                            2,
-                                            drop0trailing = TRUE,
-                                            digits = 2)),
-                      size = 8,
-                      x = 0.77,
-                      y = 0.03) +
-    ggplot2::labs(color = if(class_type == "m") "Comparison" else "Attempt",
-                  text = if(class_type == "m") "Comparison" else "Attempt",
-                  key = if(class_type == "m") "Comparison" else "Attempt") +
-    
-    ggplot2::stat_summary_bin(#alpha=.6,
-      ggplot2::aes(FPR, TPR, 
-                   group = comparison,
-                   color = if(class_type == "m") comparison else NULL), 
-      fun=mean, geom="line", 
-      cex = 2.3) + #,color="black") +
-    ggplot2::scale_color_manual(values = cols) +
-    #scale_y_continuous(limits=c(0,1)) +
-    ggplot2::coord_fixed(ratio = 1, xlim = NULL, ylim = NULL, expand = TRUE) +
-    ggplot2::coord_cartesian(xlim = c(.04,.96), ylim = c(.04,.96))
+  needs.ci$training = perf.long[!(shuffled)]
+  needs.ci$training$`Performance` = "Training"
+  ci.table = data.table::rbindlist(needs.ci)
+  ci.table$Performance = as.factor(ci.table$Performance)
   
-  p
+  myplot <- ggplot2::ggplot() + 
+    ggplot2::geom_smooth(data = ci.table,
+                         cex = 1,
+                         alpha=0.2,  
+                         linetype=2,show.legend = F,
+                         mapping = ggplot2::aes(x = x,
+                                      y = y,
+                                      group = Performance,
+                                      color = Performance,
+                                      fill = Performance
+                         )) +
+    ggplot2::geom_step(data = perf.long[`Test set` == "Test" & !(shuffled)], 
+                       cex=2,
+                       ggplot2::aes(x = x,
+                                    y = y,
+                                    group = `Test set`,
+                                    color = `Test set`,
+                                    text = paste0(`Test set`, " - Cutoff:", cutoff),
+                                    key = paste0(`Test set`, " - Cutoff:", cutoff))) +
+    ggplot2::xlab(ml_performance$names$x) + 
+    ggplot2::ylab(ml_performance$names$y) + 
+    ggplot2::scale_x_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(0,1), oob=scales::squish) + 
+    ggplot2::scale_y_continuous(breaks = seq(0,1,0.25), expand = c(0, 0), limits = c(-0.005,1.005), oob=scales::squish) +
+    ggplot2::scale_color_manual(values = colMap) +
+    ggplot2::scale_fill_manual(values = colMap) +
+    ggplot2::annotate(geom = "text", label = AUC_txt,
+                      x = 0.82, y = 0.05, size=7, lineheight = .5) +
+    ggplot2::expand_limits(x = 0, y = 0)
+  
+  if(nrow(inset.df)>0){
+    myplot = myplot +
+      ggpp::geom_plot_npc(data = inset.df,
+                          vp.width = 1/4, vp.height = 1/4,
+                          mapping=ggplot2::aes(npcx = x,
+                                               npcy = y,
+                                               label = plot)) 
+  }
+
+  #-----------------------
+  myplot
 }
+
 
 #' @title Generate machine learning importance bar plot
 #' @description Function to generate ggplot or plotly variable importance barplot for machine learning
@@ -1007,6 +1221,9 @@ ggPlotBar <- function(data,
   }else{
     lname <- "all"
   }
+
+  data = data.table::as.data.table(data, keep.rownames=T)[,1:2]
+  colnames(data) = c("m/z", "importance")
   
   if(ml_type == "glmnet"){
     colnames(data) = c("m/z", "importance.mean", "dummy")
@@ -1014,7 +1231,8 @@ ggPlotBar <- function(data,
   }else{
     data.norep <- data#[,-3]
     colnames(data.norep)[1] <- "m/z"
-    data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
+    data.ci = data.norep
+    data.ci$importance.mean <- data.ci$importance
     data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]      
   }
   
@@ -1025,13 +1243,16 @@ ggPlotBar <- function(data,
   p <- ggplot2::ggplot(data.subset, 
                        ggplot2::aes(x = reorder(`m/z`, -importance.mean),
                                     y = importance.mean,
+                                    fill = importance.mean,
+                                    colour = importance.mean,
                                     text = `m/z`,
                                     key = `m/z`)) +
-    ggplot2::geom_bar(stat = "identity",
-                      ggplot2::aes(fill = importance.mean)) +
+    ggplot2::geom_bar(stat = "identity") +
     #ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90))+
     ggplot2::scale_fill_gradientn(colors=cf(20)) +
-    ggplot2::labs(x="Top hits (m/z)",y=if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
+    ggplot2::scale_color_gradientn(colors=cf(20)) +
+    ggplot2::labs(x = "Top hits (m/z)",
+                  y = if(ml_type == "glmnet") "Times included in final model" else "Relative importance (%)")
   
   if(topn <= 15){
     p <- p + ggplot2::geom_text(ggplot2::aes(x=`m/z`, 
@@ -1041,8 +1262,7 @@ ggPlotBar <- function(data,
   }
   
   mzdata <- p$data
-  mzdata$`m/z` <- gsub(mzdata$`m/z`, pattern = "`|'", replacement="")
-  
+
   list(mzdata = mzdata, plot = p)
 }
 
@@ -1262,7 +1482,8 @@ plotPCA.3d <- function(mSet,
                        type="pca",font,
                        col.fac = "label",
                        fill.fac = "label",
-                       mode="normal",cf,
+                       mode="normal",
+                       cf,
                        ellipse=T){
   
   pcx = as.numeric(pcx)
@@ -1566,8 +1787,14 @@ plotPCA.3d <- function(mSet,
 #' @importFrom ggplot2 ggplot geom_point stat_ellipse scale_x_continuous scale_y_continuous scale_fill_manual scale_color_manual ggtitle
 #' @importFrom gsubfn fn
 #' @importFrom Hmisc capitalize
-plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill.fac = "label",
-                       pcx, pcy, mode="normal", type="pca",
+plotPCA.2d <- function(mSet, 
+                       shape.fac = "label", 
+                       cols, 
+                       col.fac = "label", 
+                       fill.fac = "label",
+                       pcx, pcy, 
+                       mode="normal",
+                       type="pca",
                        cf = rainbow, ellipse=T){
   
   classes <- if(mode == "ipca"){
@@ -1669,7 +1896,7 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
   
   dat_long$fill <- if(is.null(fill.fac)){
     dat_long$group
-  } else if(fill.fac == "label"){
+  }else if(fill.fac == "label"){
     dat_long$group
   }else{
     as.factor(mSet$dataSet$covars[,..fill.fac][[1]])
@@ -1721,21 +1948,29 @@ plotPCA.2d <- function(mSet, shape.fac = "label", cols, col.fac = "label",  fill
                   plsda = "Component ")
   
   p <- ggplot2::ggplot(dat_long, ggplot2::aes(x, y,group=group)) +
-    ggplot2::geom_point(size=6, ggplot2::aes(
+    ggplot2::geom_point(size=5, ggplot2::aes(
       shape=shape,
       text=variable,
       fill=fill,
-      color=color), alpha=0.7,stroke = 1.5)+
+      color=color), alpha=0.7,stroke = 1)+
     ggplot2::scale_x_continuous(name = paste0(title_prefix, pcx, if(x.var != "") gsubfn::fn$paste("($x.var%)") else ""))+
     ggplot2::scale_y_continuous(name = paste0(title_prefix, pcy, if(y.var != "") gsubfn::fn$paste("($y.var%)") else ""))+
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::scale_color_manual(values = cols) +
     ggplot2::scale_shape_manual(values = as.numeric(symbols)) +
     ggplot2::guides(fill = ggplot2::guide_legend(fill = ggplot2::guide_legend(override.aes = list(shape = 21)),
-                                                 color = ggplot2::guide_legend(override.aes = list(shape = 21))))
-  
+                                                 color = ggplot2::guide_legend(override.aes = list(shape = 21)))
+                    )
+
   if(ellipse){
-    p <- p + ggplot2::stat_ellipse(geom = "polygon", ggplot2::aes(fill=group), alpha = 0.3,level = .95, type = "norm",)
+    p <- p + ggplot2::stat_ellipse(geom = "polygon", 
+                                   ggplot2::aes(group=fill, 
+                                                fill=fill,
+                                                x=x,
+                                                y=y), 
+                                   alpha = 0.3,
+                                   level = .95,
+                                   type = "norm")
   }
   
   if(mode == "ipca"){
@@ -1766,37 +2001,96 @@ ggPlotVenn <- function(mSet,
                        venn_yes,
                        top = 100,
                        cols,
+                       filter_mode="top",
+                       plot_mode = "venn",
                        cf){
   
-  flattened <- getTopHits(mSet, unlist(venn_yes$now), top)
+  flattened <- getTopHits(mSet,
+                          unlist(venn_yes$now$name), 
+                          top, 
+                          thresholds = if(filter_mode == "top") c("") else venn_yes$now$threshold,
+                          filter_mode = filter_mode)
   
-  parseFun = function(labels){
-    sapply(labels, function(label){
-      if(grepl(label, pattern=":")){
-        split = trimws(stringr::str_split(label, ":")[[1]])
-        stats_on = toupper(split[1])
-        which_stats = split[length(split)]
-        subset = grep("=", split, value=T)
-        paste0(stats_on, "\n", if(length(subset)>0) paste0(subset, collapse="\n", "\n") else "", paste0(">> ", which_stats, " <<\n\n"))
-      }else{
-        label
-      }
-    })
+  # check if same prefix
+  preflength = sapply(2:length(flattened), function(i){
+    Biostrings::lcprefix(names(flattened)[i], names(flattened)[i-1])
+  })
+  if(length(unique(preflength)) == 1){
+    if(preflength[1] > 0){
+      prefix = stringr::str_sub(names(flattened)[1], 0, preflength[1])
+      names(flattened) <- gsub(prefix, "", x = names(flattened))  
+    }
+  }
+  # check if same suffix
+  suflength = sapply(2:length(flattened), function(i){
+    Biostrings::lcsuffix(names(flattened)[i], names(flattened)[i-1])
+  })
+  if(length(unique(suflength)) == 1){
+    if(suflength[1] > 0){
+      names(flattened) <- sapply(names(flattened), function(name){
+        len = stringr::str_length(name)
+        suffix = stringr::str_sub(name, len - suflength[1] + 1, len)
+        gsub(suffix, "", x = name,fixed = T)
+      })  
+    }
   }
   
-  p = ggVennDiagram::ggVennDiagram(flattened,
-                                   label_alpha = 1, 
-                                   cf = cf,
-                                   parseFun = parseFun) + ggplot2::lims(x = switch(as.character(length(flattened)),
-                                                                                   "2"= c(-7,11),
-                                                                                   "3"= c(-5,9),
-                                                                                   "4"= c(-.05,1.13)),
-                                                                        y = switch(as.character(length(flattened)),
-                                                                                   "2"= c(-5.5,7.5),
-                                                                                   "3"= c(-4,10),
-                                                                                   "4"= c(.15,1)))
-  list(plot = p, info = flattened)
+  if(plot_mode == "upset"){
+    
+    all_mzs = unique(Reduce("c", flattened))
+    upset_data = data.table::rbindlist(pbapply::pblapply(all_mzs, function(mz){
+      in_analysis = sapply(names(flattened), function(analysis){
+        mz %in% flattened[[analysis]]
+      })
+      Analyses = c(names(which(in_analysis)))
+      data.frame(mz = mz,
+                 Analyses = I(list(c(Analyses))))
+    }))
+     
+    intersections = 2^length(flattened)
+    
+    p = ggplot(data = upset_data, aes(x=Analyses, key=Analyses)) +
+        geom_bar(aes(fill=after_stat(count)), color="black") +
+        geom_text(stat='count', 
+                  aes(label=after_stat(count)), vjust=-1) +
+        ggupset::scale_x_upset(n_intersections = intersections,
+                               reverse = T)
+    
+  }else{
+      label_geom = "text"
+      percent_digit=2
+      label_alpha=1
+      venn <- ggVennDiagram::Venn(flattened)
+      data <- ggVennDiagram:::process_data(venn)
+      p <- ggplot2::ggplot() + ggplot2::geom_sf(ggplot2::aes_string(fill = "count"), 
+                                                data = data@region) + 
+        ggplot2::geom_sf(ggplot2::aes_string(color = "id"), size = 1, data = data@setEdge, 
+                show.legend = F) + ggplot2::geom_sf_text(ggplot2::aes_string(label = "name"), 
+                                                data = data@setLabel) + ggplot2::theme_void()
+      label = "count"
+      if (label != "none") {
+        region_label <- data@region %>% dplyr::filter(.data$component == 
+                                                        "region") %>% dplyr::mutate(percent = paste(round(.data$count * 
+                                                                                                            100/sum(.data$count), digits = percent_digit), "%", 
+                                                                                                    sep = "")) %>% dplyr::mutate(both = paste(.data$count, 
+                                                                                                                                              .data$percent, sep = "\n"))
+        region_label$name = gsub("\\.\\.", "<br />", region_label$name)
+        
+        if (label_geom == "label") {
+          p <- p + ggplot2::geom_sf_label(ggplot2::aes_string(label = label,
+                                            key = "name"), 
+                                 data = region_label, alpha = label_alpha, label.size = NA)
+        }
+        if (label_geom == "text") {
+          p <- p + ggplot2::geom_sf_text(ggplot2::aes_string(label = label,
+                                           key = "name"), 
+                                data = region_label, alpha = label_alpha)
+        }
+      }
+  }
+  p = p + ggplot2::scale_fill_gradient(low = "#6F6F6F", high = "white")
   
+  list(plot = p, info = flattened)
 }
 
 #' @title Generate PCA Scree plot
@@ -1815,12 +2109,61 @@ ggPlotScree <- function(mSet, cf, pcs=20){
   df <- data.table::data.table(
     pc = 1:length(names(mSet$analSet$pca$variance)),
     var = round(mSet$analSet$pca$variance*100,digits = 1))
-  p <- ggplot2::ggplot(data=df[1:20,]) + 
+  
+  # == attempt 2 ==
+  d1 <- diff(df$var)
+  k <- which.max(abs(diff(d1) / d1[-1]))
+  elbow=list(x=k)
+  # == attempt 1 ==
+  # elbow = akmedoids::elbowPoint(df$pc, df$var)
+  # elbow$x = ceiling(elbow$x)
+  
+  # sumvar
+  cum.var.list = data.frame()
+  for(i in 1:nrow(df)){
+    row = data.frame(pc = df$pc[i], var_exp = if(i==1) df$var[i] else df$var[i] + cum.var.list$var[i-1])
+    cum.var.list = rbind(cum.var.list, row)
+  }
+  
+  #fiftypoint_diff = abs(50 - cum.var.list$var_exp)
+  #fiftypoint = which(fiftypoint_diff == min(fiftypoint_diff))
+  
+  eightypoint_diff = abs(80 - cum.var.list$var_exp)
+  eightypoint = which(eightypoint_diff == min(eightypoint_diff))
+  
+  ninetypoint_diff = abs(90 - cum.var.list$var_exp)
+  ninetypoint = which(ninetypoint_diff == min(ninetypoint_diff))
+  
+  axisorder=seq(1,max(df$pc),by=ceiling(max(df$pc)/5))
+  axisorder=unique(c(axisorder,elbow$x, eightypoint, ninetypoint))
+  
+  vlines=data.frame(xintercept = as.numeric(c(elbow$x,
+                                   #fiftypoint,
+                                   eightypoint,
+                                   ninetypoint)),
+                    threshold=c(paste0("PC", elbow, ":elbow"), 
+                                #paste0("PC", fiftypoint, ":50%"), 
+                                paste0("PC", eightypoint, ":80%"),
+                                paste0("PC", ninetypoint, ":90%")))
+  p <- ggplot2::ggplot(data=df) + 
     ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var), cex=1, color="black") +
     ggplot2::geom_point(mapping = ggplot2::aes(x=pc, y=var, color=var), cex=3) +
     ggplot2::scale_colour_gradientn(colours = cf(200)) + 
     ggplot2::xlab("Principal components") +
-    ggplot2::ylab("% Variance")
+    ggplot2::ylab("% Variance") +
+    ggplot2::geom_segment(data = vlines,
+                        aes(x=xintercept,
+                            xend=xintercept,
+                            y=0,
+                            yend=.5*max(df$var),
+                            group = threshold)) +
+    ggrepel::geom_label_repel(data=vlines,
+                            aes(x=xintercept,
+                               y=.5*max(df$var),
+                               label=threshold
+                               ),min.segment.length = 0)+
+    ggplot2::scale_x_continuous(breaks=axisorder)
+  
   # - - - - -
   p
 }
@@ -1918,27 +2261,30 @@ ggPlotPower <- function(mSet,
 #' @rdname ggPlotMummi
 #' @export 
 #' @importFrom ggplot2 ylab xlab scale_colour_gradientn
-ggPlotMummi <- function(mSet, cf){
+ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
   
-  anal.type = if("mummi.resmat" %in% names(mSet$analSet$enrich)) "mummichog" else "gsea"
-  
+  anal.type = if(!is.null(mSet$analSet$enrich$mummi.resmat)) "mummichog" else "gsea"
+
   if (anal.type == "mummichog") {
     mummi.mat <- mSet$analSet$enrich$mummi.resmat
     y <- -log10(mummi.mat[, 5])
     x <- mummi.mat[, 3]/mummi.mat[, 4]
+    pval = mummi.mat[,5]
     pathnames <- rownames(mummi.mat)
   } else {
     gsea.mat <- mSet$analSet$enrich$mummi.gsea.resmat
     if(is.null(gsea.mat)) stop("No hits found.")
     y <- -log10(gsea.mat[, 3])
-    x <- gsea.mat[, 2]/gsea.mat[, 1]
+    x <- gsea.mat[,5]
+    pval = mSet$analSet$enrich$mummi.gsea.resmat[,3]
     pathnames <- rownames(gsea.mat)
   }
+  
   inx <- order(y, decreasing = T)
   y <- y[inx]
   x <- x[inx]
   path.nms <- pathnames[inx]
-  sqx <- sqrt(x)
+  sqx <- sqrt(abs(x))
   min.x <- min(sqx, na.rm = TRUE)
   max.x <- max(sqx, na.rm = TRUE)
   if (min.x == max.x) {
@@ -1949,23 +2295,61 @@ ggPlotMummi <- function(mSet, cf){
   minR <- (max.x - min.x)/160
   radi.vec <- minR + (maxR - minR) * (sqx - min.x)/(max.x - 
                                                       min.x)
+  
   bg.vec <- heat.colors(length(y))
   
-  df <- data.frame(path.nms, x, y)
+  df <- data.frame(path.nms, x, y, pval, radi.vec)
   
   scaleFUN <- function(x) sprintf("%.2f", x)
   
-  p = ggplot2::ggplot(df) + ggplot2::geom_point(ggplot2::aes(y = y, 
-                                                             x = x, 
-                                                             size = `radi.vec`, 
-                                                             color = `radi.vec`,
-                                                             text = path.nms,
-                                                             key = path.nms)) +
-    # ggtitle("Enrichment Results") +
-    ggplot2::ylab("-log10(p)") + 
-    ggplot2::xlab("Significant/expected hits") +
-    ggplot2::scale_colour_gradientn(colours = cf(20)) +
-    ggplot2::scale_y_continuous(labels=scaleFUN)
+  df$multiplied = abs(df$x * df$y)
   
-  p
+  pthresh = 0.05
+  logpthresh = -log10(pthresh)
+  
+  if(!show_nonsig | plot_mode == "gsea"){
+    df = df[df$pval <= pthresh,]
+  }
+  
+  df <- if(plot_mode == "gsea"){
+    df[order(abs(df$x), decreasing = F),]
+  }else{
+    df[order(df$multiplied, decreasing = T),]
+  }
+  
+    p <- switch(plot_mode, 
+              gsea = ggplot2::ggplot(df) + ggplot2::geom_bar(ggplot2::aes(y = path.nms, 
+                                                                                 x = x, 
+                                                                                 fill = pval,
+                                                                                 text = path.nms,
+                                                                                 key = path.nms),
+                                                             stat = "identity",
+                                                             color = "black",cex=0.1) +
+                ggplot2::ylab("KEGG pathway") + 
+                ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
+                ggplot2::scale_fill_gradientn(colours = cf(20), name = 'p-value') + 
+                ggplot2::scale_y_discrete(limits = df$path.nms),
+              volclike = ggplot2::ggplot(df) + ggplot2::geom_point(ggplot2::aes(y = y, 
+                                                                                x = x, 
+                                                                                size = `radi.vec`, 
+                                                                                fill = `radi.vec`,
+                                                                                text = path.nms,
+                                                                                key = path.nms),
+                                                                   shape = 21,
+                                                                   color = "black") +
+                ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, cex=0.3) +
+                ggrepel::geom_label_repel(data = df[df$pval <= pthresh,],
+                                          mapping = ggplot2::aes(x = x, 
+                                                                 y = y,
+                                                                 label = path.nms),
+                                          size=4,
+                                          max.overlaps = 15,
+                                          force=10,
+                                          min.segment.length = 0) +
+                # ggtitle("Enrichment Results") +
+                ggplot2::ylab("-log10(p)") + 
+                ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
+                ggplot2::scale_fill_gradientn(colours = cf(20)) +
+                ggplot2::scale_y_continuous(labels=scaleFUN))
+    p
 }

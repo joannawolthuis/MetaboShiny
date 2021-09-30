@@ -15,8 +15,10 @@ lapply(c("tt",
          "pca_load",
          "plsda_load",
          "enrich_pw",
-         "ml",
+         #"ml",
+         "ml_importance",
          "corr",
+         "combi",
          "mummi_detail",
          "venn"), FUN=function(table){
 
@@ -33,15 +35,16 @@ lapply(c("tt",
     res_tbl <- data.table::as.data.table(switch(table,
                                                 corr = mSet$analSet$corr$cor.mat,
                                                 tt = mSet$analSet$tt$sig.mat,
+                                                combi = mSet$analSet$combi$sig.mat,
                                                 fc = mSet$analSet$fc$sig.mat,
                                                 volcano = mSet$analSet$volcano$sig.mat,
                                                 pca_load = mSet$analSet$pca$rotation,
                                                 plsda_load = mSet$analSet$plsda$vip.mat,
-                                                ml = lcl$tables$ml_roc, #TODO: fix this, now in global
                                                 asca = mSet$analSet$asca$sig.list$Model.ab,
                                                 aov = mSet$analSet[[which_aov]]$sig.mat,
                                                 enrich_pw = enrich$current,
                                                 rf = vip.score,
+                                                ml_importance = lcl$tables$ml_imp,
                                                 meba = mSet$analSet$MB$stats,
                                                 plsda_vip = plsda_tab,
                                                 mummi_detail = lcl$tables$mummi_detail,
@@ -67,14 +70,45 @@ shiny::observeEvent(input$enrich_tab_rows_selected,{
   curr_row <- input$enrich_tab_rows_selected
   if (is.null(curr_row)) return()
   # -----------------------------
+  
   curr_pw <- rownames(enrich$overview)[curr_row]
   pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
   cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
   hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
   myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
   myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
-  colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
+  myHits <- myHits[,c("Query.Mass", 
+                      "Compound.Name", 
+                      "Matched.Compound", 
+                      "Matched.Form", 
+                      "Mass.Diff")]
+  colnames(myHits) <- c("rn", "compoundname", "identifier", "adduct", "dppm")
+  
+  # --- FIX ADDUCTS ---
+  if(any(!(as.character(myHits$rn) %in% colnames(mSet$dataSet$norm)))){
+    myHits$rn <- sapply(as.character(myHits$rn), function(mz){
+      orig.mzs = gsub("-", "", colnames(mSet$dataSet$norm))
+      unalt.match = mz %in% orig.mzs
+      if(unalt.match){
+        return(mz) 
+      }else{
+        alt.match = paste0(mz, "0") %in% orig.mzs
+        if(alt.match){
+          paste0(mz, "0")
+        }else{
+          mz
+        }
+      }
+    })
+    adduct.addition = ifelse(myHits$adduct %in% adducts[Ion_mode == "positive"]$Name, "", "-")
+    myHits$rn = paste0(myHits$rn, adduct.addition)
+  }
+  
+  sig.hits = mSet$analSet$enrich$orig.input[mSet$analSet$enrich$orig.input$significant, "m.z"]
+  myHits$significant = ifelse(myHits$rn %in% sig.hits, "yes", "no")  
+  
   enrich$current <- myHits
+  
 })
 
 # triggers on clicking a row in the match results table

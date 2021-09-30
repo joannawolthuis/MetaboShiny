@@ -1,4 +1,15 @@
-globalVariables(c("-log(p)", "-log10P", "..change_var", "..col.fac", "..count..", "..exp.vars", "..keep.cols", "..matches", "..predictor", "..rmcols", "..scaled..", "..shape.fac", "..stats_var", "..time_var", "..x", "Abundance", "Color", "FPR", "Group", "GroupA", "GroupB", "Individual", "Label", "Metric", "PC", "Peak", "Sample", "Shape", "TPR", "Text", "Value", "abstract", "acc", "adduct", "aes", "attempt", "color", "comparison", "coord_flip", "correlation", "count", "debug_browse_content", "debug_enrich", "debug_input", "debug_lcl", "debug_mSet", "debug_matches", "debug_pieinfo", "debug_result_filters", "debug_selection", "exp.vars", "expand_limits", "extremity", "facet_grid", "facet_wrap", "freq", "fullformula", "gbl", "geom_point", "ggplot", "ggtitle", "group", "importance.mean", "individual", "label", "labs", "lcl", "log2FC", "log2fc", "m/z", "p-value", "pathway", "pc", "position_dodge", "position_jitterdodge", "samples", "scale_size_area", "scale_x_discrete", "scale_y_discrete", "searchRev", "shape", "value", "variable", "x", "xlab", "y"))
+globalVariables(c("-log(p)", "-log10P", "..change_var", "..col.fac", "..count..", "..exp.vars", 
+                  "..keep.cols", "..matches", "..predictor", "..rmcols", "..scaled..", "..shape.fac", 
+                  "..stats_var", "..time_var", "..x", "Abundance", "Color", "FPR", "Group", "GroupA", 
+                  "GroupB", "Individual", "Label", "Metric", "PC", "Peak", "Sample", "Shape", "TPR", 
+                  "Text", "Value", "abstract", "acc", "adduct", "aes", "attempt", "color", "comparison", 
+                  "coord_flip", "correlation", "count", "debug_browse_content", "debug_enrich", "debug_input", 
+                  "debug_lcl", "debug_mSet", "debug_matches", "debug_pieinfo", "debug_result_filters", "debug_selection", 
+                  "exp.vars", "expand_limits", "extremity", "facet_grid", "facet_wrap", "freq", "fullformula", "gbl", 
+                  "geom_point", "ggplot", "ggtitle", "group", "importance.mean", "individual", "label", "labs", "lcl", 
+                  "log2FC", "log2fc", "m/z", "p-value", "pathway", "pc", "position_dodge", "position_jitterdodge", 
+                  "samples", "scale_size_area", "scale_x_discrete", "scale_y_discrete", "searchRev", "shape",
+                  "value", "variable", "x", "xlab", "y"))
 
 #' @title Collect info needed for heatmap
 #' @description Given an mSet and an analysis of interest, generates the matrix etc. needed for heatmap creation later on.
@@ -45,15 +56,17 @@ calcHeatMap <- function(mSet, signif.only,
     
     if(mSet$settings$exp.type %in% c("2f", "t1f", "t")){
       
-      # create convenient table with the ncessary info
+      # create convenient table with the necessary info
       translator <- data.table::data.table(Sample=rownames(mSet$dataSet$norm)[sample_order],
                                            GroupA=mSet$dataSet$facA[sample_order], 
                                            GroupB=mSet$dataSet$facB[sample_order])
+      colnames(translator) <- c("Sample", mSet$dataSet$facA.lbl, mSet$dataSet$facB.lbl)
+      
       hmap.lvls <- c(levels(mSet$dataSet$facA), levels(mSet$dataSet$facB))
       
       # reorder first by time, then by sample
-      split.translator <- split(translator, by = c("GroupB"))
-      split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl$GroupA)])
+      split.translator <- split(translator, by = c(mSet$dataSet$facB.lbl))
+      split.translator.ordered <- lapply(split.translator, function(tbl) tbl[order(tbl[[mSet$dataSet$facA.lbl]])])
       translator <- data.table::rbindlist(split.translator.ordered)
       
       # ensure correct sample order
@@ -92,132 +105,6 @@ calcHeatMap <- function(mSet, signif.only,
   }
 }
 
-#' @title Run machine learning
-#' @description Large wrapper function to run machine learning
-#' @param curr Non-normalized peak table (generally mSet$dataSet$proc or something similar)
-#' @param config Configuration table (metadata table)
-#' @param train_vec Metadata group to train on
-#' @param test_vec Metadata group to test on
-#' @param configCols Columns representing metadata
-#' @param ml_method caret ML method
-#' @param ml_perf_metr Performance measuring method
-#' @param ml_folds Cross validation folds
-#' @param ml_preproc Preproc table object
-#' @param tuneGrid Table of settings to try out to optimize parameters
-#' @param ml_train_perc Percentage in training
-#' @param sampling Up- or downsampling settings, Default: 'none'
-#' @return List of machine learning model, importance, labels and prediction.
-#' @seealso 
-#'  \code{\link[caret]{createDataPartition}},\code{\link[caret]{trainControl}},\code{\link[caret]{train}},\code{\link[caret]{varImp}}
-#'  \code{\link[stats]{predict}}
-#' @rdname runML
-#' @export 
-#' @importFrom caret createDataPartition trainControl train varImp
-#' @importFrom stats predict
-runML <- function(curr,
-                  config,
-                  train_vec,
-                  test_vec,
-                  configCols,
-                  ml_method,
-                  ml_perf_metr,
-                  ml_folds,
-                  ml_preproc,
-                  tuneGrid,
-                  ml_train_perc,
-                  sampling = "none",
-                  batch_sampling = "none",
-                  batches = c()){
-  
-  # get user training percentage
-  ml_train_perc <- ml_train_perc/100
-  
-  if(unique(train_vec)[1] == "all" & unique(test_vec)[1] == "all"){ # BOTH ARE NOT DEFINED
-    test_idx = caret::createDataPartition(y = curr$label, p = ml_train_perc, list = FALSE) # partition data in a balanced way (uses labels)
-    train_idx = setdiff(1:nrow(curr), test_idx) #use the other rows for testing
-    inTrain = train_idx
-    inTest = test_idx
-  }else if(unique(train_vec)[1] != "all"){ #ONLY TRAIN IS DEFINED
-    train_idx <- which(curr[,train_vec[1], with=F][[1]] == train_vec[2])
-    test_idx = setdiff(1:nrow(curr), train_idx) # use the other rows for testing
-    inTrain <- train_idx
-    inTest = test_idx
-  }else{ # ONLY TEST IS DEFINED
-    test_idx = which(curr[,test_vec[1], with=F][[1]] == test_vec[2])
-    train_idx = setdiff(1:nrow(curr), test_idx) # use the other rows for testing
-    inTrain = train_idx
-    inTest <- test_idx
-  }
-  
-  trainSamps = rownames(curr)[inTrain]
-  testSamps = rownames(curr)[inTest]
-  
-  need.rm = unique(c(train_vec[1],test_vec[1],"split"))
-  curr <- curr[,-..need.rm]
-  
-  # choose predictor "label" (some others are also included but cross validation will be done on this)
-  predictor = "label"
-  
-  # split training and testing data
-  trainY <- curr[inTrain,
-                 ..predictor][[1]]
-  testY <- curr[inTest,
-                ..predictor][[1]]
-  
-  training <- curr[inTrain,]
-  testing <- curr[inTest,]
-  
-  hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
-  
-  trainCtrl <- caret::trainControl(verboseIter = T,
-                                   allowParallel = F,
-                                   method= if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
-                                   number = as.numeric(ml_folds),
-                                   repeats = 3,
-                                   trim=TRUE, 
-                                   returnData = FALSE,
-                                   classProbs= if(!hasProb) FALSE else TRUE,
-                                   sampling = sampling)
-  
-  if(ml_method %in% c("rpartScore")){
-    fit <- caret::train(
-      label ~ .,
-      data = training,
-      method = ml_method,
-      ## Center and scale the predictors for the training
-      ## set and all future samples.
-      preProc = ml_preproc,
-      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-      trControl = trainCtrl
-    )
-  }else{
-    fit <- caret::train(
-      label ~ .,
-      data = training,
-      method = ml_method,
-      ## Center and scale the predictors for the training
-      ## set and all future samples.
-      preProc = ml_preproc,
-      importance = if(ml_method %in% c("ranger")) 'permutation' else TRUE,
-      tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-      trControl = trainCtrl
-    )
-  }
-  
-  result.predicted.prob <- stats::predict(fit, 
-                                          testing,
-                                          type = if(hasProb) "prob" else "raw") # Prediction
-  
-  # train and cross validate model
-  # return list with mode, prediction on test data etc.s
-  list(type = ml_method,
-       # model = fit,
-       importance = caret::varImp(fit)$importance,
-       prediction = result.predicted.prob,
-       labels = testing$label,
-       distr = list(train = trainSamps, test = testSamps))
-}
-
 #' @title Get performance for multi-comparison ML model
 #' @description ROC curves can be a bit tricky for multivariate models. This evaluates each possible pair of categories to generate individual and average AUC.
 #' @param model ML model
@@ -229,16 +116,16 @@ runML <- function(curr,
 #' @export 
 #' @importFrom pROC multiclass.roc auc
 #' @importFrom data.table rbindlist
-getMultiMLperformance <- function(x){
+getMultiMLperformance <- function(x, type="roc"){
   
   try({
-    mroc = pROC::multiclass.roc(x$labels, 
+    mroc = pROC::multiclass.roc(x$labels,
                                 x$prediction)
-  },silent = T)
-  try({
-    mroc = pROC::multiclass.roc(x$labels, factor(x$prediction,
-                                                 ordered = T))
-  }, silent=T)
+  },silent = F)
+  # try({
+  #   mroc = pROC::multiclass.roc(x$labels, factor(x$prediction,
+  #                                                ordered = T))
+  # }, silent=F)
   
   data.table::rbindlist(lapply(mroc$rocs, function(roc.pair){
     try({
@@ -447,7 +334,8 @@ replRowMin <- function(mSet){
 #' @export 
 #' @importFrom doParallel registerDoParallel
 #' @importFrom missForest missForest
-replRF <- function(mSet, parallelMode, ntree, cl){
+replRF <- function(mSet, parallelMode, ntree, cl, rf.method){
+  print(rf.method)
   w.missing <- qs::qread("preproc.qs")
   samples <- rownames(w.missing)
   # convert all to as numeric
@@ -457,20 +345,30 @@ replRF <- function(mSet, parallelMode, ntree, cl){
   # register other threads as parallel threads
   doParallel::registerDoParallel(cl)
   
-  # set amount of tries (defined by missforest package)
-  auto.mtry <- floor(sqrt(ncol(w.missing)))
-  
-  mtry <- ifelse(auto.mtry > 100, 
-                 100, 
-                 auto.mtry)
-  
-  # impute missing values with random forest
-  imp <- missForest::missForest(w.missing,
-                                parallelize = parallelMode, # parallelize over variables, 'forests' is other option
-                                verbose = F,
-                                ntree = ntree,
-                                mtry = mtry)
-  imp$ximp
+  imp <- switch(rf.method,
+         ranger = {
+           print(w.missing[1:10,1:10])
+           w.missing <<- w.missing
+           w.missing.df <- as.data.frame(w.missing)
+           colnames(w.missing.df) <- paste0("mz", 1:ncol(w.missing.df))
+           imp = missRanger.joanna(data = w.missing.df ,formula =  . ~ ., verbose = 0, num.threads = length(cl))
+           colnames(imp) <- colnames(w.missing)
+         },
+         rf = {
+           auto.mtry <- floor(sqrt(ncol(w.missing)))
+         
+         mtry <- ifelse(auto.mtry > 100, 
+                        100, 
+                        auto.mtry)
+         
+         # impute missing values with random forest
+         imp <- missForest::missForest(w.missing,
+                                       parallelize = parallelMode, # parallelize over variables, 'forests' is other option
+                                       verbose = F,
+                                       ntree = ntree,
+                                       mtry = mtry)
+         imp$ximp})
+  return(imp)
 }
 
 #' @title Batch correction using QC samples
@@ -547,19 +445,13 @@ hideQC <- function(mSet){
 #' @rdname combatCSV
 #' @export 
 #' @importFrom data.table as.data.table
-combatCSV <- function(mSet){
+combatCSV <- function(mSet, tbl="norm"){
   # get sample names and classes
-  smp <- rownames(mSet$dataSet$norm)
+  smp <- rownames(mSet$dataSet[[tbl]])
   exp_lbl <- mSet$dataSet$cls
-  
-  # create csv for comBat
-  csv <- data.table::as.data.table(cbind(sample = smp,
-                                         label = mSet$dataSet$cls,
-                                         mSet$dataSet$norm))
-  
-  # transpose for combat
-  csv_edata <-t(csv[,!c(1,2)])
-  colnames(csv_edata) <- csv$sample
+  csv = mSet$dataSet[[tbl]]
+  csv_edata <- t(csv)
+  colnames(csv_edata) <- rownames(mSet$dataSet[[tbl]])
   csv_edata
 }
 
@@ -601,11 +493,11 @@ metshiTable <- function(content, options=NULL, rownames= T){
   }
   DT::datatable(content,
                 selection = 'single',
-                autoHideNavigation = T,
                 class = 'compact', height = "500px",
                 extensions = c("FixedColumns", "Scroller", "Buttons"), 
                 options = opts,
-                rownames = rownames
+                rownames = rownames,
+                escape = FALSE
   )
 }
 
@@ -622,20 +514,26 @@ metshiTable <- function(content, options=NULL, rownames= T){
 #' @export 
 #' @importFrom stringr str_match
 #' @importFrom data.table as.data.table
-getTopHits <- function(mSet, expnames, top){
-  
+getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
+
   experiments <- stringr::str_match(expnames, 
                                     pattern = "(all m\\/z)|\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
 
+  exp_table = data.frame(name = expnames, threshold = c(if(length(thresholds)>0) thresholds else 0))
+  
   table_list <- lapply(experiments, function(experiment){
     if(experiment == "all m/z"){
       flattened = list(colnames(mSet$dataSet$norm))
       names(flattened) = c("all m/z")
       flattened
+    }else if(experiment == "random"){
+      flattened = list(sample(colnames(mSet$dataSet$norm)))
+      names(flattened) = c("random")
+      flattened
     }else{
-      analysis = mSet$storage[[experiment]]$analysis
+      analysis = mSet$storage[[experiment]]$analSet
       
       rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
       rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
@@ -644,12 +542,16 @@ getTopHits <- function(mSet, expnames, top){
       
       categories = grep(unlist(expnames),
                         pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
-      
-      categories = gsub(categories, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
-      
       # go through the to include analyses
       
       tables <- lapply(categories, function(name){
+        
+        name_orig = name
+        filter = exp_table[exp_table$name == name_orig, "threshold"]
+        sign = stringr::str_extract(filter,pattern = ">|<|=")
+        thresh = as.numeric(gsub(sign, "", filter))
+        
+        name = gsub(name, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
         
         base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
         
@@ -662,69 +564,112 @@ getTopHits <- function(mSet, expnames, top){
                        ml = {
                          which.ml <- gsub(name, pattern = "^.*- ", replacement="")
                          
-                         data = analysis$ml[[base_name]][[which.ml]]$bar
-                         
-                         if(base_name == "glmnet"){
-                           colnames(data) = c("m/z", "importance.mean", "dummy")
-                           data.ordered <- data[order(data$importance, decreasing=T),1:2]
-                         }else{
-                           data.norep <- data[,-3]
-                           colnames(data.norep)[1] <- "m/z"
-                           data.ci = Rmisc::group.CI(importance ~ `m/z`, data.norep)
-                           data.ordered <- data.ci[order(data.ci$importance.mean, decreasing = T),]
+                         data = analysis$ml[[base_name]][[which.ml]]
+                         if(!is.null(data$res$prediction)){
+                           data$res$shuffled = FALSE
+                           data$res = list(data$res)
                          }
+                         data.dt = data.table::as.data.table(data$res[[which(unlist(sapply(data$res, function(x) !x$shuffled)))]]$importance, keep.rownames=T)
                          
-                         data.ordered$`m/z` <- gsub("`","",data.ordered$`m/z`)
+                         colnames(data.dt)[1:2] <- c("m/z","importance")
                          
-                         res = list(data.ordered$`m/z`)
+                         data.ordered <- data.dt[order(importance, decreasing = T),]
+                         
+                         data.ordered$`m/z` <- gsub("^X","",data.ordered$`m/z`)
+                         
+                         res = list(data.frame(`m/z`=data.ordered$`m/z`,
+                                               value=data.ordered$"importance"))
                          names(res) <- paste0(which.ml, " (", base_name, ")")
                          res
                        },
+                       venn = {
+                         res = list(data.frame(`m/z`=analysis$venn$mzs,
+                                               value=c(0)))
+                         names(res) = base_name
+                         res
+                       },
                        corr = {
-                         res = list(rownames(analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
-                                                                         decreasing = F),]))
+                         values = analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
+                                                                         decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        aov = {
-                         res = list(rownames(analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
-                                                                        decreasing = F),]))
+                         values = analysis$aov$sig.mat[order(analysis$aov$sig.mat[,2],
+                                                             decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        aov2 = {
-                         res = list(rownames(analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
-                                                                         decreasing = F),]))
+                         values = analysis$aov2$sig.mat[order(analysis$aov2$sig.mat[,"Interaction(adj.p)"],
+                                                              decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        asca = {
-                         res = list(rownames(analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
-                                                                                   decreasing = T),]))
+                         values = analysis$asca$sig.list$Model.ab[order(analysis$asca$sig.list$Model.ab[,1],
+                                                                        decreasing = T),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        MB = {
-                         res = list(rownames(analysis$MB$stats)[order(analysis$MB$stats[,1],
-                                                                      decreasing = T)])
+                         values = analysis$MB$stats[order(analysis$MB$stats[,1],
+                                                            decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
                        tt = {
-                         res = list(rownames(analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                                       decreasing = F),]))
+                         values = analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                          decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                                    )
                          names(res) = base_name
                          res
                        },
                        fc = {
-                         res = list(rownames(analysis$fc$sig.mat[order(abs(analysis$fc$sig.mat[,2]),
-                                                                       decreasing = F),]))
+                         values = analysis$fc$sig.mat[order(analysis$fc$sig.mat[,2],
+                                                            decreasing = F),]
+                         res = list(data.frame(`m/z` = rownames(values),
+                                               value = values[,2])
+                         )
                          names(res) = base_name
                          res
                        },
-                       volcano = {
-                         res = list(rownames(analysis$volcano$sig.mat))
+                       combi = {
+                         # special opt for volcano... TODO: somehow make this work for the others
+                         is.volc = all(colnames(analysis$combi$sig.mat) %in% c("rn",  "log2(FC)", "-log10(p)"))
+                         res = if(is.volc){
+                           print("special volcano plot mode")
+                           abs.fc = abs(analysis$combi$sig.mat$`log2(FC)`)
+                           comb.vals = abs.fc * analysis$combi$sig.mat$`-log10(p)`
+                           res = analysis$combi$sig.mat[order(comb.vals,
+                                                                 decreasing = T),]
+                           res[,2:3] <- NULL
+                           res$value <- c(0)
+                           res = list(res)
+                         }else{
+                           res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
+                                                 value=c(0)))
+                         }
+                         
                          names(res) = base_name
+                         #print(res)
                          res
                        },
                        plsda = {
@@ -741,7 +686,6 @@ getTopHits <- function(mSet, expnames, top){
                        },
                        pca = {
                          which.pca <- gsub(name, pattern = "^.*- | ", replacement="")
-                         
                          compounds_pc <- data.table::as.data.table(analysis$pca$rotation,keep.rownames = T)
                          ordered_pc <- setorderv(compounds_pc, which.pca, -1)
                          res <- list(ordered_pc$rn)
@@ -749,26 +693,38 @@ getTopHits <- function(mSet, expnames, top){
                          # - - -
                          res
                        },
-                       volcano = {
-                         res <- list(rownames(analysis$volcano$sig.mat))
-                         names(res) = base_name
+                       featsel = {
+                         decision = analysis$featsel[[1]]$finalDecision
+                         res = list(names(decision[decision != "Rejected"]))
+                         names(res) <- "featsel"
                          res
                        },
-                       {metshiAlert("Not currently supported...")
-                         return(NULL)})
+                       return(NULL))
         
         if(is.null(tbls)) return(NULL)
         
         # user specified top hits only
         tbls_top <- lapply(tbls, function(tbl){
-          if(length(tbl) < top){
-            tbl
-          }else{
-            tbl[1:top]
-          }
+          filt_tbl = switch(filter_mode,
+                 top = if(nrow(tbl) < top){
+                   tbl[,1]
+                 }else{
+                   tbl[1:top, 1]
+                 },
+                 threshold = tbl[switch(sign,
+                                        ">" = {tbl$value > thresh},
+                                        "=" = {tbl$value == thresh},
+                                        "<" = {tbl$value < thresh}),1])
+          
         })
-        names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))
-        tbls_top
+        keep_tbls = unlist(lapply(tbls_top, function(t) length(t)>0))
+        tbls_top=tbls_top[keep_tbls]
+        if(length(tbls_top)>0){
+          names(tbls_top) <- paste0(experiment, ": ", names(tbls_top))  
+          tbls_top
+        }else{
+          list()
+        }
       })
       
       # unnest the nested lists
@@ -783,15 +739,128 @@ getTopHits <- function(mSet, expnames, top){
       flattened      
     }
   })
-  
   flattened <- flattenlist(table_list)
   names(flattened) <- gsub(x = names(flattened), pattern = "(.*\\.)(.*$)", replacement = "\\2")
   flattened <- lapply(flattened, function(x) x[!is.na(x)])
   return(flattened)
 }
 
+getAllHits <- function(mSet, expname, randomize = F){
+  
+  experiment <- stringr::str_match(expname, 
+                                    pattern = "(all m\\/z)|\\(.*\\)")[,1]
+  
+  experiment <- unique(gsub(experiment, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
+  
+  exp_table = data.frame(name = expname, threshold = c(0))
+  
+  if(experiment == "all m/z"){
+    flattened = list(colnames(mSet$dataSet$norm))
+    names(flattened) = c("all m/z")
+    flattened
+  }else{
+    analysis = mSet$storage[[experiment]]$analSet
+    
+    rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
+    rgx_exp <- gsub(rgx_exp, pattern = "\\+", replacement = "\\\\+")
+    
+    name_orig = grep(expname,
+                     pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
+    # go through the to include analyses
+      
+    filter = exp_table[exp_table$name == name_orig, "threshold"]
+    sign = stringr::str_extract(filter,pattern = ">|<|=")
+    thresh = as.numeric(gsub(sign, "", filter))
+    
+    name = gsub(name_orig, pattern = " \\(\\s*(.+)\\s*\\)", replacement = "")
+    
+    base_name <- search_name <- gsub(name, pattern = " -.*$| ", replacement="")
+    
+    if(base_name %in% gbl$constants$ml.models){
+      search_name <- "ml"
+    }
+    
+    # fetch involved mz values
+    tbl <- switch(search_name,
+                   venn = {
+                     venn.mzs = analysis$venn$mzs
+                     not.in.venn = setdiff(colnames(mSet$dataSet$norm), venn.mzs)
+                     res = data.frame(`m/z` = c(venn.mzs, not.in.venn),
+                                      value = c(rep(0, length(venn.mzs)),
+                                                rep(1, length(not.in.venn)))
+                                      #,statistic = c(0)
+                                      )
+                     
+                     # -------------------------
+                     res
+                   },
+                   tt = {
+                     res = data.frame(`m/z` = names(analysis$tt$p.value),
+                                      value = analysis$tt$p.value,
+                                      statistic = analysis$tt$t.score
+                     )
+                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
+                     res
+                   },
+                   fc = {
+                     res = data.frame(`m/z` = names(analysis$fc$fc.all),
+                                      value = analysis$fc$fc.all)
+                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$fc$sig.mat))
+                     names(res) = base_name
+                     res
+                   },
+                   combi = {
+                     # --- only volc for now ---
+                     res = data.frame(`m/z` = names(analysis$combi$all.vals$x),
+                                      value = sapply(names(analysis$combi$all.vals$x), function(x) if(x %in% analysis$combi$sig.mat$rn) 0 else 1),
+                                      statistic = analysis$combi$all.vals$x * analysis$combi$all.vals$y)
+                     res$significant = sapply(res$m.z, function(mz) mz %in% analysis$combi$sig.mat$rn)
+                     # -------------------------
+                     res
+                   },
+                  featsel = {
+                    decision = analysis$featsel[[1]]$finalDecision
+                    res = data.frame(`m/z` = names(decision),
+                                     value = sapply(names(decision), function(x) ifelse(as.character(decision[x]) == "Rejected", 1, 0)),
+                                     statistic = sapply(names(decision), function(x) switch(as.character(decision[x]), 
+                                                                                            Rejected = 0, 
+                                                                                            Tentative = 1, 
+                                                                                            Confirmed = 2))
+                                     )
+                    res
+                  },
+                   ml = {
+                     ml_name = gsub(paste0(base_name, " - "), "", name)
+                     mdls = analysis$ml[[base_name]][[ml_name]]$res
+                     final_nonshuffle = mdls[[which(sapply(mdls, function(mdl) !mdl$shuffled))]]
+                     res = data.frame(`m/z` = gsub("\\.$", "-", gsub("^X", "", rownames(final_nonshuffle$importance))),
+                                      value =  c(0),
+                                      stastistic = final_nonshuffle$importance[,1])
+                     res
+                   },
+                   {metshiAlert("Not currently supported...")
+                     return(NULL)})
+
+    try({
+      tbl = tbl[order(abs(tbl$statistic),decreasing = T),]
+    }, silent = F)
+    
+    if(nrow(tbl)>0){
+      if(randomize){
+        tbl[sample(1:nrow(tbl)),]
+      }else{
+        tbl  
+      }
+    }else{
+      data.table::data.table()
+    }
+  }
+}
+
 getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
-  toWrap <- switch(do,
+                  toWrap <- switch(do,
                    general = {
                      # make sidebar
                      # make pca, plsda, ml(make plotmanager do that)
@@ -809,17 +878,19 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                             samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
                        
                      }},
-                   venn = {
+                    venn = {
                      # get user input for how many top values to use for venn
                      top = input$venn_tophits
-                     if(nrow(venn_yes$now) > 4 | nrow(venn_yes$now) <= 1){
-                       metshiAlert("Can only take more than 2 and less than five analyses!")
+                     if(nrow(venn_yes$now) > 7 | nrow(venn_yes$now) <= 1){
+                       metshiAlert("Can only take more than 2 and less than seven analyses!")
                        list()
                      }else{
                        p <- ggPlotVenn(mSet = mSet,
                                        venn_yes = as.list(venn_yes),
+                                       filter_mode = input$venn_filter_mode,
                                        top = input$venn_tophits,
                                        cols = lcl$aes$mycols,
+                                       plot_mode = ifelse(input$venn_plot_mode, "upset", "venn"),
                                        cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
                        lcl$vectors$venn_lists <- p$info
                        list(venn_plot = p$plot)
@@ -827,7 +898,9 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    },
                    enrich = {
                      p = ggPlotMummi(mSet, 
-                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                     plot_mode = if(input$enrich_plot_mode) "volclike" else "gsea",
+                                     show_nonsig = T)
                      list(enrich_plot = p)
                    },
                    summary = {
@@ -858,7 +931,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    },
                    aov = { # render manhattan-like plot for UI
                      p = ggPlotAOV(mSet,
-                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 20,
+                                   topn=input$aov_topn)
                      
                      list(aov_plot = p)
                    },
@@ -1108,23 +1182,74 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }else{NULL}
                    },
                    ml = {
+                     if("ml" %in% names(mSet$analSet) & 
+                        !(input$ml_plot_posclass %in% c("placeholder", "")) & 
+                          input$ml_plot_x != "" &
+                          input$ml_plot_y != ""){
+
+                       if(length(mSet$analSet$ml) > 0){
+                         
+                         data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+
+                         if(!is.null(data$res$prediction)){
+                           data$res$shuffled = FALSE
+                           data$res = list(data$res)
+                         }
+                         
+                         # PLOT #
+                         ml_performance_rows = lapply(1:length(data$res), function(i){
+                           res = data$res[[i]]
+                           ml_performance = getMLperformance(ml_res = res, 
+                                                             pos.class = input$ml_plot_posclass,
+                                                             x.metric = input$ml_plot_x,
+                                                             y.metric = input$ml_plot_y)
+                           ml_performance$coords$shuffled = c(res$shuffled)
+                           ml_performance$coords$run = i
+                           plot_coords = ml_performance$coords[`Test set`=="Test"]
+                           ml_performance
+                         })
+                         
+                         coords = data.table::rbindlist(lapply(ml_performance_rows,
+                                                               function(x) x$coords))
+                         
+                         ml_performance = list(coords = coords,
+                                               names = ml_performance_rows[[1]]$names)
+                         
+                         ml_roc = ggPlotCurves(ml_performance,
+                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         
+                         no_shuffle_imp = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]$importance
+                         
+                         barplot_data <- ggPlotBar(data = no_shuffle_imp,
+                                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                   topn = input$ml_topn,
+                                                   ml_name = data$params$ml_name,
+                                                   ml_type = data$params$ml_method)
+                         
+                         ml_barplot <- barplot_data$plot
+                         lcl$tables$ml_bar <- barplot_data$mzdata
+                         
+                         list(ml_roc = ml_roc, 
+                              ml_bar = ml_barplot)
+                         
+                       }} else list()
+                   },
+                   ml_mistake = {
                      if("ml" %in% names(mSet$analSet)){
-                       ml_roc = ggPlotROC(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc,
-                                          attempts = input$ml_attempts,
-                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-                       
-                       barplot_data <- ggPlotBar(data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$bar,
-                                                 attempts = input$ml_attempts,
-                                                 cf =gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                                 topn = input$ml_top_x,
-                                                 ml_name = mSet$analSet$ml$last$name,
-                                                 ml_type = mSet$analSet$ml$last$method)
-                       
-                       ml_barplot <- barplot_data$plot
-                       lcl$tables$ml_bar <- barplot_data$mzdata
-                     }
-                     list(ml_roc = ml_roc, 
-                          ml_bar = ml_barplot)
+                       if(length(mSet$analSet$ml) > 0){
+                         data =  mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                         mistake_plot <- if(input$ml_mistake_var != "") ggPlotMLMistakes(labels = data$roc$labels,
+                                                                                         predictions = data$roc$predictions,
+                                                                                         test_sampnames = data$roc$inTest,
+                                                                                         covars = mSet$dataSet$covars,
+                                                                                         metadata_focus = input$ml_mistake_var,
+                                                                                         cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                                                                         smooth_line = input$ml_mistake_smooth,
+                                                                                         show_reps = input$ml_mistake_per_rep#,show_reps = T
+                         ) else NULL
+                         list(ml_mistake = mistake_plot)
+                       }
+                      }else list()
                    },
                    multigroup = {
                      p = ggplotSummary(mSet, my_selection$mz, 
@@ -1144,21 +1269,23 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                     #my_selection$mz,
                                     #draw.average = T,
                                     #cols = lcl$aes$mycols,
-                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                    cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                    topn=input$meba_topn)
                      list(meba_plot = p)
                    },
                    tt = {
                      # render manhattan-like plot for UI
                      p = ggPlotTT(mSet,
                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
-                                  20)
+                                  20,topn=input$tt_topn)
                      
                      list(tt_plot = p)
                    },
                    fc = {
                      # render manhattan-like plot for UI
                      p <- ggPlotFC(mSet,
-                                   gbl$functions$color.functions[[lcl$aes$spectrum]], 20)
+                                   gbl$functions$color.functions[[lcl$aes$spectrum]], 20, 
+                                   topn=input$fc_topn)
                      
                      list(fc_plot = p)
                    },
@@ -1231,8 +1358,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                column_text_angle = 90,
                                                ylab = "m/z\n",
                                                showticklabels = if(ncol(hmap_matr) <= 100) c(T,T) else c(F,F),
-                                               symm=T,
-                                               symbreaks=T,
+                                               symm = T,
+                                               symbreaks = T,
                                                dendrogram="none"
                      )
                      lcl$vectors$diffcorr_heatmap <- p2$x$layout$yaxis$ticktext
@@ -1322,14 +1449,14 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      
                      mat = mSet$analSet$heatmap$matrix[1:if(input$heatmap_topn < nrow(mSet$analSet$heatmap$matrix)) input$heatmap_topn else nrow(mSet$analSet$heatmap$matrix),]
                      
-                     sideLabels = if(input$fill_var == "label"){
+                     sideLabels = if(mSet$settings$exp.type %in% c("2f", "t1f")){
                        as.data.frame(mSet$analSet$heatmap$translator[,!1])
                      }else{
                        varOrder = match(mSet$dataSet$covars$sample, colnames(mat))
                        as.data.frame(mSet$dataSet$covars[, input$fill_var, with=F])
                      }
                      
-                     sidePalette = if(input$fill_var == "label"){
+                     sidePalette = if(mSet$settings$exp.type %in% c("2f", "t1f")){
                        mSet$analSet$heatmap$colors
                      }else{
                        hmap.lvls = unlist(unique(sideLabels))
@@ -1354,7 +1481,6 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                           hmap_int
                           }else{
                            hmap_int <- suppressWarnings({
-                             
                              if(input$heatlimits){
                                heatmaply::heatmaply(mat,
                                                     Colv = mSet$analSet$heatmap$my_order,
@@ -1460,6 +1586,17 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      }
                      list(power_plot = p)
                    },
+                   combi = {
+                     p = {
+                       if("combi" %in% names(mSet$analSet)){
+                         ggPlotCombi(mSet,
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                       }else{
+                         NULL
+                      }
+                     }
+                     list(combi_plot = p)
+                   },
                    wordcloud = {
                      if(nrow(lcl$tables$wordcloud_filt) > 0){
                        topWords = if(input$wordcloud_topWords > nrow(lcl$tables$wordcloud_filt)) nrow(lcl$tables$wordcloud_filt) else input$wordcloud_topWords
@@ -1480,6 +1617,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   finalPlots <- mapply(function(myplot, plotName){
     
     targets = "aov|tt|fc|corr|asca|volcano|meba"
+    
     if(grepl(targets, plotName)){
       
       whichAnal <- stringr::str_match(plotName, targets)[,1]
@@ -1508,29 +1646,33 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
     }
     
     if(!is3D & !grepl("heatmap", plotName)){
-      
-      myplot <- myplot + guides(fill = guide_legend(ncol = 2),
-                                shape = guide_legend(ncol = 2),
-                                color = guide_legend(ncol = 2))
+      myplot <- myplot + guides(fill = guide_legend(ncol = 1),
+                                shape = guide_legend(ncol = 1),
+                                color = guide_legend(ncol = 1))
+   
       myplot <- myplot + 
-        gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
-        ggplot2::theme(legend.position=if(input$legend) "right" else "none",
+        gbl$functions$plot.themes[[lcl$aes$theme]](base_size = lcl$aes$font$plot.font.size) + 
+        ggplot2::theme(legend.position = if(input$legend) "right" else "none",
                        legend.key.size = unit(.5,"line"),
-                       legend.title = element_text(size=13),
-                       legend.text=element_text(size=10),
-                       axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                       legend.title = element_text(size=15),
+                       legend.text = element_text(size=12),
+                       axis.line = ggplot2::element_line(colour = 'black',
+                                                         size = .5),
                        plot.title = ggplot2::element_text(hjust = 0.5,
                                                           vjust = 0.1,
-                                                          size=lcl$aes$font$title.size*1.2),
+                                                          size=lcl$aes$font$plot.font.size * 1.2),
                        text = ggplot2::element_text(family = lcl$aes$font$family))
-      if(grepl("venn", plotName)){
-        myplot <- myplot + 
-          ggplot2::theme_void() +
+      
+      if(grepl("venn", plotName) & !input$venn_plot_mode){
+        myplot <- myplot +
+          ggplot2::theme_void(base_size = lcl$aes$font$plot.font.size) +
           ggplot2::theme(panel.grid = ggplot2::element_blank(),
                          legend.position="none",
                          text = ggplot2::element_text(family = lcl$aes$font$family))
         
       }
+      
+      
       if(grepl("ml_bar", plotName)){
         myplot <- myplot + 
           ggplot2::theme(axis.text.x=ggplot2::element_blank(),
@@ -1602,3 +1744,430 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   res = list(lcl = lcl, plots = finalPlots)
   res
 }
+
+metshiProcess <- function(mSet, session, init=F, cl=0){
+  
+  sums = colSums(mSet$dataSet$missing)
+  missing.per.mz.perc = sums/nrow(mSet$dataSet$missing)*100
+  good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
+  mSet$dataSet$orig <- as.data.frame(mSet$dataSet$orig[, good.inx, drop = FALSE])
+  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+  
+  if(!init) mSet$dataSet$missing <- NULL
+  
+  if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)){
+    
+    # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+    keep.mz <- colnames(FilterVariableMetshi(mSet,
+                                             filter = mSet$metshiParams$filt_type,
+                                             qcFilter = "F", #TODO: mSet$metshiParams$useQCs
+                                             rsd = 25,
+                                             max.allow = mSet$metshiParams$max.allow
+    )$dataSet$filt)  
+    if(mSet$metshiParams$norm_type == "ProbNorm"){
+      keep.mz = unique(c(keep.mz, mSet$metshiParams$ref_var))
+    }
+    mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
+    mSet$dataSet$filt <- NULL
+  }
+  
+  qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+  
+  # sanity check data
+  mSet <- MetaboAnalystR::SanityCheckData(mSet)
+  
+  #shiny::setProgress(session=session, value= .6)
+  
+  # missing value imputation
+  if(req(mSet$metshiParams$miss_type) != "none"){
+    if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
+      mSet <- replRowMin(mSet)
+    }
+    else if(req(mSet$metshiParams$miss_type ) == "pmm"){ # use predictive mean matching
+      # TODO: re-enable, it's very slow
+      base <- mSet$dataSet$orig
+      imp <- mice::mice(base, printFlag = TRUE)
+      
+    }else if(req(mSet$metshiParams$miss_type ) == "rf"){ # random forest
+      mSet$dataSet$proc <- replRF(mSet, 
+                                               parallelMode = mSet$metshiParams$rf_norm_parallelize, 
+                                               ntree = mSet$metshiParams$rf_norm_ntree,
+                                               cl = cl,
+                                               rf.method = mSet$metshiParams$rf_norm_method)
+      w.missing <- qs::qread("preproc.qs")
+      rownames(mSet$dataSet$proc) <- rownames(w.missing)
+      # - - - - - - - - - - - -
+    }else{
+      # use built in imputation methods, knn means etc.
+      mSet <- MetaboAnalystR::ImputeMissingVar(mSet,
+                                               method = mSet$metshiParams$miss_type
+      )
+    }
+  }
+  
+  # if normalizing by a factor, do the below
+  if(req(mSet$metshiParams$norm_type) == "SpecNorm"){
+    rematch = match(
+      rownames(mSet$dataSet$preproc),
+      mSet$dataSet$covars$sample
+    )
+    mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+    
+    norm.vec <<- mSet$dataSet$covars[[mSet$metshiParams$samp_var]]
+    norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
+  }else{
+    norm.vec <<- rep(1, length(mSet$dataSet$cls)) # empty
+  }
+  
+  mSet <- MetaboAnalystR::PreparePrenormData(mSet)
+
+  if(mSet$metshiParams$norm_type == "QcNorm"){
+    data <- qs::qread("prenorm.qs")  
+    rematch = match(
+      rownames(data),
+      mSet$dataSet$covars$sample
+    )
+    mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+    
+    batches = mSet$dataSet$covars$batch
+    normalized_blocks = pbapply::pblapply(unique(batches),function(lvl){
+      rows = data[which(batches == lvl),]
+      is_qc = grep("^qc", tolower(rownames(rows)))
+      if(length(is_qc) == nrow(rows)){
+        rows
+      }else{
+        qcs = rows[is_qc,]
+        avg_qc_sample = colMeans(qcs)
+        non_qcs = rows[-is_qc,]
+        qc_norm_rows = lapply(1:nrow(non_qcs), function(i){
+          x = non_qcs[i,]
+          as.list(x/median(as.numeric(x/avg_qc_sample), na.rm = T))
+          #as.list(non_qcs[i,]/avg_qc_sample)
+        })
+        res = as.data.frame(data.table::rbindlist(qc_norm_rows, use.names = T))
+        rownames(res) = rownames(non_qcs)
+        rbind(qcs, res)  
+      }
+    })
+    qc_norm_table = do.call("rbind", normalized_blocks)
+    mSet$dataSet$norm <- qc_norm_table
+  }else{
+    data <- qs::qread("prenorm.qs")  
+    # normalize dataset with user settings(result: mSet$dataSet$norm)
+    mSet <- MetaboAnalystR::Normalization(mSet,
+                                          rowNorm = mSet$metshiParams$norm_type,
+                                          transNorm = mSet$metshiParams$trans_type,
+                                          scaleNorm = mSet$metshiParams$scale_type,
+                                          ref = mSet$metshiParams$ref_var) 
+
+  }
+  
+  mSet$dataSet$prenorm <- NULL
+  
+  #shiny::setProgress(session=session, value= .8)
+  
+  # get sample names
+  smps <- rownames(mSet$dataSet$norm)
+  # get which rows are QC samples
+  qc_rows <- which(grepl(pattern = "QC", x = smps))
+  #print(qc_rows)
+  # if at least one row has a QC in it, batch correct
+  has.qc <- length(qc_rows) > 0
+  
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+  )
+  
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+  
+  # lowercase all the covars table column names
+  colnames(mSet$dataSet$covars) <- tolower(colnames(mSet$dataSet$covars))
+  
+  mSet$dataSet$prebatch <- mSet$dataSet$norm
+  
+  left_batch_vars = mSet$metshiParams$batch_var
+  
+  batch_method_a = mSet$metshiParams$batch_method_a
+  batch_method_b = mSet$metshiParams$batch_method_b
+  
+  # IN CASE SUBSETTING ELIMINATES BATCH EFFECT (ONLY ONE BATCH SELECTED)
+  # keep var 1 ?
+  keep.batch.1 = length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[1], with=F]))) > 1
+  # keep var 2 ? 
+  keep.batch.2 = if(length(left_batch_vars) > 1) length(unique(unlist(mSet$dataSet$covars[, left_batch_vars[2], with=F]))) > 1 else F
+  if(!keep.batch.1 & !keep.batch.2){
+    left_batch_vars = c()
+  }else if(!keep.batch.1 & keep.batch.2){
+    left_batch_vars = left_batch_vars[2]
+    batch_method_a = batch_method_b 
+  }else if(keep.batch.1 & !keep.batch.2){
+    left_batch_vars = left_batch_vars[1]
+  }
+  
+  if(length(left_batch_vars)>0){
+    
+    # APPLY THE FIRST METHOD ONLY FOR BATCH + INJECTION
+    
+    if(batch_method_a == "limma" & 
+       batch_method_b == "limma" & 
+       length(left_batch_vars) == 2){
+      # create a model table
+      csv_pheno <- data.frame(sample = 1:nrow(mSet$dataSet$covars),
+                              batch1 = mSet$dataSet$covars[, left_batch_vars[1], with=FALSE][[1]],
+                              batch2 = mSet$dataSet$covars[, left_batch_vars[2], with=FALSE][[1]]
+                              #,outcome = as.factor(exp_lbl)
+      )
+      
+      csv_edata <- combatCSV(mSet, tbl = "norm")
+      
+      # batch correct with limma and two batches
+      batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
+                                                    batch = csv_pheno$batch1
+                                                    ,batch2 = csv_pheno$batch2))
+      rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+      mSet$dataSet$norm <- as.data.frame(batch_normalized)
+    }else{
+      if("batch" %in% left_batch_vars){# & mSet$metshiParams$batch_use_qcs){# & has.qc){
+        
+        # get batch for each sample
+        batch.idx = as.numeric(as.factor(mSet$dataSet$covars$batch))
+        
+        if(length(batch.idx) == 0) return(mSet$dataSet$norm)
+        # get injection order for samples
+        hasRT = any(grepl(pattern = "RT", colnames(mSet$dataSet$proc)))
+        
+        if(hasRT & batch_method_a == "batchCorr"){
+          metshiAlert("Only available for LC-MS data! Defaulting to WaveICA.")
+          batch_method_a <- "waveica"
+        }
+        
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars, cl=cl)
+        
+        left_batch_vars <- grep(left_batch_vars,
+                                pattern = "batch|injection|sample",
+                                value = T,
+                                invert = T)
+      }
+      
+      # check which batch values are left after initial correction
+      if(length(left_batch_vars) == 0){
+        NULL # if none left, continue after this
+      } else{
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars, cl=cl) 
+      }}
+  }
+  
+  if(mSet$metshiParams$pca_corr){
+    print("Performing PCA and subtracting PCs...")
+    res <- prcomp(mSet$dataSet$norm, 
+                  center = F,
+                  scale = F)
+    pc.use <- as.numeric(mSet$metshiParams$keep_pcs[1]:mSet$metshiParams$keep_pcs[2]) # explains 93% of variance
+    trunc <- res$x[,pc.use] %*% t(res$rotation[,pc.use])
+    mSet$dataSet$norm <- as.data.frame(trunc)
+  }
+  
+  #shiny::setProgress(session=session, value= .9)
+  
+  mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
+  
+  # make sure covars order is consistent with mset$..$norm order
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+  )
+  
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+  
+  mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
+                                                         star = c(FALSE)))  
+  data.table::setkey(mSet$report$mzStarred, mz)
+  
+  if(has.qc & !init){
+    mSet <- hideQC(mSet)
+  }
+  
+  rematch = match(
+    rownames(mSet$dataSet$norm),
+    mSet$dataSet$covars$sample
+  )
+  
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
+  
+  if(!init){
+    mSet$dataSet$missing <- mSet$dataSet$start <- NULL 
+  }
+  
+  mSet$analSet <- list(type = "stat")
+  mSet
+  # TODO: WHERE IS THE REORDERING FAILING?
+}
+
+render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, type = c("gene", 
+                                                                                      "compound")[1], text.col = "black", cex = 0.25) 
+{
+  width = ncol(img)
+  height = nrow(img)
+  nn = nrow(plot.data)
+  pwids = plot.data$width
+  if (!all(pwids == max(pwids))) {
+    message("Info: ", "some node width is different from others, and hence adjusted!")
+    wc = table(pwids)
+    pwids = plot.data$width = as.numeric(names(wc)[which.max(wc)])
+  }
+  if (type == "gene") {
+    if (same.layer != T) {
+      rect.out = pathview:::sliced.shapes(plot.data$x + 0.5, height - 
+                                            plot.data$y, plot.data$width/2 - 0.5, plot.data$height/2 - 
+                                            0.25, cols = cols.ts, draw.border = F, shape = "rectangle")
+      text(plot.data$x + 0.5, height - plot.data$y, labels = as.character(plot.data$labels), 
+           cex = cex, col = text.col)
+      return(invisible(1))
+    }
+    else {
+      img2 = img
+      pidx = cbind(ceiling(plot.data$x - plot.data$width/2) + 
+                     1, floor(plot.data$x + plot.data$width/2) + 
+                     1, ceiling(plot.data$y - plot.data$height/2) + 
+                     1, floor(plot.data$y + plot.data$height/2) + 
+                     1)
+      cols.ts = cbind(cols.ts)
+      ns = ncol(cols.ts)
+      brk.x = sapply(plot.data$width/2, function(wi) seq(-wi, 
+                                                         wi, length = ns + 1))
+      for (k in 1:ns) {
+        col.rgb = col2rgb(cols.ts[, k])/255
+        pxr = t(apply(pidx[, 1:2], 1, function(x) x[1]:x[2])) - 
+          plot.data$x - 1
+        sel = pxr >= ceiling(brk.x[k, ]) & pxr <= floor(brk.x[k + 
+                                                                1, ])
+        for (i in 1:nn) {
+          sel.px = (pidx[i, 1]:pidx[i, 2])[sel[i, ]]
+          node.rgb = img[pidx[i, 3]:pidx[i, 4], sel.px, 
+                         1:3]
+          node.rgb.sum = apply(node.rgb, c(1, 2), sum)
+          blk.ind = which(node.rgb.sum == 0 | node.rgb.sum == 
+                            1, arr.ind = T)
+          node.rgb = array(col.rgb[, i], dim(node.rgb)[3:1])
+          node.rgb = aperm(node.rgb, 3:1)
+          for (j in 1:3) node.rgb[cbind(blk.ind, j)] = 0
+          img2[pidx[i, 3]:pidx[i, 4], sel.px, 1:3] = node.rgb
+        }
+      }
+      return(img2)
+    }
+  }
+  else if (type == "compound") {
+    plot.data <<- plot.data
+    if (same.layer != T) {
+      nc.cols = ncol(cbind(cols.ts))
+      if (nc.cols > 2) {
+        na.cols = rep("#FFFFFF", nrow(plot.data))
+        cir.out = pathview:::sliced.shapes(plot.data$x, height - 
+                                             plot.data$y, plot.data$width[1], plot.data$width[1], 
+                                           cols = na.cols, draw.border = F, shape = "ellipse", 
+                                           lwd = 0.2)
+      }
+      cir.out = pathview:::sliced.shapes(plot.data$x, height - plot.data$y, 
+                                         plot.data$width[1], plot.data$width[1], cols = cols.ts, 
+                                         shape = "ellipse", blwd = 0.2)
+      return(invisible(1))
+    }
+    else {
+      blk = c(0, 0, 0)
+      img2 = img
+      
+      w = ncol(img)
+      h = nrow(img)
+      
+      cidx = rep(1:w, each = h)
+      ridx = rep(1:h, w)
+      
+      plot.data <<- plot.data
+      
+      pidx = lapply(1:nn, function(i) {
+        ii = which((cidx - plot.data$x[i])^2 + (ridx - 
+                                                  plot.data$y[i])^2 < (plot.data$width[i])^2)
+        imat = cbind(cbind(ridx, cidx)[rep(ii, each = 3), 
+        ], 1:3)
+        imat[, 1:2] = imat[, 1:2] + 1
+        ib = which(abs((cidx - plot.data$x[i])^2 + (ridx - 
+                                                      plot.data$y[i])^2 - (plot.data$width[i])^2) <= 
+                     8)
+        ibmat = cbind(cbind(ridx, cidx)[rep(ib, each = 3), 
+        ], 1:3)
+        ibmat[, 1:2] = ibmat[, 1:2] + 1
+        return(list(fill = imat, border = ibmat))
+      })
+      cols.ts = cbind(cols.ts)
+      
+      rows_corr_list = lapply(1:nrow(cols.ts), function(i){
+        row = cols.ts[i,]
+        has.hit = !(all(row == "#FFFFFF"))
+        if(has.hit){
+          difvals = unique(setdiff(row, "#FFFFFF"))
+          uniq.hits = length(difvals)
+          rep(difvals, each = floor(length(row)/uniq.hits))#, length.out = length(row)) 
+        }else{
+          row
+        }
+      })
+      cols.ts = do.call("rbind", rows_corr_list)
+      rows_corr_list <<- rows_corr_list
+      
+      ns = ncol(cols.ts)
+      brk.x = sapply(plot.data$width, function(wi) seq(-wi, 
+                                                       wi, length = ns + 1))
+      for (i in 1:nn) {
+        pxr = pidx[[i]]$fill[, 2] - 1 - plot.data$x[i]
+        cols.ts.adj = cols.ts[i, ]
+        # if(!all(cols.ts.adj == "#FFFFFF")){
+        #   cols.ts.adj = cols.ts.adj[cols.ts[i, ] != "#FFFFFF"]
+        # }
+        # ns = length(cols.ts.adj)
+        # print(ns)
+        col.rgb = col2rgb(cols.ts.adj)/255
+        for (k in 1:ns) {
+          sel = pxr >= brk.x[k, i] & pxr <= brk.x[k + 
+                                                    1, i]
+          img2[pidx[[i]]$fill[sel, ]] = col.rgb[, k]
+        }
+        img2[pidx[[i]]$border] = blk
+      }
+      print("uwu")
+      return(img2)
+    }
+  }
+  else stop("unrecognized node type!")
+}
+
+ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0){
+  
+  parallel::clusterExport(ml_session_cl, c("ml_run",
+                                           "gbl", 
+                                           "mSet_loc"),
+                          envir = environment())
+  
+  parallel::clusterEvalQ(ml_session_cl,{
+    small_mSet <- qs::qread(mSet_loc)
+  })
+  
+  pbapply::pblapply(jobs, 
+                    cl = if(length(jobs) > 1) ml_session_cl else 0, 
+                    function(settings, ml_cl){
+                      res = list()
+                      try({
+                        res = ml_run(settings = settings, 
+                                     mSet = small_mSet,
+                                     input = input,
+                                     cl = ml_cl)  
+                      })
+                      res
+                    },
+                    ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
+}
+
+assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")
+

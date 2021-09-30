@@ -67,9 +67,9 @@ observe({
   if(is.null(given_dir)) return()
   # change db storage directory in user options file
   MetaboShiny::setOption(lcl$paths$opt.loc, key="db_dir", value=given_dir)
-
+  lcl$paths$db_dir <<- given_dir
   # render current db location in text
-  output$curr_db_dir <- shiny::renderText({getOptions(lcl$paths$opt.loc)$db_dir})
+  output$curr_db_dir <- shiny::renderText({lcl$paths$db_dir})
 })
 
 # see above, but for working directory. CSV/DB files with user data are stored here.
@@ -85,7 +85,7 @@ shiny::observe({
   if(is.null(given_dir)) return()
   MetaboShiny::setOption(lcl$paths$opt.loc,key="work_dir", value=given_dir)
   lcl$paths$work_dir <<- given_dir
-  output$curr_exp_dir <- shiny::renderText({MetaboShiny::getOptions(lcl$paths$opt.loc)$work_dir})
+  output$curr_exp_dir <- shiny::renderText({lcl$paths$work_dir})
 })
 
 # triggers if user changes their current project name
@@ -113,37 +113,18 @@ observe({
     if(file.exists(fn)){
       mSet <- NULL
       mSet <- tryCatch({
-        load(fn)
+        suppressWarnings(load(fn))
         if(is.list(mSet)){
           msg = "Old save selected! Conversion isn't possible due to some batch correction methods changing in R 4.0. Please re-normalize your data."
           metshiAlert(msg)
           NULL
-          # # fix orig file
-          # orig_fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), "_ORIG.metshi")
-          # mSet_old <- readRDS(orig_fn)
-          # names(mSet_old) <- c("dataSet", "analSet", "settings")
-          # anal.type <<- "stat"
-          # mSet_old <- MetaboAnalystR::Read.TextData(mSet_old,
-          #                                           filePath = lcl$paths$csv_loc,
-          #                                           "rowu",
-          #                                           lbl.type = "disc")  # rows contain samples
-          # 
-          # mSet_old$dataSet$missing <- is.na(mSet$dataSet$orig)
-          # mSet_old$dataSet$start <- mSet$dataSet$orig
-          # mSet_old$metshiParams <- mSet$metshiParams
-          # mSet_old$metshiParams$rf_norm_parallelize <- "no"
-          # mSet_old$metshiParams$rf_norm_ntree <- 5
-          # mSet_old$metshiParams$max.allow <- 5000
-          # mSet_old$metshiParams$orig.count <- nrow(mSet_old$dataSet$orig)
-          # mSet_old$metshiParams$miss_perc <- mSet_old$metshiParams$perc_limit
-          # mSet_old$metshiParams$batch_method_a <- "WaveICA"
         }else{
           stop()
         }
       },
       error = function(cond){
         tryCatch({
-          mSet <- qs::qread(fn)
+          suppressWarnings(mSet <- qs::qread(fn))
         },
         error = function(cond){
           metshiAlert("Corrupt save detected! Reverting to previous state...")
@@ -159,28 +140,28 @@ observe({
         mSet$mSet <- NULL
         mSet$dataSet$combined.method <- TRUE # FC fix
         mSet <<- mSet
-        opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-        lcl$proj_name <<- opts$proj_name
-        lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, lcl$proj_name)
-        lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".db"))
-        lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(opts$proj_name, ".csv"))
-        
+        ml_queue$jobs <- list()
         shiny::updateCheckboxInput(session,
                                    "paired",
                                    value = mSet$dataSet$paired)
-        
-        uimanager$refresh <- c("general","statspicker",if("adducts" %in% names(opts)) "adds" else NULL, "ml")
+        uimanager$refresh <- c("general",
+                               "statspicker",
+                               "adds", 
+                               "ml")
         plotmanager$make <- "general"  
       }
     }
   }else if(filemanager$do == "save"){
+    
     fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
     
     if(!is.null(mSet)){
       
       mSet$mSet <- NULL
+      
       fn_bu <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
                                     "_BACKUP.metshi"),mustWork = F)
+      
       fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
                                  ".metshi"))
       file.rename(fn, fn_bu)
@@ -189,19 +170,19 @@ observe({
       try({
         qs::qsave(mSet, file = fn)
         success = T
-      })
+      }, silent=T)
       
       if(!success){
         file.rename(from = fn_bu, 
                     to = fn)
       }else{
+        file.remove(fn_bu)
         save_info$prev_time <- Sys.time()
         save_info$has_changed <- FALSE
-        
-        file.remove(fn_bu)
       }
     } 
   }
+  gc()
   filemanager$do <- "nothing"
 })
 
@@ -230,6 +211,10 @@ observe({
   }
 })
 
+#for(i in 1:length(ml_queue$jobs)){
+#  ml_queue$jobs[[i]]$ml_mtry = 20
+#}
+
 observe({
   # Re-execute this reactive expression after 1000 milliseconds
   invalidateLater(600000, session)
@@ -245,4 +230,33 @@ output$has_unsaved_changes <- shiny::renderUI({
   }else{
     ""
   }
+})
+
+shiny::observeEvent(input$clone_proj, {
+  if(input$proj_clone_name != ""){
+    proj_folder = lcl$paths$proj_dir
+    clone_folder = file.path(dirname(proj_folder), input$proj_clone_name)
+    if(!dir.exists(clone_folder)){
+      dir.create(clone_folder)
+      for(suffix in c("_params.csv", ".csv")){
+        orig_file = file.path(proj_folder, paste0(lcl$proj_name, suffix))
+        new_file = file.path(clone_folder, paste0(input$proj_clone_name, suffix))
+        file.copy(orig_file, new_file)
+      } 
+      shiny::showNotification("Cloned project! Please restart to load and continue from normalization.")
+    }
+  }
+})
+
+shiny::observe({
+  # - - - -
+  if(is.null(input$queue_ml_load)) return() # if nothing is chosen, do nothing
+  q_path <- input$queue_ml_load$datapath
+  shiny::showNotification("Loading existing machine learning queue...")
+  ml_queue$jobs <<- qs::qread(q_path)
+})
+
+shiny::observeEvent(input$queue_ml_save, {
+  q_path = normalizePath(file.path(lcl$paths$work_dir, paste0(input$queue_ml_name, ".qs")))
+  qs::qsave(ml_queue$jobs, q_path)
 })

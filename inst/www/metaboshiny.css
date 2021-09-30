@@ -384,7 +384,7 @@
 }
 /* -------------------- EXPERIMENTATION -------------------- */
 
-.shiny-image-output img {
+.dbimg > .shiny-image-output > img {
   max-width: 100%;
   max-height: 120px;
 }
@@ -616,3 +616,9 @@ a {
 .smallsparkle {
   pointer-events: none
 }
+
+.selectize-input { word-wrap : break-word;}
+
+.selectize-input { word-break: break-word;}
+
+.selectize-dropdown {word-wrap : break-word;}

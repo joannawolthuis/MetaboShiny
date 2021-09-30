@@ -57,8 +57,11 @@ shiny::observe({
 })
 
 shiny::observe({
+  
   if(my_selection$name != ""){
+    
     if(nrow(shown_matches$forward_full) > 0 ){
+      
       subsec = data.table::as.data.table(shown_matches$forward_full)[compoundname == my_selection$name]
       
       if(grepl("SYNONYMS:", x = subsec$description)){
@@ -72,9 +75,7 @@ shiny::observe({
       subsec <- subsec[, .(compoundname, 
                            source = strsplit(source, split = "SEPERATOR")[[1]], 
                            structure = structure, 
-                           description = strsplit(description, split = "SEPERATOR")[[1]]
-      )
-      ]
+                           description = strsplit(description, split = "SEPERATOR")[[1]])]
       
       subsec <- aggregate(subsec, by = list(subsec$source), FUN=function(x) paste0(unique(x), collapse="."))
       
@@ -99,12 +100,12 @@ shiny::observe({
             db = row$source
             desc_id = paste0("curr_desc_", db)
             desc = row$description
-            #output[[desc_id]] <- shiny::renderText({desc})
-            
+
             if(db == "synonym"){
               ui = shiny::fluidRow(align="center", 
                                    tags$h3("Synonyms:"),
-                                   helpText(desc),
+                                   shiny::span(desc),
+                                   shiny::br(),
                                    shiny::br()
               )
             }else{
@@ -116,10 +117,13 @@ shiny::observe({
                                      class = "btn btn-default action-button shiny-bound-input",
                                      shiny::img(src = address,
                                                 height = "30px"),
-                                     style = "vertical-align: middle;border-radius: 0px;border-width: 0px;background-color: #ff000000;"
+                                     style = "vertical-align: middle;border-radius: 
+                                              0px;border-width: 
+                                              0px;background-color: #ff000000;"
                                    ),
                                    shiny::br(),
-                                   helpText(desc),
+                                   shiny::HTML(paste0("<span>", desc, "</span>")),
+                                   shiny::br(),
                                    shiny::br()
               )
               

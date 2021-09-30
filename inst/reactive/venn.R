@@ -1,7 +1,7 @@
 # nonselected
 
 venn_yes = shiny::reactiveValues(start = data.frame(),
-                          now = data.frame())
+                                 now = data.frame())
 
 venn_no = shiny::reactiveValues(
                         start = data.frame(c("a", "b", "c")),
@@ -14,8 +14,8 @@ shiny::observeEvent(input$venn_add, {
   rows <- input$venn_unselected_rows_selected
   # get members and send to members list
   added = venn_no$now[rows,]
-  venn_yes$now <<- data.frame(c(unlist(venn_yes$now), added))
-  venn_no$now <<- data.frame(venn_no$now[-rows,])
+  venn_yes$now <<- rbind(venn_yes$now, added)
+  venn_no$now <<- venn_no$now[-rows,]
 })
 
 shiny::observeEvent(input$venn_remove, {
@@ -23,25 +23,63 @@ shiny::observeEvent(input$venn_remove, {
   rows <- input$venn_selected_rows_selected
   # get members and send to non members list
   removed = venn_yes$now[rows,]
-  venn_no$now <<- data.frame(c(unlist(venn_no$now), removed))
+  venn_no$now <<- rbind(venn_yes$now, removed)
   venn_yes$now <<- data.frame(venn_yes$now[-rows,])
 })
 
+output$venn_threshold_ui <- shiny::renderUI({
+  row = input$venn_selected_row_last_clicked
+  if(!is.null(row)){
+    if(venn_yes$now[row, "threshold"] != "any"){
+      thresh = venn_yes$now[row, "threshold"]#">10"
+      sign = stringr::str_extract(thresh,pattern = ">|<|=")
+      value = as.numeric(gsub(sign, "", thresh))
+    }else{
+      sign = "="
+      value = 0
+    }
+    shiny::fluidRow(column(width = 4, shiny::selectInput("venn_threshold_sign",
+                                                         label="sign:",
+                                                         choices = c("=",">","<"),
+                                                         multiple = F,
+                                                         selected = sign)), 
+                    column(width = 4, shiny::numericInput("venn_threshold_value",
+                                                          label = "value:",
+                                                          min = 0,
+                                                          max = 100,
+                                                          step = 0.01,
+                                                          value = value)),
+                    column(width=4, br(),shinyWidgets::circleButton("venn_threshold_set",
+                                                               icon = icon("check"),
+                                                               size="sm")))
+  }else{"Select analysis in bottom table to set threshold!"}
+})
+
+shiny::observeEvent(input$venn_threshold_set, {
+  rows = input$venn_selected_rows_selected
+  sign = input$venn_threshold_sign
+  value = input$venn_threshold_value
+  venn_yes$now[rows,"threshold"] <- paste0(sign, value)
+})
 
 # the 'non-selected' table
 output$venn_unselected <- DT::renderDataTable({
-  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames="excluded", options = list(dom = 'tp'))
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
   try({
-    res = DT::datatable(venn_no$now, rownames = FALSE, colnames="excluded", selection = "multiple", options = list(dom = 'tp'))
+    res = DT::datatable(venn_no$now, 
+                        rownames = FALSE, 
+                        colnames=c("result","threshold"), 
+                        selection = "multiple")
   })
   res
 })
 
 # the 'selected' table
 output$venn_selected <- DT::renderDataTable({
-  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames="included", options = list(dom = 'tp'))
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
   try({
-    res = DT::datatable(venn_yes$now,rownames = FALSE, colnames="included", selection = "multiple", options = list(dom = 'tp'))
+    res = DT::datatable(venn_yes$now,rownames = FALSE, colnames=c("result","threshold"), 
+                        selection = "multiple")
   })
   res
 })
@@ -73,30 +111,48 @@ shiny::observeEvent(input$intersect_venn, {
     intersecties <- unique(unlist(out))
 
     uniqies = lcl$vectors$venn_lists[[input$intersect_venn]]
-    lcl$tables$venn_overlap <<- setdiff(uniqies,intersecties)
-
+    overlap <- setdiff(uniqies,intersecties)
+    overlap = gsub("\\.$", "-", overlap)
+    mSet$analSet$venn <<- list(mzs = overlap)
+    lcl$tables$venn_overlap <<- overlap
   }else{
-    lcl$tables$venn_overlap <<- Reduce("intersect", lapply(input$intersect_venn, function(x){ # get the intersecting hits for the wanted tables
-      lcl$vectors$venn_lists[[x]]
-    }))
-  }
+    overlap <- Reduce("intersect", lcl$vectors$venn_lists[input$intersect_venn])
+    overlap = gsub("\\.$", "-", overlap)
+    mSet$analSet$venn <<- list(mzs = overlap)
+    lcl$tables$venn_overlap <<- overlap 
+    }
 
   lcl$tables$venn_overlap <<- data.frame(mz = lcl$tables$venn_overlap)
   rownames(lcl$tables$venn_overlap) <<- lcl$tables$venn_overlap$mz
 
   # hypergeometric testing...
-  if(length(input$intersect_venn) == 2 & nrow(lcl$tables$venn_overlap) > 0){
-
-    pval = 1 - phyper(nrow(lcl$tables$venn_overlap),
-                      length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
-                      ncol(mSet$dataSet$norm) - length(lcl$vectors$venn_lists[[1]]),
-                      length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]))
-    stars = p2stars(pval)
-    boxcolor = if(stars == "") "blue" else if(stars == "*") "green" else if(stars == "**") "yellow" else if(stars == "***") "orange" else if (stars == "****") "red"
-    output$venn_pval <- shiny::renderUI({
-      div(shiny::renderText({
-        paste0("significance: ", stars, " (p = ", pval, ")" )
-      }), style=paste0("background:", boxcolor))
+  if(nrow(lcl$tables$venn_overlap) > 0){
+    try({
+      pval = switch(as.character(length(input$intersect_venn)),
+                    "2" = 1 - phyper(nrow(lcl$tables$venn_overlap),
+                                     length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
+                                     ncol(mSet$dataSet$norm) - length(lcl$vectors$venn_lists[[1]]),
+                                     length(lcl$vectors$venn_lists[[input$intersect_venn[2]]])),
+                    "3" = venn_sample_3(nrepl = 100,
+                                        intersectn = nrow(lcl$tables$venn_overlap),
+                                        n = 1:ncol(mSet$dataSet$norm),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[3]]])),
+                    "4" = venn_sample_4(nrepl = 100,
+                                        intersectn = nrow(lcl$tables$venn_overlap),
+                                        n = 1:ncol(mSet$dataSet$norm),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[1]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[2]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[3]]]),
+                                        length(lcl$vectors$venn_lists[[input$intersect_venn[4]]])))
+      stars = p2stars(pval)
+      boxcolor = if(stars == "") "blue" else if(stars == "*") "green" else if(stars == "**") "yellow" else if(stars == "***") "orange" else if (stars == "****") "red"
+      output$venn_pval <- shiny::renderUI({
+        div(shiny::renderText({
+          paste0("significance: ", stars, " (p = ", pval, ")" )
+        }), style=paste0("background:", boxcolor))
+      })
     })
   }else{
     pval = NULL

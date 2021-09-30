@@ -33,7 +33,6 @@ Imports:
   BiocManager,
   pacman,
   devtools,
-  classyfireR,
   httr,
   jsonlite,
   RCurl,
@@ -91,7 +90,6 @@ Imports:
   plsdepot,
   vroom,
   qs,
-  WaveICA,
   ctc,
   gdata,
   glasso,
@@ -101,5 +99,14 @@ Imports:
   umap,
   ica,
   svglite,
-  beepr
+  beepr,
+  ggforce,
+  pracma,
+  ggupset,
+  missRanger,
+  doSNOW,
+  ggpp,
+  pdftools,
+  magick,
+  ggrepel
 RoxygenNote: 7.1.0

@@ -10,16 +10,16 @@ shiny::observe({
       success = F
       try({
         for(do in tablemanager$make){
-          suppressWarnings({
+          #suppressWarnings({
             toWrap <- switch(do,
                    vennrich = {
                      # - - - - -
-                     analyses = names(mSet$storage)
-                     venn_no$start <- report_no$start <- data.table::rbindlist(lapply(analyses, function(name){
-                       analysis = mSet$storage[[name]]$analysis
+                     analyses = names(mSet$storage) 
+                     analyses_table = data.table::rbindlist(lapply(analyses, function(name){
+                       analysis = mSet$storage[[name]]$analSet
                        analysis_names = names(analysis)
                        # - - -
-                       exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "venn")
+                       exclude = c("tsne", "heatmap", "type", "enrich", "power", "network")
                        analysis_names <- setdiff(analysis_names, exclude)
                        if(length(analysis_names) == 0){
                          return(data.table::data.table())
@@ -50,35 +50,42 @@ shiny::observe({
                        
                        # - - -
                        data.frame(
-                         paste0(analysis_names, " (", name, ")")
+                         name = paste0(analysis_names, " (", name, ")"),
+                         threshold = c("any")
                        )
                      }))
-                     venn_no$now <- venn_no$start
-                     report_no$now <- report_no$start
-                     lcl$vectors$analyses <<- unlist(venn_no$start[,1])
+                     #if(ncol(venn_no$start) > 0){
+                     
+                     lcl$vectors$analyses <<- unlist(analyses_table[,1])
+                     #}else{
+                     #  lcl$vectors$analyses <<- c()
+                     #}
                      # ---
                      lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
-                       shiny::updateSelectInput(session,
+                       shiny::updateSelectizeInput(session,
                                                 inputID, 
                                                 choices = {
-                                                 allChoices = as.character(lcl$vectors$analyses)
-                                                 if(inputID %in% c("heattable", "network_table", "ml_specific_mzs")){
+                                                 ch = allChoices = as.character(lcl$vectors$analyses)
+                                                 if(inputID %in% c("heattable", "network_table")){
                                                    ch = allChoices[grepl(mSet$settings$cls.name, allChoices, fixed=TRUE)]  
+                                                   }else{
+                                                   ch = allChoices
                                                    if(inputID == "ml_specific_mzs"){
-                                                     c("no", "manual", ch)
-                                                   }else{
-                                                     ch
+                                                     ch = c("no", "manual", "none", ch)
                                                    }
-                                                   }else{
-                                                   allChoices
-                                                 }
-                                                })  
+                                                   }
+                                                 ch
+                                                }, server = T) 
                      })
                      # --- 
+                     venn_no$start <- report_no$start <- analyses_table
+                     venn_no$now <- venn_no$start
+                     report_no$now <- report_no$start
+                     
                      list()
                    },
                    enrich = {
-                     enrich$overview <<- if("mummi.resmat" %in% names(mSet$analSet$enrich)){
+                     enrich$overview <<- if(!is.null(mSet$analSet$enrich$"mummi.resmat")){
                        mSet$analSet$enrich$mummi.resmat 
                      }else{
                        mSet$analSet$enrich$mummi.gsea.resmat
@@ -129,6 +136,12 @@ shiny::observe({
                    tsne = {
                      NULL
                    },
+                   featsel = {
+                     decision = mSet$analSet$featsel[[1]]$finalDecision
+                     res = data.frame(decision = decision[decision != "Rejected"], 
+                                      row.names = names(decision[decision != "Rejected"]))
+                     list(featsel_tab = res) 
+                   },
                    pca = {
                      if("pca" %in% names(mSet$analSet)){
                        # render PCA variance per PC table for UI
@@ -168,12 +181,71 @@ shiny::observe({
                      }
                    },
                    ml = {
+                     ###
+                     
                      if("ml" %in% names(mSet$analSet)){
-                       roc_data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]$roc
-                       roc_data$perf <- data.table::as.data.table(roc_data$perf)
-                       res = unique(roc_data$perf[,c("AUC_PAIR", "comparison", "attempt")])
+                       data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
+                       if(!is.null(data$res$prediction)){
+                         data$res$shuffled = FALSE
+                         data$res = list(data$res)
+                       }
+                       
+                       ml_performance_rows = lapply(1:length(data$res), function(i){
+                         res = data$res[[i]]
+                         ml_performance = getMLperformance(res, 
+                                                           pos.class = input$ml_plot_posclass,
+                                                           x.metric=input$ml_plot_x,
+                                                           y.metric=input$ml_plot_y)
+                         ml_performance$coords$shuffled = c(res$shuffled)
+                         ml_performance$coords$run = i
+                         ml_performance
+                       })
+                       coords = data.table::rbindlist(lapply(ml_performance_rows, function(x) x$coords))
+                       ml_performance = list(coords = coords,
+                                             names = ml_performance_rows[[1]]$names)
+                       
+                       split_coords = split(coords, coords$run)
+                       
+                       ml_tbl_rows = lapply(split_coords, function(tbl){
+                         shuffled = unique(tbl$shuffled)
+                         training.rows = data.table::data.table()
+                         if(!shuffled){
+                           training = tbl[grep("Fold", `Test set`)]
+                           spl.folds = split(training, training$`Test set`)
+                           fold.rows = lapply(spl.folds, function(test_set){
+                             data.table::data.table(AUC = pracma::trapz(test_set$x, 
+                                                                        test_set$y),
+                                                    "Test set" = unique(test_set$`Test set`))
+                           })
+                           training.rows = data.table::rbindlist(fold.rows)
+                         }
+                         # testing
+                         test_name = if(shuffled) paste0("Shuffled test #", unique(tbl$run) - 1) else "Test"
+                         test_set = tbl[`Test set`=="Test"]
+                         testing.row = data.table::data.table(AUC = pracma::trapz(test_set$x, 
+                                                                                  test_set$y),
+                                                              "Test set" = test_name)
+                         rbind(training.rows, testing.row)
+                       })
+                       res = data.table::rbindlist(ml_tbl_rows)
                        lcl$tables$ml_roc_all <<- res
-                       list(ml_overview_tab = res)
+                       # params 
+                       if("params" %in% names(data)){
+                         params = data.table::data.table(param = gsub("ml_", "", names(data$params)), value = data$params)
+                       }else{
+                         params = data.table::data.table(unavailable = "No parameters saved for this model...")
+                       }
+                       
+                       no_shuffle = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
+                       res2 = no_shuffle$importance
+                       rownames(res2) = gsub("^X", "", rownames(res2))
+                       rownames(res2) = gsub("\\.$", "-", rownames(res2))
+                       res2 = data.frame(importance=res2[,1], row.names=rownames(res2))
+                       lcl$tables$ml_imp <<- res2
+                       
+                       list(ml_overview_tab = res,
+                            ml_param_tab = params,
+                            ml_importance_tab = res2)
                      }else{
                        list()
                      }
@@ -206,6 +278,19 @@ shiny::observe({
                      # set buttons to proper thingy
                      list(tt_tab = res)
                    },
+                   combi = {
+                     # save results to table
+                     res <- mSet$analSet$combi$sig.mat
+                     if(is.null(res)){
+                       res <- data.table::data.table("No significant hits found")
+                       mSet$analSet$combi <- NULL
+                     }
+                     res = as.data.frame(res)
+                     rownames(res) <- res$rn
+                     res$rn <- NULL
+                     # set buttons to proper thingy
+                     list(combi_tab = res)
+                   },
                    fc = {
                      # if none found, give the below table...
                      # save results to table
@@ -223,7 +308,7 @@ shiny::observe({
                      NULL
                    }
             )
-          })
+          #})
         }
         success = T
       })
@@ -235,12 +320,17 @@ shiny::observe({
           output[[tableName]] <- DT::renderDataTable({
             subbed = gsub("\\+", "", rownames(mytable))
             rns = rownames(mytable)
-            if(subbed[1] %in% colnames(mSet$dataSet$norm)){ # check if a mz table
-              stars = sapply(mSet$report$mzStarred[subbed]$star, 
-                             function(hasStar) if(hasStar) "★" else "")
-              starCol = data.table::data.table("★" = stars)
-              mytable = cbind(starCol, mytable)
-            }
+            try({
+              if(subbed[1] %in% colnames(mSet$dataSet$norm)){ # check if a mz table
+                # starico = "★"
+                starico = '<i class=\"fa fa-star\" role=\"presentation\" aria-label=\"star icon\"></i>'
+                stars = sapply(mSet$report$mzStarred[subbed]$star, 
+                               function(hasStar) if(hasStar) starico else "")
+                starCol = data.table::data.table(starico = stars)
+                colnames(starCol) = starico
+                mytable = cbind(starCol, mytable)
+              }
+            })
             metshiTable(content = mytable, rownames = rns)
           }, server = FALSE)
         }, toWrap, names(toWrap)) 

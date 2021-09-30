@@ -5,25 +5,26 @@ lapply(c("merge",
            # creates listener for if the 'check db' button is pressed
            shiny::observe({
              # see which db files are present in folder
-             if(dir.exists(lcl$paths$proj_dir)){
-               folder_files <- list.files(lcl$paths$proj_dir)
-               is.present <- switch(col,
-                                    merge = {
-                                      if(!is.null(input$ms_modes)){
-                                        all(sapply(input$ms_modes, function(ionMode){
-                                          !is.null(input[[paste0("outlist_", ionMode)]])
-                                        }) & !is.null(input$metadata))  
-                                      } else FALSE
-                                    },
-                                    csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
-                                    db = paste0(input$proj_name_new, ".db") %in% folder_files)
-               check_pic <- if(is.present) "yes.png" else "no.png"
-               # generate checkmark image objects
-               output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
-                 filename <- normalizePath(file.path('www', check_pic))
-                 list(src = filename, height = "70px")
-               }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha  
-             }
+             if(!is.null(lcl$paths$proj_dir)){
+               if(dir.exists(lcl$paths$proj_dir)){
+                 folder_files <- list.files(lcl$paths$proj_dir)
+                 is.present <- switch(col,
+                                      merge = {
+                                        if(!is.null(input$ms_modes)){
+                                          all(sapply(input$ms_modes, function(ionMode){
+                                            !is.null(input[[paste0("outlist_", ionMode)]])
+                                          }) & !is.null(input$metadata))  
+                                        } else FALSE
+                                      },
+                                      csv = paste0(input$proj_name_new, ".csv") %in% folder_files,
+                                      db = paste0(input$proj_name_new, ".db") %in% folder_files)
+                 check_pic <- if(is.present) "yes.png" else "no.png"
+                 # generate checkmark image objects
+                 output[[paste0("proj_", col, "_check")]] <- shiny::renderImage({
+                   filename <- normalizePath(file.path('www', check_pic))
+                   list(src = filename, height = "70px")
+                 }, deleteFile = FALSE)# <- this is important or the checkmark file is deleted, haha  
+               }}
            })
          })
 
@@ -54,14 +55,16 @@ missValues <- shiny::reactiveValues(pos = c(),
 output$missMzRatio <- shiny::renderUI({
   if(length(missValues$pos) > 0){
     posTotal = length(missValues$pos$missPerc)
-    posKeep = length(which(missValues$pos$missPerc < input$perc_limit_mz))
+    posPerc = missValues$pos$missPerc/missValues$pos$nrows * 100
+    posKeep = length(which(posPerc < input$perc_limit_mz))
     posText = paste0("Remaining (+): ", posKeep, " / ", posTotal)
   }else{
     posText = NULL
   }
   if(length(missValues$neg) > 0){
-    negTotal = length(missValues$neg$missPerc )
-    negKeep = length(which(missValues$neg$missPerc < input$perc_limit_mz))
+    negTotal = length(missValues$neg$missPerc)
+    negPerc = missValues$neg$missPerc/missValues$neg$nrows * 100
+    negKeep = length(which(negPerc < input$perc_limit_mz))
     negText = paste0("Remaining (-):", negKeep, " / ", negTotal)
   }else{
     negText = NULL
@@ -221,10 +224,11 @@ shiny::observeEvent(input$metadata_new_add, {
   meta_path <- input$metadata_new$datapath
   success = F
   try({
-    new_meta <- data.table::fread(meta_path)
+    new_meta <- data.table::fread(meta_path,fill=TRUE)#,comment.char=.)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
-    mSet <- MetaboShiny::store.mSet(mSet)
+    mSet <- MetaboShiny::store.mSet(mSet, 
+                                    proj.folder = lcl$paths$proj_dir)
     mSet <- MetaboShiny::reset.mSet(mSet,
                                     fn = file.path(lcl$paths$proj_dir, 
                                                    paste0(lcl$proj_name,
@@ -243,12 +247,11 @@ shiny::observeEvent(input$metadata_new_add, {
   if(success){
     mSet <<- mSet
     # overwrite orig?
-    save(mSet, file = file.path(lcl$paths$proj_dir, 
+    save(mSet, file = file.path(lcl$paths$proj_dir,
                                 paste0(lcl$proj_name,"_ORIG.metshi")))
     mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <- NULL 
-    fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")
-    save(mSet, file = fn)
     shiny::showNotification("Updated metadata!")
+    filemanager$do <- "save"
     uimanager$refresh <- "general"
   }else{
     shiny::showNotification("Something went wrong! :(")
@@ -316,3 +319,19 @@ output$wipe_regex_ui <- shiny::renderUI({
                      width="50%")
   }
 })
+
+shiny::observeEvent(input$check_ref_mzs, {
+  firstRow = data.table::fread(lcl$paths$csv_loc,nrows = 1,fill=TRUE,comment.char=.)
+  distr = MetaboShiny::getColDistribution(firstRow)
+  refMzs = colnames(firstRow)[distr$mz]
+  shinyWidgets::updatePickerInput(session, 
+                                  "ref_mz",
+                                  choices = append(refMzs, 
+                                                   list("select a m/z")), 
+                                  # choicesOpt = list(subtext = c(subtext[newOrder], "select a m/z"),
+                                  #                   icon = c(rep('',length(subtext)), "fa-cat"),
+                                  #                   style = c(rep('text-align:center;',length(subtext) + 1))),
+                                  selected = "select a m/z"
+  )  
+})
+
