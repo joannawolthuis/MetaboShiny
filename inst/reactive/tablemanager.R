@@ -90,6 +90,54 @@ shiny::observe({
                      }else{
                        mSet$analSet$enrich$mummi.gsea.resmat
                      } 
+                     # summary table for papers
+                     signif = 0.05
+                     signif_hits <- enrich$overview[enrich$overview[,"EASE"] <= signif,]
+                     summary_table_blocks <- lapply(rownames(signif_hits), function(curr_pw){
+                       pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
+                       cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
+                       hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
+                       myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
+                       myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
+                       myHits <- myHits[,c("Query.Mass", 
+                                           "Compound.Name", 
+                                           "Matched.Compound", 
+                                           "Matched.Form", 
+                                           "Mass.Diff")]
+                       colnames(myHits) <- c("rn", "compoundname", "identifier", "adduct", "dppm")
+                       # --- FIX ADDUCTS ---
+                       if(any(!(as.character(myHits$rn) %in% colnames(mSet$dataSet$norm)))){
+                         myHits$rn <- sapply(as.character(myHits$rn), function(mz){
+                           orig.mzs = gsub("-", "", colnames(mSet$dataSet$norm))
+                           unalt.match = mz %in% orig.mzs
+                           if(unalt.match){
+                             return(mz) 
+                           }else{
+                             alt.match = paste0(mz, "0") %in% orig.mzs
+                             if(alt.match){
+                               paste0(mz, "0")
+                             }else{
+                               mz
+                             }
+                           }
+                         })
+                         adduct.addition = ifelse(myHits$adduct %in% adducts[Ion_mode == "positive"]$Name, "", "-")
+                         myHits$rn = paste0(myHits$rn, adduct.addition)
+                       }
+                       sig.hits = mSet$analSet$enrich$orig.input[mSet$analSet$enrich$orig.input$significant, "m.z"]
+                       myHits$significant = ifelse(myHits$rn %in% sig.hits, "yes", "no")  
+                       myHits <- unique(myHits[significant == "yes"])
+                       myHits <- myHits[order(myHits$compoundname)]
+                       myHits$pathway <- curr_pw
+                       myHits <- myHits[,c("pathway","compoundname","identifier","rn", "adduct","dppm")]
+                       myHits$dppm <- sprintf("%.2f", myHits$dppm)
+                       colnames(myHits) <- c("Pathway", "Metabolite", "KEGG ID", "m/z", "Adduct", "dppm")
+                       for(i in 1:3){
+                         myHits[[i]][duplicated(myHits[[i]])] <- ""
+                       }
+                       myHits
+                     })
+                     enrich$summary <- data.table::rbindlist(summary_table_blocks)
                      list()
                    },
                    corr = {

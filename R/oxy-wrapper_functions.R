@@ -534,7 +534,6 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
       flattened
     }else{
       analysis = mSet$storage[[experiment]]$analSet
-      
       rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
       rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
       rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
@@ -667,19 +666,18 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                            res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
                                                  value=c(0)))
                          }
-                         
                          names(res) = base_name
-                         #print(res)
                          res
                        },
                        plsda = {
                          which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
-                         
                          compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
-                         colnames(compounds_pc) <- c("rn", paste0("Component ", 1:(ncol(compounds_pc)-1)))
-                         ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
-                         
-                         res <- list(ordered_pc$rn)
+                         colnames(compounds_pc) <- c("rn", 
+                                                     paste0("Component", 1:(ncol(compounds_pc)-1)))
+                         ordered_compounds_pc <- compounds_pc[order(compounds_pc[[which.plsda]],
+                                                                    decreasing = T),]
+                         res <- list(data.frame("m/z"=ordered_compounds_pc$rn,
+                                                value=ordered_compounds_pc[[which.plsda]]))
                          names(res) <- paste0(which.plsda, " (PLS-DA)")
                          # - - -
                          res

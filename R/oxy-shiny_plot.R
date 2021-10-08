@@ -303,17 +303,6 @@ ggplotSummary <- function(mSet, cpd,
                                     y = rep(min(profile$Abundance - 0.1), 2))
   stars = ""
   
-  # try({
-  #   pval <- if(mode == "nm"){
-  #     mSet$analSet$tt$sig.mat[which(rownames(mSet$analSet$tt$sig.mat) == cpd), "p.value"]
-  #   }else{
-  #     int.col <- grep("adj|Adj", colnames(mSet$analSet$aov2$sig.mat),value=T)
-  #     int.col <- grep("int|Int", int.col, value=T)
-  #     mSet$analSet$aov2$sig.mat[which(rownames(mSet$analSet$aov2$sig.mat) == cpd), int.col]
-  #   }
-  #   stars <- p2stars(pval)
-  # })
-  
   p <- ggplot2::ggplot()
   
   for(adj in c("color", "shape", "text", "fill")){
@@ -506,6 +495,35 @@ ggplotSummary <- function(mSet, cpd,
                                                                              color = ggplot2::guide_legend(override.aes = list(shape = 21)))
     p  
   })
+}
+
+#' @export
+ggPlotMulti <- function(mSet, mzs,
+                        shape.fac = "label", 
+                        cols = c("black", "pink"),
+                        cf = rainbow, 
+                        mode = "nm", 
+                        styles=c("box", "beeswarm"), add_stats = "mean",
+                        color.fac = "label",
+                        text.fac = "label",
+                        fill.fac = "label"){
+  print("Collecting data for m/z values...")
+  all_mz_dat = data.table::rbindlist(pbapply::pblapply(mzs, function(mz){
+    data = MetaboShiny::getProfile(mSet, mz)
+    data$mz = mz
+    data
+  }))
+  all_mz_dat$mz <- as.factor(all_mz_dat$mz)
+  
+  p = ggplot2::ggplot(all_mz_dat, aes(x = mz, y = Abundance))
+  
+  for(style in styles){
+    p = p + switch(style, 
+                   box = geom_boxplot(aes(fill = Group), position = position_dodge(0.9))
+    ) 
+  }
+  p = p + scale_fill_manual(values = cols) + ggplot2::xlab("m/z")
+  p
 }
 
 #' @export 
@@ -795,7 +813,10 @@ ggPlotCombi <- function(mSet,
                         cf,
                         n=20,
                         color_all_vals = F,
-                        pointsize = 2){
+                        pointsize = 2,
+                        only_color_specific = F,
+                        topn = 20,
+                        add_mz_labels=F){
   
     dt = data.table::as.data.table(mSet$analSet$combi$sig.mat)
     anal1_trans = mSet$analSet$combi$trans$x
@@ -808,7 +829,7 @@ ggPlotCombi <- function(mSet,
     anal2_col = colnames(dt)[3]
     
     colnames(dt) <- c("m/z", "x", "y")#anal1_col, anal2_col)
-    dt$col <- abs(dt[,2]*dt[,3])
+    dt$col <- abs(dt[,2] * dt[,3])
     dt$significant <- "YES"
     
     if(length(mSet$analSet$combi$all.vals$x) > 0 & length(mSet$analSet$combi$all.vals$y) > 0){
@@ -835,6 +856,14 @@ ggPlotCombi <- function(mSet,
     anal2_col = if(anal2_trans != "none") paste0(anal2_trans,"(", anal2_col,")") else anal2_col
     
     dt$V = dt$x * dt$y
+    dt = dt[order(abs(dt$V),decreasing = T),]
+    
+    if(only_color_specific){
+      dt$significant <- c("NO")
+      dt$significant[1:topn] <- c("YES")
+    }
+    
+    View(dt)
     
     p <- if(color_all_vals){
       ggplot2::ggplot() +
@@ -844,25 +873,36 @@ ggPlotCombi <- function(mSet,
                                                   text=`m/z`,
                                                   key=`m/z`),
                             linesize = 0.5,
-                            cex = pointsize,shape=21) +
+                            cex = pointsize,
+                            shape=21) +
         ggplot2::scale_fill_gradientn(colours = cf(n)) +
         ggplot2::scale_x_continuous(labels=scaleFUN) + 
         ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
         ggplot2::ylab(paste0(anal2, ": ", anal2_col))
     }else{
-      ggplot2::ggplot() +
+      p = ggplot2::ggplot() +
         ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
                                                   y=y,
-                                                  fill=significant, #col,
+                                                  fill = significant, 
+                                                  color = significant,
                                                   text=`m/z`,
                                                   key=`m/z`), cex=pointsize, shape=21) +
+        scale_color_manual(values=c("YES" = "red",
+                                   "NO" = "darkgray"))+
         scale_fill_manual(values=c("YES" = "red",
-                                    "NO" = "darkgray")) +
+                                   "NO" = "darkgray")) +
         #ggplot2::scale_colour_gradientn(colours = cf(n),guide=FALSE) +
         ggplot2::scale_x_continuous(labels=scaleFUN) + 
         ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
         ggplot2::ylab(paste0(anal2, ": ", anal2_col)) 
+      if(add_mz_labels){
+       p + ggrepel::geom_label_repel(data = dt[1:topn,], 
+                                     mapping = ggplot2::aes(label = `m/z`, x = x, y = y),
+                                     max.overlaps = 30,
+                                     force = 20,size=3) 
+      }
     }
+    
     p
 }
 
@@ -2261,15 +2301,17 @@ ggPlotPower <- function(mSet,
 #' @rdname ggPlotMummi
 #' @export 
 #' @importFrom ggplot2 ylab xlab scale_colour_gradientn
-ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
+ggPlotMummi <- function(mSet, cf, 
+                        plot_mode = "volclike", 
+                        show_nonsig=T){
   
   anal.type = if(!is.null(mSet$analSet$enrich$mummi.resmat)) "mummichog" else "gsea"
 
   if (anal.type == "mummichog") {
     mummi.mat <- mSet$analSet$enrich$mummi.resmat
-    y <- -log10(mummi.mat[, 5])
+    y <- -log10(mummi.mat[, 6]) # EASE
     x <- mummi.mat[, 3]/mummi.mat[, 4]
-    pval = mummi.mat[,5]
+    pval = mummi.mat[,6]
     pathnames <- rownames(mummi.mat)
   } else {
     gsea.mat <- mSet$analSet$enrich$mummi.gsea.resmat
@@ -2298,7 +2340,9 @@ ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
   
   bg.vec <- heat.colors(length(y))
   
-  df <- data.frame(path.nms, x, y, pval, radi.vec)
+  df <- data.frame(path.nms, 
+                   x, y, pval, 
+                   radi.vec)
   
   scaleFUN <- function(x) sprintf("%.2f", x)
   
@@ -2307,16 +2351,15 @@ ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
   pthresh = 0.05
   logpthresh = -log10(pthresh)
   
-  if(!show_nonsig | plot_mode == "gsea"){
-    df = df[df$pval <= pthresh,]
-  }
-  
   df <- if(plot_mode == "gsea"){
     df[order(abs(df$x), decreasing = F),]
   }else{
     df[order(df$multiplied, decreasing = T),]
   }
   
+  if(!show_nonsig | plot_mode == "gsea"){
+    df = df[df$pval <= pthresh,]
+  }
     p <- switch(plot_mode, 
               gsea = ggplot2::ggplot(df) + ggplot2::geom_bar(ggplot2::aes(y = path.nms, 
                                                                                  x = x, 
@@ -2338,7 +2381,7 @@ ggPlotMummi <- function(mSet, cf, plot_mode = "volclike", show_nonsig=T){
                                                                    shape = 21,
                                                                    color = "black") +
                 ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, cex=0.3) +
-                ggrepel::geom_label_repel(data = df[df$pval <= pthresh,],
+                ggrepel::geom_label_repel(data = df[df$y >= logpthresh,],
                                           mapping = ggplot2::aes(x = x, 
                                                                  y = y,
                                                                  label = path.nms),

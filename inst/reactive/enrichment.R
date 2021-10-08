@@ -19,17 +19,22 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       mzs_withvals$statistic = c(1)
     }
     
-    multi.state.table <- data.table::rbindlist(lapply(cpds, function(cpd_id){
+    multi.state.table <- data.table::rbindlist(lapply(cpds, 
+                                                      function(cpd_id){
       mz_rows = mzs_withvals[identifier == cpd_id]
-      if(grey_nonsig){
-        mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
+      if(nrow(mz_rows) > 0){
+        if(grey_nonsig){
+          mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
+        }else{
+          mz_rows$stastistic <- ifelse(mz_rows$significant, 1, 0)
+        }
+        all.dat = data.table::data.table(id = cpd_id,
+                                         value = mz_rows$stastistic)
+        reshape2::dcast(unique(all.dat),
+                        formula = id ~ value)  
       }else{
-        mz_rows$stastistic <- ifelse(mz_rows$significant, 1, 0)
+        data.table::data.table()
       }
-      all.dat = data.table::data.table(id = cpd_id,
-                                       value = mz_rows$stastistic)
-      reshape2::dcast(unique(all.dat),
-                      formula = id ~ value)
     }), fill = TRUE)
     
     colnames(multi.state.table) = c("id", paste0("add", 1:(ncol(multi.state.table)-1)))
@@ -39,7 +44,8 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       multi.state.table[i,] <- multi.state.table[i, ..new.order]  
     }
     
-    non.zero.cols = sapply(1:ncol(multi.state.table), function(i) any(!is.na(multi.state.table[[i]])))
+    non.zero.cols = sapply(1:ncol(multi.state.table), 
+                           function(i) any(!is.na(multi.state.table[[i]])))
     multi.state.table = multi.state.table[, ..non.zero.cols]
     multi.state.table <- as.data.frame(multi.state.table)
     rownames(multi.state.table) = multi.state.table$id

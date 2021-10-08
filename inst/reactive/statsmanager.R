@@ -152,6 +152,14 @@ shiny::observe({
                    #similarly to venn diagram
                    flattened <- list(getAllHits(mSet,
                                                 input$mummi_anal))
+                   if(input$mummi_enr_method & grepl("combi", input$mummi_anal)){
+                     head(flattened)
+                     flattened[[1]]$value <- 1
+                     flattened[[1]]$significant <- F
+                     flattened[[1]] <- flattened[[1]][order(abs(flattened[[1]]$significant),decreasing = T),]
+                     flattened[[1]]$value[1:input$mummi_topn] <- 0
+                     flattened[[1]]$significant[1:input$mummi_topn] <- T
+                   }
                    
                    hasP = T#grepl("tt|aov|asca|combi|venn",input$mummi_anal)
                    setProgress(0.1)
@@ -171,13 +179,13 @@ shiny::observe({
                    tbl[, "p.value"] = if(hasP) flattened[[1]][,2] else c(0)
                    tbl[, "t.score"] = if(hasT) flattened[[1]][,3] else c(NA)
                    
-                   print("Preview of input table:")
-                   print(head(tbl))
-                   
                    if(hasP) if(all(is.na(tbl$p.value))) tbl$p.value <- c(0)
                    if(hasT) if(all(is.na(tbl$t.score))) tbl$t.score <- c(0)
                    
                    tmpfile <- tempfile()
+                   
+                   print("Preview of input table:")
+                   print(head(tbl))
                    
                    fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
                    

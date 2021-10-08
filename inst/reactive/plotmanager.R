@@ -112,7 +112,7 @@ shiny::observe({
                       }
                       
                       output[[plotName]] <- shiny::renderPlot({
-                        suppressWarnings(print(myplot))
+                        suppressWarnings(myplot)
                       })  
                     }
                   }, silent = F)
@@ -132,16 +132,16 @@ shiny::observe({
                   }else{
                     plotly::renderPlotly({
                       if(!is3D & plotName != "heatmap_plot"){
-                        myplot <- plotly::ggplotly(suppressWarnings(print(myplot)),
+                        myplot <- plotly::ggplotly(suppressWarnings(myplot),
                                                    tooltip = "text", 
                                                    height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
                       }
                       if(plotName != "heatmap_plot"){
-                        myplot <- if(grepl("venn", plotName)) plotly::ggplotly(suppressWarnings(print(myplot))) %>% plotly::layout(xaxis = emptyax,
+                        myplot <- if(grepl("venn", plotName)) plotly::ggplotly(suppressWarnings(myplot)) %>% plotly::layout(xaxis = emptyax,
                                                                                            yaxis = emptyax,
                                                                                            showlegend=input$legend) else myplot %>% plotly::layout(showlegend=input$legend) 
                       }else{
-                        myplot <- if(plotName == "heatmap_plot") suppressWarnings(print(myplot$heatmap_interactive)) else plotly::ggplotly(suppressWarnings(print(myplot))) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
+                        myplot <- if(plotName == "heatmap_plot") suppressWarnings(myplot$heatmap_interactive) else plotly::ggplotly(suppressWarnings(myplot)) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
                                                                width = session$clientData[[empty]])
                       }
                       
@@ -158,13 +158,13 @@ shiny::observe({
                       }
                       
                       suppressWarnings({
-                        suppressWarnings(print(myplot %>%
+                        suppressWarnings(myplot %>%
                           plotly::config(
                             toImageButtonOptions = list(
                               format = if(input$plotsvg) "svg" else "png",
                               filename = paste0(plotFn, "_interactive")
                             ))
-                          ))
+                          )
                       })
                     })
                   }
@@ -175,10 +175,10 @@ shiny::observe({
                     if(plotName == "heatmap_plot"){
                       saveFun = if(input$plotsvg) svg else png
                       saveFun(file=file)
-                      suppressWarnings(print(myplot$heatmap_static()))
+                      suppressWarnings(myplot$heatmap_static())
                       dev.off()  
                     }else{
-                      ggplot2::ggsave(file, plot = suppressWarnings(print(myplot)))
+                      ggplot2::ggsave(file, plot = suppressWarnings(myplot))
                     }
                   }
                 )
