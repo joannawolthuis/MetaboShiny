@@ -127,7 +127,6 @@ get_prematches <- function(who = NA,
                                          main = "AND `%iso` > 99.9999", 
                                          minor = "AND `%iso` < 99.9999") else ""
   
-  #who = gsub("0+$", "", who)
   query = gsubfn::fn$paste("$firstpart WHERE $what = '$who' $dbfrag $addfrag $isofrag")
 
   res = RSQLite::dbGetQuery(conn, query)
@@ -223,8 +222,6 @@ score.isos <- function(qmz, table, mSet, method="mscore", inshiny=TRUE,
   }else{
     sourcetable = mSet$dataSet$norm
   }
-  
-  print(dim(sourcetable))
   
   if(rtmode){
     rt = as.numeric(gsub("(.*RT)", "", qmz))

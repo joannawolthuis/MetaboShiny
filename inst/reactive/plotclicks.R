@@ -8,7 +8,6 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
       if(input$tab_search == "match_filters_tab" & input$match_filters == paste0("pie_",pietype)){
         i = d$pointNumber + 1
         showsubset = as.character(pieinfo[[pietype]]$Var.1[i])
-        
         print(showsubset)
         mzMode =if(grepl(my_selection$mz, pattern = "-")) "negative" else "positive"
         if(pietype == "add"){
@@ -26,6 +25,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
             result_filters[[pietype]] <- curr_filt[curr_filt != showsubset]  
           }
         }
+        print(reactiveValuesToList(result_filters))
         search$go <- T
       }
     }, silent = F)

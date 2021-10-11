@@ -484,6 +484,11 @@ shiny::observe({
         
         mzMode = if(grepl(my_selection$mz, pattern="\\-")) "negative" else "positive"
         
+        mz = gsub(my_selection$mz, 
+                  pattern="/.*$|RT.*$", 
+                  replacement="")
+        mz = gsub("0$", "", mz)
+        
         matches = data.table::as.data.table(get_prematches(who = mz,
                                                            what = "map.query_mz",
                                                            patdb = lcl$paths$patdb,
