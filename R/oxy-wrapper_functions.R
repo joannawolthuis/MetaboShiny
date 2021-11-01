@@ -1197,13 +1197,35 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          # PLOT #
                          ml_performance_rows = lapply(1:length(data$res), function(i){
                            res = data$res[[i]]
-                           ml_performance = getMLperformance(ml_res = res, 
-                                                             pos.class = input$ml_plot_posclass,
-                                                             x.metric = input$ml_plot_x,
-                                                             y.metric = input$ml_plot_y)
+                           if(input$ml_plot_facet %in% colnames(mSet$dataSet$covars)){
+                             test_samps = res$in_test
+                             perf_faceted <- lapply(unique(mSet$dataSet$covars[[input$ml_plot_facet]]), function(facet_var){
+                               in_facet = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$ml_plot_facet]] == facet_var)]
+                               in_facet_and_test_idx = rownames(res$prediction) %in% in_facet
+                               in_facet_and_test = rownames(res$prediction)[in_facet_and_test_idx]
+                               print(paste(c("In subset:",
+                                             in_facet_and_test),
+                                           collapse = ","))
+                               res_subset = res
+                               res_subset$prediction <- res_subset$prediction[in_facet_and_test,]
+                               res_subset$labels <- res_subset$labels[which(in_facet_and_test_idx)]
+                               subset_performance <- getMLperformance(ml_res = res_subset, 
+                                                                      pos.class = input$ml_plot_posclass,
+                                                                      x.metric = input$ml_plot_x,
+                                                                      y.metric = input$ml_plot_y)
+                               subset_performance$coords$Facet = facet_var
+                               subset_performance
+                             })
+                             ml_performance <- list(coords = data.table::rbindlist(lapply(perf_faceted, function(x) x$coords)),
+                                                    names = perf_faceted[[1]]$names)
+                           }else{
+                             ml_performance = getMLperformance(ml_res = res, 
+                                                               pos.class = input$ml_plot_posclass,
+                                                               x.metric = input$ml_plot_x,
+                                                               y.metric = input$ml_plot_y) 
+                           }
                            ml_performance$coords$shuffled = c(res$shuffled)
                            ml_performance$coords$run = i
-                           plot_coords = ml_performance$coords[`Test set`=="Test"]
                            ml_performance
                          })
                          
@@ -1213,8 +1235,24 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          ml_performance = list(coords = coords,
                                                names = ml_performance_rows[[1]]$names)
                          
-                         ml_roc = ggPlotCurves(ml_performance,
-                                               cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                         if("Facet" %in% colnames(coords)){
+                           ml_facet_rocs = lapply(split(ml_performance$coords, ml_performance$coords$Facet),
+                                             function(facet){
+                                               ml_performance_facet = ml_performance
+                                               ml_performance_facet$coords <- facet
+                                               ml_roc = ggPlotCurves(ml_performance_facet,
+                                                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                               ml_roc = ml_roc + 
+                                                 ggplot2::ggtitle(unique(facet$Facet)) + 
+                                                 ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+                                               ml_roc
+                                             })
+                           ml_roc = ggpubr::ggarrange(plotlist = ml_facet_rocs, common.legend = TRUE, legend="right")
+                         }else{
+                           ml_roc = ggPlotCurves(ml_performance,
+                                                 cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                           
+                         }
                          
                          no_shuffle_imp = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]$importance
                          
@@ -2168,14 +2206,16 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0, slurm_mode=F){
                                            "gbl", "input"))
     
   }else{
-    parallel::clusterExport(ml_session_cl, c("ml_run",
-                                             "gbl", 
-                                             "mSet_loc"),
-                            envir = environment())
-    
-    parallel::clusterEvalQ(ml_session_cl,{
-      small_mSet <- qs::qread(mSet_loc)
-    })
+    if(length(ml_session_cl) > 1){
+      parallel::clusterExport(ml_session_cl, c("ml_run",
+                                               "gbl", 
+                                               "mSet_loc"),
+                              envir = environment())
+      
+      parallel::clusterEvalQ(ml_session_cl,{
+        small_mSet <- qs::qread(mSet_loc)
+      })    
+    }
     
     pbapply::pblapply(jobs, 
                       cl = if(length(jobs) > 1) ml_session_cl else 0, 

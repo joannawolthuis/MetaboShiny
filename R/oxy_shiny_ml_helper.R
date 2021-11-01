@@ -31,13 +31,6 @@ getMLperformance = function(ml_res, pos.class, x.metric, y.metric, silent = F){
     })  
   }
   
-  # alternative precision recall...
-  
-  
-  
-  # -------------------------------
-  
-  
   prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
                                 ml_res$labels)
   
@@ -115,7 +108,7 @@ runML <- function(training,
   # get user training percentage
   need.rm = c("split")
   training[, (need.rm) := NULL]
-  testing[, (need.rm) := NULL]
+  testing <- testing[, colnames(testing) != "split"]
   
   if(length(cl) > 0){
     doParallel::registerDoParallel(cl)  
@@ -212,8 +205,7 @@ runML <- function(training,
       train.performance = fit$pred,
       importance = caret::varImp(fit)$importance,
       labels = testing$label,
-      distr = list(train = rownames(train.set),
-                   test = rownames(test.set)),
+      in_test = rownames(test.set),
       prediction = result.predicted.prob,
       shuffled = shuffled)
     return(l)
@@ -238,10 +230,11 @@ ml_prep_data <- function(settings, mSet, input, cl){
     stop("Please run PCA first!")
   }
   
+  if(settings$ml_batch_covars %in% c("", " ")) settings$ml_batch_covars <- c()
   # covars needed
   keep.config = setdiff(unique(c(settings$ml_include_covars, settings$ml_batch_covars,
                                  settings$ml_train_subset[[1]], settings$ml_test_subset[[1]])),
-                        "label")
+                        c("label", "", " "))
   if(length(keep.config) > 0){
     config = mSet$dataSet$covars[, ..keep.config,drop=F]
   }else{
@@ -352,7 +345,9 @@ ml_prep_data <- function(settings, mSet, input, cl){
                        config = config[train_idx,,drop=F])
   
   testing_data = list(curr = curr[test_idx,,drop=F],
-                      config = config[test_idx,,drop=F])
+                      config = as.data.frame(config[test_idx,,drop=F]))
+  
+  rownames(testing_data$curr) <- rownames(testing_data$config) <- mSet$dataSet$covars$sample[test_idx]
   
   curr = NULL
   
@@ -381,9 +376,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
     smallest.group.overall = min(balance.overview)
     
     orig.samp.distr = table(training_data$config$label)
-    
-    training_data$config = training_data$config
-    testing_data$config = testing_data$config
     
     size.global = if(settings$ml_sampling != "down") biggest.group.overall else smallest.group.overall
     size.preset = settings$ml_groupsize
@@ -541,22 +533,23 @@ ml_run <- function(settings, mSet, input, cl){
     
     # remove columns that should not be in prediction
     keep.config = unique(c("label", "split", settings$ml_include_covars))
+
+    # divvy folds based on batch (doensn't work for now)    
+    # fold_variable = if(length(settings$ml_batch_covars) > 0){
+    #   apply(training_data$config[, settings$ml_batch_covars,with=F],
+    #         MARGIN = 1, 
+    #         function(x) paste0(x, collapse="_"))
+    # }else{
+    #   c()
+    # }
     
-    fold_variable = if(length(settings$ml_batch_covars) > 0){
-      apply(training_data$config[, settings$ml_batch_covars,with=F],
-            MARGIN = 1, 
-            function(x) paste0(x, collapse="_"))
-    }else{
-      c()
-    }
-    
-    testing_data$config = testing_data$config[, ..keep.config]
     training_data$config = training_data$config[, ..keep.config]
+    testing_data$config = testing_data$config[, keep.config]
     
     # merge back into one
     training = cbind(training_data$config,
                      training_data$curr)
-    testing = cbind(testing_data$config[,colnames(training_data$config),with=F],
+    testing = cbind(testing_data$config[, colnames(training_data$config)],
                     testing_data$curr)
     
     training_data <- testing_data <- NULL
