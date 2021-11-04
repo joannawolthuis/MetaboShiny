@@ -534,6 +534,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
       flattened
     }else{
       analysis = mSet$storage[[experiment]]$analSet
+      
       rgx_exp <- gsub(experiment, pattern = "\\(", replacement = "\\\\(")
       rgx_exp <- gsub(rgx_exp, pattern = "\\)", replacement = "\\\\)")
       rgx_exp <- gsub(rgx_exp, pattern = "\\-", replacement = "\\\\-")
@@ -666,18 +667,19 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                            res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
                                                  value=c(0)))
                          }
+                         
                          names(res) = base_name
+                         #print(res)
                          res
                        },
                        plsda = {
                          which.plsda <- gsub(name, pattern = "^.*- | ", replacement="")
+                         
                          compounds_pc <- data.table::as.data.table(analysis$plsda$vip.mat,keep.rownames = T)
-                         colnames(compounds_pc) <- c("rn", 
-                                                     paste0("Component", 1:(ncol(compounds_pc)-1)))
-                         ordered_compounds_pc <- compounds_pc[order(compounds_pc[[which.plsda]],
-                                                                    decreasing = T),]
-                         res <- list(data.frame("m/z"=ordered_compounds_pc$rn,
-                                                value=ordered_compounds_pc[[which.plsda]]))
+                         colnames(compounds_pc) <- c("rn", paste0("Component ", 1:(ncol(compounds_pc)-1)))
+                         ordered_pc <- setorderv(compounds_pc, which.plsda, -1)
+                         
+                         res <- list(ordered_pc$rn)
                          names(res) <- paste0(which.plsda, " (PLS-DA)")
                          # - - -
                          res
@@ -1237,16 +1239,27 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          
                          if("Facet" %in% colnames(coords)){
                            ml_facet_rocs = lapply(split(ml_performance$coords, ml_performance$coords$Facet),
-                                             function(facet){
-                                               ml_performance_facet = ml_performance
-                                               ml_performance_facet$coords <- facet
-                                               ml_roc = ggPlotCurves(ml_performance_facet,
-                                                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
-                                               ml_roc = ml_roc + 
-                                                 ggplot2::ggtitle(unique(facet$Facet)) + 
-                                                 ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
-                                               ml_roc
-                                             })
+                                                  function(facet){
+                                                    ml_performance_facet = ml_performance
+                                                    ml_performance_facet$coords <- facet
+                                                    ml_roc = ggPlotCurves(ml_performance_facet,
+                                                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                                    ml_roc = ml_roc + 
+                                                      ggplot2::ggtitle(unique(facet$Facet)) + 
+                                                      ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))
+                                                    ml_roc + gbl$functions$plot.themes[[lcl$aes$theme]](base_size = lcl$aes$font$plot.font.size) + 
+                                                      ggplot2::theme(legend.position = if(input$legend) "right" else "none",
+                                                                     legend.key.size = unit(.5,"line"),
+                                                                     legend.title = element_text(size=15),
+                                                                     legend.text = element_text(size=12),
+                                                                     axis.line = ggplot2::element_line(colour = 'black',
+                                                                                                       size = .5),
+                                                                     plot.title = ggplot2::element_text(hjust = 0.5,
+                                                                                                        vjust = 0.1,
+                                                                                                        size=lcl$aes$font$plot.font.size * 1.2),
+                                                                     text = ggplot2::element_text(family = lcl$aes$font$family))
+                                                    
+                                                  })
                            ml_roc = ggpubr::ggarrange(plotlist = ml_facet_rocs, common.legend = TRUE, legend="right")
                          }else{
                            ml_roc = ggPlotCurves(ml_performance,
@@ -2179,14 +2192,19 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
   else stop("unrecognized node type!")
 }
 
-ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0, slurm_mode=F){
+ml_loop_wrapper <- function(mSet_loc, gbl, jobs, 
+                            ml_session_cl=0, slurm_mode=F,
+                            jobid = "METSHI_ML", 
+                            job_time = "00:20:00"){
   
   if(slurm_mode){
     
-    print("attempting to submit jobs through slurm")
+    print("Attempting to submit jobs through slurm!")
     
     ml_run_slurm <- function(i){
+      library(MetaboShiny)
       settings = ml_queue$jobs[[i]]
+      small_mSet <- qs::qread(mSet_loc)
       res = list()
       try({
         res = ml_run(settings = settings, 
@@ -2199,28 +2217,45 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0, slurm_mode=F){
     
     pars = data.frame(i = 1:length(jobs))
     
-    rslurm::slurm_apply(ml_run_slurm, 
-                        pars, 
-                        slurm_options = list(time = '0:30:00'),
-                        global_objects = c("mSet_loc", "ml_queue", 
-                                           "gbl", "input"))
+    batch_job = rslurm::slurm_apply(ml_run_slurm, 
+                                    pars, 
+                                    cpus_per_node = 1,
+                                    jobname = jobid,
+                                    nodes = nrow(pars),#/10,
+                                    slurm_options = list(time = job_time),
+                                    global_objects = c("mSet_loc", "ml_queue", 
+                                                       "gbl", "input", "ml_run"))
     
-  }else{
-    if(length(ml_session_cl) > 1){
-      parallel::clusterExport(ml_session_cl, c("ml_run",
-                                               "gbl", 
-                                               "mSet_loc"),
-                              envir = environment())
-      
-      parallel::clusterEvalQ(ml_session_cl,{
-        small_mSet <- qs::qread(mSet_loc)
-      })    
+    
+    completed = F
+    
+    print("Waiting on cluster to finish jobs...")
+    
+    while(!completed){
+      Sys.sleep(5)
+      completed = slurm_job_complete(batch_job)
     }
+    
+    # my ver has a progress bar
+    print("Cluster batch job complete! Collecting results...")
+    res <- get_slurm_out_jw(batch_job,outtype = "raw")
+    names(res) <- sapply(res, function(x) x$params$ml_name)
+    rslurm::cleanup_files(batch_job) #cleanup files
+    res
+  }else{
+    parallel::clusterExport(ml_session_cl, c("ml_run",
+                                             "gbl", 
+                                             "mSet_loc"),
+                            envir = environment())
+    
+    parallel::clusterEvalQ(ml_session_cl,{
+      small_mSet <- qs::qread(mSet_loc)
+    })
     
     pbapply::pblapply(jobs, 
                       cl = if(length(jobs) > 1) ml_session_cl else 0, 
                       function(settings, ml_cl){
-                        res = list()
+                     res = list()
                         try({
                           res = ml_run(settings = settings, 
                                        mSet = small_mSet,
@@ -2231,7 +2266,6 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs, ml_session_cl=0, slurm_mode=F){
                       },
                       ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
   }
-  
 }
 
 assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")

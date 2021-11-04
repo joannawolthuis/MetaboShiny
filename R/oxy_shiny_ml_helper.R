@@ -7,7 +7,9 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
   as.data.frame(trunc)
 }
 
-getMLperformance = function(ml_res, pos.class, x.metric, y.metric, silent = F){
+getMLperformance = function(ml_res, pos.class, 
+                            x.metric, y.metric,
+                            silent = F){
   
   if(!("Resample" %in% names(ml_res$train.performance))){
     is.loocv = TRUE
@@ -623,4 +625,57 @@ ml_run <- function(settings, mSet, input, cl){
     res = list(res = ml_res, params = settings)
   }
   res
+}
+
+get_slurm_out_jw <- function (slr_job, outtype = "raw", wait = TRUE, ncores = NULL) 
+{
+  if (!(class(slr_job) == "slurm_job")) {
+    stop("slr_job must be a slurm_job")
+  }
+  outtypes <- c("table", "raw")
+  if (!(outtype %in% outtypes)) {
+    stop(paste("outtype should be one of:", paste(outtypes, 
+                                                  collapse = ", ")))
+  }
+  if (!(is.null(ncores) || (is.numeric(ncores) && length(ncores) == 
+                            1))) {
+    stop("ncores must be an integer number of cores")
+  }
+  if (wait) {
+    rslurm:::wait_for_job(slr_job)
+  }
+  res_files <- paste0("results_", 0:(slr_job$nodes - 1), ".RDS")
+  tmpdir <- paste0("_rslurm_", slr_job$jobname)
+  missing_files <- setdiff(res_files, dir(path = tmpdir))
+  if (length(missing_files) > 0) {
+    missing_list <- paste(missing_files, collapse = ", ")
+    warning(paste("The following files are missing:", missing_list))
+  }
+  res_files <- file.path(tmpdir, setdiff(res_files, missing_files))
+  if (length(res_files) == 0) 
+    return(NA)
+  if (is.null(ncores)) {
+    slurm_out <- pbapply::pblapply(res_files, readRDS)
+  }
+  else {
+    cl = parallel::makeCluster(ncores)
+    slurm_out <- pbapply::pblapply(res_files, readRDS, cl = cl)
+    parallel::stopCluster(cl)
+  }
+  slurm_out <- do.call(c, slurm_out)
+  if (outtype == "table") {
+    slurm_out <- as.data.frame(do.call(rbind, slurm_out))
+  }
+  slurm_out
+}
+
+slurm_job_complete <- function (slr_job) 
+{
+  if (!(class(slr_job) == "slurm_job")) 
+    stop("input must be a slurm_job")
+  squeue_out <- suppressWarnings(system(paste("squeue -n", 
+                                              slr_job$jobname), intern = TRUE))
+  queue <- read.table(text = squeue_out, header = TRUE)
+  completed <- nrow(queue) == 0
+  return(completed)
 }

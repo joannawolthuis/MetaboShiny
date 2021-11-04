@@ -14,6 +14,13 @@ shiny::observeEvent(input$show_which_ml,{
   }
 },ignoreNULL = T, ignoreInit = T)
 
+shiny::observeEvent(input$ml_plot_facet, {
+  if(input$ml_plot_facet != "don't facet"){
+    plotmanager$make <- "ml"
+  }
+},ignoreNULL = T, ignoreInit = T)
+
+
 shiny::observeEvent(input$ml_batch_size_sampling, {
   if(input$ml_batch_size_sampling){
     shinyWidgets::updateRadioGroupButtons(session, 

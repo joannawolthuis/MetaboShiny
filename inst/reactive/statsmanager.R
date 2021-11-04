@@ -487,6 +487,7 @@ shiny::observe({
                      ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
                                                      jobs = ml_queue$jobs,
                                                      gbl=gbl,
+                                                     job_time = "02:00:00",
                                                      slurm_mode = has_slurm,
                                                      ml_session_cl = ml_session_cl)
                    }
