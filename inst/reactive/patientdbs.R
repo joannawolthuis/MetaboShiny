@@ -1,3 +1,7 @@
+# filechoose
+shinyFiles::shinyFileChoose(input, 'outlist_pos', root=gbl$paths$volumes, filetypes=c('tsv', 'csv'))
+shinyFiles::shinyFileChoose(input, 'outlist_neg', root=gbl$paths$volumes, filetypes=c('tsv', 'csv'))
+
 # create checkcmarks if database is present
 lapply(c("merge", 
          "db", 
@@ -34,14 +38,14 @@ shiny::observeEvent(input$ms_modes, {
     pickerUI = lapply(input$ms_modes, function(mode){
       char=if(mode == "pos") "+" else "-"
       shiny::column(width = eachCol,
-                    shiny::fileInput(paste0('outlist_',mode), 
-                                     gsubfn::fn$paste('Select $char peaks'), 
-                                     buttonLabel="Browse", accept = c(".csv",".tsv"))
+                    shinyFiles::shinyFilesButton(paste0('outlist_',mode),
+                                                 gsubfn::fn$paste('upload $char peaks'),
+                                                 gsubfn::fn$paste('Upload $char mode peaks'),
+                                                 FALSE)
+                    # shiny::fileInput(paste0('outlist_',mode), 
+                    #                  gsubfn::fn$paste('Select $char peaks'), 
+                    #                  buttonLabel="Browse", accept = c(".csv",".tsv"))
                     )
-      # shinyFiles::shinyFilesButton(paste0('outlist_',mode), 
-      #                              gsubfn::fn$paste('upload $char peaks'), 
-      #                              gsubfn::fn$paste('Upload $char mode peaks'), 
-      #                              FALSE)
     })
     output$outlist_pickers <- shiny::renderUI(shiny::fluidRow(align="center",pickerUI)) 
   }
@@ -189,11 +193,13 @@ shiny::observeEvent(input$create_csv,{
       # }
       
       # FOR EXAMPLE DATA: "(^\\d+?_)|POS_|NEG_"
+      pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
+      negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()
       
       # if loading in .csv files...
       import.pat.csvs(ppm = input$ppm,
-                      pospath = if(hasPos) input$outlist_pos$datapath else c(),
-                      negpath = if(hasNeg) input$outlist_neg$datapath else c(),
+                      pospath = if(hasPos) pospath else c(),
+                      negpath = if(hasNeg) negpath else c(),
                       metapath = input$metadata$datapath,
                       wipe.regex = input$wipe_regex,
                       missperc.mz = input$perc_limit_mz,
@@ -283,9 +289,8 @@ output$wipe_regex_ui <- shiny::renderUI({
   if(length(input$ms_modes) > 0){
     myPath = lapply(input$ms_modes, function(mode){
       inp = paste0('outlist_',mode)
-      if(!is.null(inp)){
-        path=input[[inp]]$datapath  
-      }else{
+      path=shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath
+      if(length(path) == 0){
         path=NULL
       }
       path
