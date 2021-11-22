@@ -484,12 +484,115 @@ shiny::observe({
                      mSet_loc <- tempfile()
                      qs::qsave(small_mSet, mSet_loc)
 
-                     ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
-                                                     jobs = ml_queue$jobs,
-                                                     gbl=gbl,
-                                                     job_time = "02:00:00",
-                                                     slurm_mode = has_slurm,
-                                                     ml_session_cl = ml_session_cl)
+                     # ml_queue$jobs <- lapply(ml_queue$jobs, function(x){
+                     #   x$ml_mtry <- "sqrt"
+                     #   x$ml_name <- gsub("mtry\\d+", "mtrysqrt", x$ml_name)
+                     #   x
+                     # })
+                     # names(ml_queue$jobs) <- sapply(ml_queue$jobs, function(x) x$ml_name)
+                     # basejob <- ml_queue$jobs[[1]]
+                     # basejob$ml_test_subset <- NULL
+                     # basejob$ml_batch_covars <- "country"
+                     # basejob$ml_name <- "mtrysqrt global cbal"
+                     # basejob$ml_batch_balance <- T
+                     # globaljobs <- lapply(1:20, function(x){
+                     #   job = basejob
+                     #   job$ml_name <- paste0(job$ml_name, " #", x)
+                     #   job
+                     # })
+                     # 
+                     # qs::qsave(ml_queue$jobs, "../MetShi_files/dsm_paper_chicken/chicken_loco_mtrysqrt_withwithout_rose_20reps.qs")
+
+                     if(has_slurm){
+                       
+                       job_time = "12:00:00"
+                       
+                       print("Attempting to submit jobs through slurm!")
+                       
+                       settings_loc <- tempfile()
+                       qs::qsave(ml_queue$jobs, file = settings_loc)
+                       
+                       pars = data.frame(i = 1:length(ml_queue$jobs),
+                                         mloc = c(mSet_loc),
+                                         sloc = c(settings_loc))
+                       
+                       print(head(pars))
+                       success = F
+                       
+                       try({
+                         fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
+                                                    ".metshi"))
+                         qs::qsave(mSet, file = fn)
+                
+                         batch_job <- slurm_apply_metshi(ml_slurm, 
+                                                         pars[1,], 
+                                                         cpus_per_node = 1,
+                                                         jobname = paste0("METSHI_ML_",
+                                                                          lcl$proj_name,
+                                                                          "_",
+                                                                          gsub("file","",
+                                                                               basename(tempfile()))),
+                                                         nodes = nrow(pars),#/10,
+                                                         slurm_options = list(time = job_time))
+                         
+                         completed = F
+                         
+                         print("Waiting on cluster to finish jobs...")
+                         
+                         while(!completed){
+                           Sys.sleep(5)
+                           completed = slurm_job_complete(batch_job)
+                         }
+                         
+                         # my ver has a progress bar
+                         print("Cluster batch job complete! Collecting results...")
+                         ml_queue_res <- get_slurm_out_jw(batch_job,outtype = "raw")
+                         
+                         rslurm::get_job_status(batch_job)
+                         
+                         names(ml_queue_res) <- sapply(ml_queue_res, function(x) x$params$ml_name)
+                         rslurm::cleanup_files(batch_job) #cleanup files
+                         
+                         success = T
+                       })
+                       if(success){
+                         print("reloading mSet...")
+                         # load in mSet back
+                         mSet <- qs::qread(fn)
+                       }else{
+                         stop("ml failed")
+                       }
+                     }else{
+                       parallel::clusterExport(ml_session_cl, c("ml_run",
+                                                                "gbl", 
+                                                                "mSet_loc"),
+                                               envir = environment())
+                       
+                       parallel::clusterEvalQ(ml_session_cl,{
+                         small_mSet <- qs::qread(mSet_loc)
+                       })
+                       
+                       pbapply::pblapply(jobs, 
+                                         cl = if(length(jobs) > 1) ml_session_cl else 0, 
+                                         function(settings, ml_cl){
+                                           res = list()
+                                           try({
+                                             res = ml_run(settings = settings, 
+                                                          mSet = small_mSet,
+                                                          input = input,
+                                                          cl = ml_cl,
+                                                          tmpdir = dirname(tempfile()))  
+                                           })
+                                           res
+                                         },
+                                         ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
+                     }
+                     # ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
+                     #                                 jobs = ml_queue$jobs,#[100],
+                     #                                 gbl=gbl,
+                     #                                 job_time = "12:00:00",
+                     #                                 slurm_mode = has_slurm,
+                     #                                 ml_session_cl = ml_session_cl)
                    }
                    
                    print("Done!")

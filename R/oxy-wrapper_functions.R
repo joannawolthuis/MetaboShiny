@@ -2197,75 +2197,7 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs,
                             jobid = "METSHI_ML", 
                             job_time = "00:20:00"){
   
-  if(slurm_mode){
-    
-    print("Attempting to submit jobs through slurm!")
-    
-    ml_run_slurm <- function(i){
-      library(MetaboShiny)
-      settings = ml_queue$jobs[[i]]
-      small_mSet <- qs::qread(mSet_loc)
-      res = list()
-      try({
-        res = ml_run(settings = settings, 
-                     mSet = small_mSet,
-                     input = input,
-                     cl = 0)   # no parallel here
-      })
-      res
-    }
-    
-    pars = data.frame(i = 1:length(jobs))
-    
-    batch_job = rslurm::slurm_apply(ml_run_slurm, 
-                                    pars, 
-                                    cpus_per_node = 1,
-                                    jobname = jobid,
-                                    nodes = nrow(pars),#/10,
-                                    slurm_options = list(time = job_time),
-                                    global_objects = c("mSet_loc", "ml_queue", 
-                                                       "gbl", "input", "ml_run"))
-    
-    
-    completed = F
-    
-    print("Waiting on cluster to finish jobs...")
-    
-    while(!completed){
-      Sys.sleep(5)
-      completed = slurm_job_complete(batch_job)
-    }
-    
-    # my ver has a progress bar
-    print("Cluster batch job complete! Collecting results...")
-    res <- get_slurm_out_jw(batch_job,outtype = "raw")
-    names(res) <- sapply(res, function(x) x$params$ml_name)
-    rslurm::cleanup_files(batch_job) #cleanup files
-    res
-  }else{
-    parallel::clusterExport(ml_session_cl, c("ml_run",
-                                             "gbl", 
-                                             "mSet_loc"),
-                            envir = environment())
-    
-    parallel::clusterEvalQ(ml_session_cl,{
-      small_mSet <- qs::qread(mSet_loc)
-    })
-    
-    pbapply::pblapply(jobs, 
-                      cl = if(length(jobs) > 1) ml_session_cl else 0, 
-                      function(settings, ml_cl){
-                     res = list()
-                        try({
-                          res = ml_run(settings = settings, 
-                                       mSet = small_mSet,
-                                       input = input,
-                                       cl = ml_cl)  
-                        })
-                        res
-                      },
-                      ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
-  }
+  print("deprecated")
 }
 
 assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")
