@@ -116,17 +116,19 @@ shiny::observeEvent(input$checkMiss, {
     !is.null(input[[paste0("outlist_", ionMode)]])
   }))
   
-  file.pos = input$outlist_pos$datapath
-  file.neg = input$outlist_neg$datapath
+  hasPos = "pos" %in% input$ms_modes
+  hasNeg = "neg" %in% input$ms_modes
+  pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
+  negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()
   
   if(files.present){
-    if(!is.null(input$outlist_pos)){
-      nrows = length(vroom::vroom_lines(file.pos, altrep = TRUE, progress = TRUE)) - 1L
-      missValues$pos = getMissing(file.pos, nrow=nrows)
+    if(hasPos){
+      nrows = length(vroom::vroom_lines(pospath, altrep = TRUE, progress = TRUE)) - 1L
+      missValues$pos = getMissing(pospath, nrow=nrows)
     }
-    if(!is.null(input$outlist_neg)){
-      nrows = length(vroom::vroom_lines(file.neg, altrep = TRUE, progress = TRUE)) - 1L
-      missValues$neg = getMissing(file.neg, nrow=nrows)
+    if(hasNeg){
+      nrows = length(vroom::vroom_lines(negpath, altrep = TRUE, progress = TRUE)) - 1L
+      missValues$neg = getMissing(negpath, nrow=nrows)
     }
   }else{
     MetaboShiny::metshiAlert("Please select files first!")
@@ -233,6 +235,7 @@ shiny::observeEvent(input$metadata_new_add, {
     new_meta <- data.table::fread(meta_path,fill=TRUE)#,comment.char=.)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
+    mSet$dataSet$covars <- plyr::join(mSet$dataSet$covars[,"sample"], new_meta, type = "left")
     mSet <- MetaboShiny::store.mSet(mSet, 
                                     proj.folder = lcl$paths$proj_dir)
     mSet <- MetaboShiny::reset.mSet(mSet,
@@ -240,11 +243,23 @@ shiny::observeEvent(input$metadata_new_add, {
                                                    paste0(lcl$proj_name,
                                                           "_ORIG.metshi")))
     mSet$dataSet$covars <- plyr::join(mSet$dataSet$covars[,"sample"], new_meta, type = "left")
+    save(mSet, file = file.path(lcl$paths$proj_dir,
+                                paste0(lcl$proj_name,"_ORIG.metshi")))
+    
+    mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <<- NULL
+    
     for(project in names(mSet$storage)){
       if("dataSet" %in% names(mSet$storage[[project]])){
         mSet$storage[[project]]$dataSet$covars <- plyr::join(mSet$storage[[project]]$dataSet$covars[,"sample"], 
                                                              new_meta,
                                                              type = "left")
+        project_submetshi = file.path(lcl$paths$proj_dir, paste0(project, ".metshi"))
+        subset_mSet = qs::qread(project_submetshi)
+        subset_mSet$dataSet$covars <- plyr::join(subset_mSet$dataSet$covars[,"sample"], 
+                                                 new_meta,
+                                                 type = "left")
+        qs::qsave(subset_mSet, project_submetshi)
+        subset_mSet <- NULL
         #mSet$storage[[project]]$dataSet$cls <- mSet$storage[[project]]$dataSet$orig.cls
       }
     }
@@ -252,10 +267,7 @@ shiny::observeEvent(input$metadata_new_add, {
   })
   if(success){
     mSet <<- mSet
-    # overwrite orig?
-    save(mSet, file = file.path(lcl$paths$proj_dir,
-                                paste0(lcl$proj_name,"_ORIG.metshi")))
-    mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <- NULL 
+    View(mSet$dataSet$covars)
     shiny::showNotification("Updated metadata!")
     filemanager$do <- "save"
     uimanager$refresh <- "general"
