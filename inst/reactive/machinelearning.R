@@ -118,8 +118,8 @@ shiny::observeEvent(input$queue_ml, {
 })
 
 shiny::observeEvent(input$queue_ml_del, {
-  row = input$ml_queue_all_rows_selected
-  ml_queue$jobs = ml_queue$jobs[-row]
+  rows = input$ml_queue_all_rows_selected
+  ml_queue$jobs = ml_queue$jobs[-rows]
 })
 
 shiny::observeEvent(input$clear_ml_runs, {
@@ -135,7 +135,7 @@ shiny::observeEvent(input$clear_ml_runs, {
       br()
     ),
     btn_labels = c("No", "Yes"),
-    title = "Are you sure? This will erase all machine learning results.",
+    title = "Erase all machine learning results?",
     #showCloseButton = T,
     html = TRUE
   )
@@ -149,7 +149,6 @@ observeEvent(input$clear_ml_sure,{
 },ignoreNULL = T)
 
 shiny::observeEvent(input$ml_queue_all_rows_selected, {
-  print(input$ml_queue_all_rows_selected)
   params = ml_queue$jobs[[input$ml_queue_all_rows_selected]]
   param_dt = data.table::data.table(parameter = names(params),
                          value = params)

@@ -427,7 +427,7 @@ combatCSV <- function(mSet, tbl="norm"){
 #' @export 
 #' @importFrom stringr str_match
 #' @importFrom DT datatable
-metshiTable <- function(content, options=NULL, rownames= T){
+metshiTable <- function(content, options=NULL, rownames= T, selection = 'single'){
   opts = list(deferRender = TRUE, 
               scrollY = 200,
               searching = TRUE,
@@ -451,7 +451,7 @@ metshiTable <- function(content, options=NULL, rownames= T){
     rownames(content) <- paste0(rownames(content), sapply(rownames(content), function(mz) if(grepl("\\-", mz)) "" else "+"))
   }
   DT::datatable(content,
-                selection = 'single',
+                selection = selection,
                 class = 'compact', height = "500px",
                 extensions = c("FixedColumns", "Scroller", "Buttons"), 
                 options = opts,

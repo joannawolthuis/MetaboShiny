@@ -437,12 +437,12 @@ ml_prep_data <- function(settings, mSet, input, cl){
     print(settings$ml_sampling)
     # split on factor (either batch or placeholder to create one result)
     if(settings$ml_batch_balance){
-      split.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
+      split.fac = training_data$config[, setdiff(settings$ml_batch_covars, "individual"), with=F][[1]]
     }else{
       split.fac = rep(1, nrow(training_data$config))
     }
     split.fac = if(settings$ml_batch_balance){
-      training_data$config[, settings$ml_batch_covars, with=F][[1]]
+      training_data$config[, setdiff(settings$ml_batch_covars, "individual"), with=F][[1]]
     }else{rep(1, nrow(training_data$config))
     }
     
@@ -551,7 +551,8 @@ ml_prep_data <- function(settings, mSet, input, cl){
       colnames(curr.subset) <- mz.names
       
       if(settings$ml_batch_balance & settings$ml_sampling %in% c("rose", "smote", "adasyn")){
-        config.subset[[settings$ml_batch_covars]] <- c(config.top.row[[settings$ml_batch_covars]])
+        config.subset[[setdiff(settings$ml_batch_covars,"individual")]] <- c(config.top.row[[setdiff(settings$ml_batch_covars,
+                                                                                                     "individual")]])
       }
       
       list(curr = curr.subset,
@@ -559,8 +560,8 @@ ml_prep_data <- function(settings, mSet, input, cl){
     })
     training_data = list(
       curr = data.table::rbindlist(lapply(resampled.data.list, function(x) x$curr),use.names = T),
-      config = data.table::rbindlist(lapply(resampled.data.list, function(x) x$config), use.names = T),
-      samples = training.rownames
+      config = data.table::rbindlist(lapply(resampled.data.list, function(x) x$config), use.names = T)
+      #samples = training.rownames
       )
     resampled.data.list <- NULL
   }
