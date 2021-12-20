@@ -404,47 +404,6 @@ shiny::observe({
                                                           "covars")]
                      
                      ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]
-                     
-                     #ml_queue$jobs = ml_queue$jobs[grep("sa", names(ml_queue$jobs))]
-                     resource_saver_mode = F # only make the datasets once, for example with resampling
-                     if(resource_saver_mode){
-                       vars.require.dataset.change <- c("ml_test_subset",
-                                                        "ml_train_subset",
-                                                        "ml_sampling",
-                                                        "ml_batch_balance",
-                                                        "ml_batch_covars",
-                                                        "ml_batch_size_sampling",
-                                                        "ml_groupsize",
-                                                        "ml_include_covars",
-                                                        "ml_used_table",
-                                                        "ml_pca_corr",
-                                                        "ml_train_perc",
-                                                        "ml_keep_pcs",
-                                                        "ml_pca_corr"
-                       )
-                       rows.changes.dataset <- lapply(ml_queue$jobs, function(job){
-                         job[vars.require.dataset.change]
-                       })
-                       unique.dataset.change.jobs = unique(rows.changes.dataset)
-                       print(paste("preparing", length(unique.dataset.change.jobs), "dataset(s) for jobs"))
-                       train.test.unique <- pbapply::pblapply(unique.dataset.change.jobs, 
-                                                              cl=0, # TODO: make parallel
-                                                              function(job){
-                                                                tr_te = ml_prep_data(settings = job, 
-                                                                                     mSet = small_mSet,
-                                                                                     input = input, cl=0)
-                                                              })
-                       
-                       mapper = data.table::rbindlist(lapply(1:length(rows.changes.dataset), function(i){
-                         job = rows.changes.dataset[[i]]
-                         jobi = which(sapply(unique.dataset.change.jobs, 
-                                             function(uniq.job) identical(job, uniq.job)))
-                         data.table::data.table(ml_name = ml_queue$jobs[[i]]$ml_name, unique_data_id=jobi)
-                       }))
-                       small_mSet$dataSet$for_ml <- list(datasets = train.test.unique, 
-                                                         mapper = mapper)
-                     }
-                     
                      uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
                      if(uses.specific.mzs){
                        keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
@@ -464,7 +423,7 @@ shiny::observe({
                      use_slurm = T
                      
                      net_cores = input$ncores# - 1
-                     if(net_cores > 0 & (!has_slurm | !use_slurm)){
+                     if(net_cores > 0 & ((!has_slurm | !use_slurm) | input$ml_resource_friendly)){
                        try({
                          parallel::stopCluster(session_cl)
                          parallel::stopCluster(ml_session_cl)
@@ -487,25 +446,50 @@ shiny::observe({
                      
                      mSet_loc <- tempfile()
                      qs::qsave(small_mSet, mSet_loc)
-
-                     #   x$ml_mtry <- "sqrt"
-                     #   x$ml_name <- gsub("mtry\\d+", "mtrysqrt", x$ml_name)
-                     #   x
-                     # })
-                     # names(ml_queue$jobs) <- sapply(ml_queue$jobs, function(x) x$ml_name)
-                     # basejob <- ml_queue$jobs[[1]]
-                     # basejob$ml_test_subset <- NULL
-                     # basejob$ml_batch_covars <- "country"
-                     # basejob$ml_name <- "mtrysqrt global cbal"
-                     # basejob$ml_batch_balance <- T
-                     # globaljobs <- lapply(1:20, function(x){
-                     #   job = basejob
-                     #   job$ml_name <- paste0(job$ml_name, " #", x)
-                     #   job
-                     # })
-                     # 
-                     # qs::qsave(ml_queue$jobs, "../MetShi_files/dsm_paper_chicken/chicken_loco_mtrysqrt_withwithout_rose_20reps.qs")
-
+                     
+                     #ml_queue$jobs = ml_queue$jobs[grep("sa", names(ml_queue$jobs))]
+                     resource_saver_mode = input$ml_resource_friendly # only make the datasets once, for example with resampling
+                     if(resource_saver_mode){
+                       vars.require.dataset.change <- c("ml_test_subset",
+                                                        "ml_train_subset",
+                                                        "ml_sampling",
+                                                        "ml_batch_balance",
+                                                        "ml_batch_covars",
+                                                        "ml_batch_size_sampling",
+                                                        "ml_groupsize",
+                                                        "ml_include_covars",
+                                                        "ml_used_table",
+                                                        "ml_pca_corr",
+                                                        "ml_train_perc",
+                                                        "ml_keep_pcs",
+                                                        "ml_pca_corr"
+                       )
+                       rows.changes.dataset <- lapply(ml_queue$jobs, function(job){
+                         job[vars.require.dataset.change]
+                       })
+                       unique.dataset.change.jobs = unique(rows.changes.dataset)
+                       print(paste("preparing", length(unique.dataset.change.jobs), "dataset(s) for jobs"))
+                       train.test.unique <- pbapply::pblapply(unique.dataset.change.jobs, 
+                                                              cl = 0,#ml_session_cl, # TODO: make parallel
+                                                              function(job, mSet_loc, input){
+                                                                small_mSet = qs::qread(mSet_loc)
+                                                                tr_te = ml_prep_data(settings = job, 
+                                                                                     mSet = small_mSet,
+                                                                                     input = input, cl=0)
+                                                              }, mSet_loc = mSet_loc, input = input)
+                       
+                       mapper = data.table::rbindlist(lapply(1:length(rows.changes.dataset), function(i){
+                         job = rows.changes.dataset[[i]]
+                         jobi = which(sapply(unique.dataset.change.jobs, 
+                                             function(uniq.job) identical(job, uniq.job)))
+                         data.table::data.table(ml_name = ml_queue$jobs[[i]]$ml_name, unique_data_id=jobi)
+                       }))
+                       small_mSet$dataSet$for_ml <- list(datasets = train.test.unique, 
+                                                         mapper = mapper)
+                     }
+                     
+                     qs::qsave(small_mSet, mSet_loc)
+                  
                      if(has_slurm & use_slurm){
                        
                        job_time = "24:00:00"
@@ -525,7 +509,6 @@ shiny::observe({
                                          sloc = c(settings_loc),
                                          tmpdir = c(dirname(tempfile())))
                        
-                       print(head(pars))
                        success = F
                        
                        try({
