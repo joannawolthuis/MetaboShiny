@@ -206,6 +206,12 @@ ml_single_run <- function(trainOrder,
   training = qs::qread(train_fn)
   testing = qs::qread(test_fn)
   
+  training$label <- as.factor(training$label)
+  testing$label <- as.factor(testing$label)
+  
+  levels(training$label) = make.names(levels(training$label))
+  levels(testing$label) = make.names(levels(testing$label))
+  
   hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
   
   orig.lbl = training[['label']]
@@ -263,11 +269,14 @@ ml_single_run <- function(trainOrder,
   
   train.performance = fit$pred
 
-  l <- list(#model = fit,
+  caret.mdls <- caret::getModelInfo()
+  has.importance = "varImp" %in% names(caret.mdls[[ml_method]])
+  
+  l <- list(
     type = ml_method,
     best.model = fit$bestTune,
     train.performance = train.performance,
-    importance = caret::varImp(fit)$importance,
+    importance = if(has.importance) caret::varImp(fit)$importance else data.table::data.table(unavailable = "method has no variable importance!"),
     labels = testing$label,
     in_test = rownames(testing),
     prediction = result.predicted.prob,
@@ -343,9 +352,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
     test_idx = setdiff(1:nrow(config), train_idx)
     #table(split_label[test_idx])
   }
-  
-  print(test_idx)
-  print(train_idx)
   
   if(mSet$metshiParams$renorm & pickedTbl != "pca"){
     samps_train = rownames(mSet$dataSet$norm)[train_idx]
@@ -428,7 +434,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
   # resampling
   
   if(settings$ml_sampling != "none"){
-    
+    print(settings$ml_sampling)
     # split on factor (either batch or placeholder to create one result)
     if(settings$ml_batch_balance){
       split.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
@@ -566,6 +572,13 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
   res = list()
   #({
   {
+    
+    if(length(settings$ml_batch_covars) == 1 & 
+       settings$ml_batch_covars[1] == ""){
+      settings$ml_batch_covars <- c()
+      settings$ml_batch_balance = F
+    }
+    
     if("for_ml" %in% names(mSet$dataSet)){
       jobi = mSet$dataSet$for_ml$mapper[ml_name == settings$ml_name,]$unique_data_id
       training_data = mSet$dataSet$for_ml$datasets[[jobi]]$train
@@ -623,29 +636,26 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
                       MARGIN = 1,
                       function(x) paste0(x, collapse="_")))
     }else{
-      c()
+      training_data$config$label
     }
     
-    print(fold_variable)
-    
-    folds <- if(settings$ml_folds != "LOOCV" & length(fold_variable) > 0 ){
-      # nfolds = min(as.numeric(settings$ml_folds),
-      #              max(table(fold_variable)))
-      # caret::createFolds(fold_variable, k = nfolds)
-      
-      if(!settings$ml_covar_fold_seperate){
-        caret::createFolds(fold_variable, 
-                           k = as.numeric(settings$ml_folds),
-                           list = TRUE,returnTrain = T)
-      }else{
+    folds <- if(settings$ml_folds == "LOOCV"){
+      NULL
+    } else {
+       if(!settings$ml_covar_fold_seperate & length(settings$ml_batch_covars) == 0){
+        # caret::createFolds(fold_variable, 
+        #                    k = as.numeric(settings$ml_folds),
+        #                    list = TRUE,returnTrain = T)
+        NULL
+      }else if(length(settings$ml_batch_covars) > 0){
         nfold = min(as.numeric(settings$ml_folds),
                     length(table(fold_variable)))
         caret::groupKFold(fold_variable,
                           k = nfold)
-      }  
-    } else {
-      caret::createFolds(training_data$config$label, k = as.numeric(settings$ml_folds))
+      }
     }
+    
+    print(folds)
     
     if(!is.null(folds)){
       fold_translation <- lapply(1:length(folds), function(i){
@@ -656,8 +666,6 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     }else{
       fold_translation = NULL
     }
-    
-    print(fold_translation)
     
     settings$samps_per_fold = fold_translation
     
@@ -935,4 +943,44 @@ ml_slurm <- function(i,
                               use_slurm = T)
   })
   res
+}
+
+#' @title Get performance for multi-comparison ML model
+#' @description ROC curves can be a bit tricky for multivariate models. This evaluates each possible pair of categories to generate individual and average AUC.
+#' @param model ML model
+#' @return FPR,TPR,average AUC,AUC for a given pair, and the name of the comparison
+#' @seealso 
+#'  \code{\link[pROC]{multiclass.roc}},\code{\link[pROC]{auc}}
+#'  \code{\link[data.table]{rbindlist}}
+#' @rdname getMultiMLperformance
+#' @export 
+#' @importFrom pROC multiclass.roc auc
+#' @importFrom data.table rbindlist
+getMultiMLperformance <- function(x, type="roc"){
+  try({
+    mroc = pROC::multiclass.roc(x$labels,
+                                x$prediction)
+  },silent = F)
+  # try({
+  #   mroc = pROC::multiclass.roc(x$labels, factor(x$prediction,
+  #                                                ordered = T))
+  # }, silent=F)
+  
+  data.table::rbindlist(lapply(mroc$rocs, function(roc.pair){
+    try({
+      dt = data.table(FPR = sapply(roc.pair$specificities, function(x) 1-x),
+                      TPR = roc.pair$sensitivities,
+                      AUC_AVG = as.numeric(mroc$auc),
+                      AUC_PAIR = as.numeric(pROC::auc(roc.pair)),
+                      comparison = paste0(roc.pair$levels,collapse=" vs. "))
+    },silent=T)
+    try({
+      dt = data.table(FPR = sapply(roc.pair[[1]]$specificities, function(x) 1-x),
+                      TPR = roc.pair[[1]]$sensitivities,
+                      AUC_AVG = as.numeric(mroc$auc),
+                      AUC_PAIR = as.numeric(pROC::auc(roc.pair[[1]])),
+                      comparison = paste0(roc.pair[[1]]$levels,collapse=" vs. "))  
+    },silent=T)
+    dt
+  })) 
 }

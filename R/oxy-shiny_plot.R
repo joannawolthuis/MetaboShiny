@@ -1316,7 +1316,7 @@ ggPlotBar <- function(data,
   data = data.table::as.data.table(data, keep.rownames=T)[,1:2]
   colnames(data) = c("m/z", "importance")
   
-  if(ml_type == "glmnet"){
+  if(F){#ml_type == "glmnet"){
     colnames(data) = c("m/z", "importance.mean", "dummy")
     data.ordered <- data[order(data$importance, decreasing=T),1:2]
   }else{
@@ -2096,17 +2096,26 @@ ggPlotVenn <- function(mSet,
                        plot_mode = "venn",
                        cf){
   
+  print(unlist(venn_yes$now$name))
+  
   flattened <- getTopHits(mSet,
                           unlist(venn_yes$now$name), 
                           top, 
                           thresholds = if(filter_mode == "top") c("") else venn_yes$now$threshold,
                           filter_mode = filter_mode)
   
+  print(names(flattened))
+  
   # check if same prefix
   preflength = sapply(2:length(flattened), function(i){
-    Biostrings::lcprefix(names(flattened)[i], names(flattened)[i-1])
+    pref = Biostrings::lcprefix(names(flattened)[i], names(flattened)[i-1])
+    print(pref)
+    pref
   })
-  if(length(unique(preflength)) == 1){
+  
+  print(preflength)
+  
+  if(T){#length(unique(preflength)) == 1){
     if(preflength[1] > 0){
       prefix = stringr::str_sub(names(flattened)[1], 0, preflength[1])
       names(flattened) <- gsub(prefix, "", x = names(flattened))  

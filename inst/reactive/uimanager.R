@@ -263,7 +263,9 @@ shiny::observe({
                                               choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
                      
                      shiny::updateSelectizeInput(session, "ml_batch_covars", 
-                                              choices = c(colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]))
+                                              choices = c("", 
+                                                          colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]),
+                                              selected = "")
                      
                       
                      # --- ML PCA ---
@@ -306,10 +308,11 @@ shiny::observe({
                                        t[`Test set` == "Test"]$y)
                        })
                        pos.class <- names(which.max(perf.per.posclass))
+                       print(pos.class)
                        
                        shiny::updateSelectizeInput(session, "ml_plot_posclass", 
-                                                choices = classes, 
-                                                selected = pos.class)
+                                                   choices = classes, 
+                                                   selected = pos.class)
                        ###
                        
                        choices = c()

@@ -392,7 +392,6 @@ shiny::observe({
                  mSet$analSet$featsel <- list(boruta_res)
                },
                ml = {
-                 #try({
                    {
                      assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
                      assign("input", shiny::isolate(shiny::reactiveValuesToList(input)), envir = .GlobalEnv)
@@ -488,24 +487,6 @@ shiny::observe({
                      mSet_loc <- tempfile()
                      qs::qsave(small_mSet, mSet_loc)
 
-                     #   x$ml_mtry <- "sqrt"
-                     #   x$ml_name <- gsub("mtry\\d+", "mtrysqrt", x$ml_name)
-                     #   x
-                     # })
-                     # names(ml_queue$jobs) <- sapply(ml_queue$jobs, function(x) x$ml_name)
-                     # basejob <- ml_queue$jobs[[1]]
-                     # basejob$ml_test_subset <- NULL
-                     # basejob$ml_batch_covars <- "country"
-                     # basejob$ml_name <- "mtrysqrt global cbal"
-                     # basejob$ml_batch_balance <- T
-                     # globaljobs <- lapply(1:20, function(x){
-                     #   job = basejob
-                     #   job$ml_name <- paste0(job$ml_name, " #", x)
-                     #   job
-                     # })
-                     # 
-                     # qs::qsave(ml_queue$jobs, "../MetShi_files/dsm_paper_chicken/chicken_loco_mtrysqrt_withwithout_rose_20reps.qs")
-
                      if(has_slurm & use_slurm){
                        
                        job_time = "24:00:00"
@@ -589,13 +570,15 @@ shiny::observe({
                          stop("ml failed")
                        }
                      }else{
-                       parallel::clusterExport(ml_session_cl, c("ml_run",
-                                                                "gbl", 
-                                                                "mSet_loc"),
-                                               envir = environment())
-                       
-                       read_in = parallel::clusterEvalQ(ml_session_cl,{
-                         small_mSet <- qs::qread(mSet_loc)
+                       try({
+                         parallel::clusterExport(ml_session_cl, c("ml_run",
+                                                                  "gbl", 
+                                                                  "mSet_loc"),
+                                                 envir = environment())
+                         
+                         read_in = parallel::clusterEvalQ(ml_session_cl,{
+                           small_mSet <- qs::qread(mSet_loc)
+                         })  
                        })
                        
                        ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
@@ -614,12 +597,6 @@ shiny::observe({
                                          },
                                          ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
                      }
-                     # ml_queue_res <- ml_loop_wrapper(mSet_loc = mSet_loc, 
-                     #                                 jobs = ml_queue$jobs,#[100],
-                     #                                 gbl=gbl,
-                     #                                 job_time = "12:00:00",
-                     #                                 slurm_mode = has_slurm,
-                     #                                 ml_session_cl = ml_session_cl)
                    }
                    
                    print("Done!")

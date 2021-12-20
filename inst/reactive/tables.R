@@ -1,14 +1,9 @@
 output$match_tab <- DT::renderDataTable({
-  # don't show some columns but keep them in the original table, so they can be used
-  # for showing molecule descriptions, structure
   empty = data.table::data.table(" " = rep("", nrow(shown_matches$forward_unique)))
-  
-  content = cbind(shown_matches$forward_unique, 
+  content = cbind(shown_matches$forward_unique,
                   empty)
-  
   targets = unique(c(which(colnames(content) %in% gbl$vectors$hide_match_cols),
                      which(colnames(content) == "isocat")))
-  
   colnames(content)[colnames(content) == "compoundname"] <- "name"
   MetaboShiny::metshiTable(
               content = content,
@@ -49,23 +44,6 @@ output$ml_queue_all <- DT::renderDataTable({
 output$ml_tab <- DT::renderDataTable({
   MetaboShiny::metshiTable(content = data.table::data.table("nothing selected" = "Please select a model from ROC plot or left-hand table!"))
 }, server = T)
-
-shiny::observeEvent(input$ml_overview_tab_rows_selected, {
-  attempt <- lcl$tables$ml_roc_all[input$ml_overview_tab_rows_selected,]$attempt
-  data <- mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-  xvals <- data$roc
-  output$ml_tab <- DT::renderDataTable({
-    imp <- xvals$imp[[attempt]]
-    imp <- data.table::data.table(mz = rownames(imp),
-                                  importance = imp[[1]])
-    imp <- imp[importance > 0,]
-    fixed.mzs = gsub("^X", "", imp$mz)
-    fixed.mzs = gsub("\\.$", "-", fixed.mzs)
-    lcl$tables$ml_roc <<- data.frame(importance = imp$importance,
-                                    row.names = fixed.mzs)
-    MetaboShiny::metshiTable(content = lcl$tables$ml_roc)
-  }, server = F)
-})
 
 values = shiny::reactiveValues()
 

@@ -43,18 +43,18 @@ shiny::observe({
               if(plotName != "network"){
                 list(conditionalPanel(
                   condition = 'input.ggplotly == true',
-                  plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%")) ,
+                  plotly::plotlyOutput(paste0(plotName, "_interactive")),#, height = "100%")) ,
                   conditionalPanel(
                     condition = 'input.ggplotly == false',
                     list(fluidRow(align="right",
                                   downloadButton(outputId = paste0("download_", plotName),
                                                  label = icon("download"))),
-                         plotOutput(plotName, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
+                         plotOutput(plotName)#, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
                     )
-                  )) 
+                  )))
               }else{
-                visNetwork::visNetworkOutput(paste0(plotName, "_interactive"),
-                                             height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
+                visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
+                                             #,height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
               }
             })
             
@@ -133,16 +133,17 @@ shiny::observe({
                     plotly::renderPlotly({
                       if(!is3D & plotName != "heatmap_plot"){
                         myplot <- plotly::ggplotly(suppressWarnings(myplot),
-                                                   tooltip = "text", 
-                                                   height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)  
+                                                   tooltip = "text"
+                                                   #height = session$clientData[[empty]]/if(isSquare) 1.4 else 2
+                                                   )  
                       }
                       if(plotName != "heatmap_plot"){
                         myplot <- if(grepl("venn", plotName)) plotly::ggplotly(suppressWarnings(myplot)) %>% plotly::layout(xaxis = emptyax,
                                                                                            yaxis = emptyax,
                                                                                            showlegend=input$legend) else myplot %>% plotly::layout(showlegend=input$legend) 
                       }else{
-                        myplot <- if(plotName == "heatmap_plot") suppressWarnings(myplot$heatmap_interactive) else plotly::ggplotly(suppressWarnings(myplot)) %>% plotly::layout(height = session$clientData[[empty]]/1.4,
-                                                               width = session$clientData[[empty]])
+                        myplot <- if(plotName == "heatmap_plot") suppressWarnings(myplot$heatmap_interactive) else plotly::ggplotly(suppressWarnings(myplot))# %>% plotly::layout(height = session$clientData[[empty]]/1.4,
+                                                               #width = session$clientData[[empty]])
                       }
                       
                       if(canBe3D){

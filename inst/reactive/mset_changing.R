@@ -44,7 +44,7 @@ observeEvent(input$remove_storage, {
         br()
       ),
       btn_labels = c("No", "Yes"),
-      title = gsubfn::fn$paste("Are you sure you want to remove sub-experiment '$exp'?"),
+      title = gsubfn::fn$paste("Are you sure you want to remove '$exp'?"),
       #showCloseButton = T,
       html = TRUE
     )

@@ -13,7 +13,7 @@ shiny::observe({
                                                          lcl$proj_name)) # save analyses
         success = F
         
-        if(mSetter$do == "load"){
+        if("load" %in% mSetter$do){
            # more mem friendly??
           mSet <- load.mSet(mSet, 
                             input$storage_choice, 
@@ -30,8 +30,8 @@ shiny::observe({
           
           orig.count <- mSet$metshiParams$orig.count
           
-          if(!(mSetter$do %in% c("unsubset"))){
-            mSet.settings <- if(mSetter$do == "load") mSet$storage[[input$storage_choice]]$settings else oldSettings
+          if(!("unsubset" %in% mSetter$do)){
+            mSet.settings <- if("load" %in% mSetter$do) mSet$storage[[input$storage_choice]]$settings else oldSettings
             if(length(mSet.settings$subset) > 0){
               subs = mSet.settings$subset
               subs = subs[!(names(subs) %in% c("sample", "mz"))]
@@ -49,47 +49,37 @@ shiny::observe({
           
           mSet$settings <- mSet.settings
           
-          mSet <- switch(mSetter$do,
-                         refresh = {
-                           mSet$dataSet$ispaired <- mSet.settings$ispaired
-                           mSet
-                         },
-                         load = {
-                           mSet$dataSet$ispaired <- mSet.settings$ispaired
-                           mSet
-                         },
-                         change = {
-                           mSet$dataSet$ispaired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE
-                           mSet
-                         },
-                         subset_mz = {
-                           if(input$subset_mzs == "prematched"){
-                             keep.mzs = get_prematched_mz(patdb = lcl$paths$patdb,
-                                                          mainisos = input$subset_mz_iso)
-                           }
-                           
-                           mSet <- subset_mSet_mz(mSet,
-                                                  keep.mzs = keep.mzs)
-                           mSet$dataSet$ispaired <- mSet.settings$ispaired
-                           mSet
-                         },
-                         subset = {
-                           mSet <- subset_mSet(mSet,
-                                               subset_var = input$subset_var, 
-                                               subset_group = input$subset_group)
-                           mSet$dataSet$ispaired <- mSet.settings$ispaired
-                           mSet
-                         },
-                         unsubset = {
-                           mSet$dataSet$ispaired <- mSet.settings$ispaired
-                           mSet$settings$subset <- list()
-                           mSet
-                         }) 
+          if("refresh" %in% mSetter$do | 
+             "load" %in% mSetter$do | 
+             "subset" %in% mSetter$do | 
+             "subset_mz" %in% mSetter$do | 
+             "unsubset" %in% mSetter$do){
+            mSet$dataSet$ispaired <- mSet.settings$ispaired
+          }
+          if("change" %in% mSetter$do){
+            mSet$dataSet$ispaired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE 
+          }
+          if("subset_mz" %in% mSetter$do){
+            if(input$subset_mzs == "prematched"){
+              keep.mzs = get_prematched_mz(patdb = lcl$paths$patdb,
+                                           mainisos = input$subset_mz_iso)
+            }
+            mSet <- subset_mSet_mz(mSet,
+                                   keep.mzs = keep.mzs)
+          }
+          if("subset" %in% mSetter$do){
+            mSet <- subset_mSet(mSet,
+                                subset_var = input$subset_var, 
+                                subset_group = input$subset_group)
+          }
+          if("unsubset" %in% mSetter$do){
+            mSet$settings$subset <- list()
+          }
           
           mSet$analSet <- list(type = "stat")
           mSet$analSet$type <- "stat"
           
-          if(mSetter$do == "change"){
+          if("change" %in% mSetter$do){
             if(input$omit_unknown & grepl("^1f", input$stats_type)){
               shiny::showNotification("omitting 'unknown' labeled samples...")
               knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
