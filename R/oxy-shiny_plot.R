@@ -1107,21 +1107,26 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   
   perf.long = ml_performance$coords
   
-  AUC = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
-                      perf.long[`Test set` == "Test" & !(shuffled)]$y)
-
-  cat("Test AUC:")
-  cat(AUC)
-  cat("\n")
+  if("Test" %in% unique(perf.long$`Test set`)){
+    AUC = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
+                        perf.long[`Test set` == "Test" & !(shuffled)]$y)
+  }else{
+    AUC = mean(sapply(unique(perf.long$`Test set`), function(t){
+      pracma::trapz(perf.long[`Test set` == t & !(shuffled)]$x, 
+                        perf.long[`Test set` == t & !(shuffled)]$y)}
+      ))
+  }
   
   class_type = "b"
   scaleFUN <- function(x) sprintf("%.5s", x)
   
-  #uniq = unique(perf.long$`Test set`)
-  #colMap = cf(length(uniq))
-  #names(colMap) = uniq
-  colMap = c("black", "red", "cyan")
-  names(colMap) = c("Test", "Shuffled", "Training")
+  if("Test" %in% perf.long$`Test set`){
+    colMap = c("black", "red","cyan")
+    names(colMap) = c("Test", "Shuffled", "Training CV")
+  }else{
+    colMap = c("red", "black")
+    names(colMap) = c("Shuffled", "Training CV")
+  }
   
   shuffleAUCs = NULL
   
@@ -1135,10 +1140,19 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     
     try({
       shuffleSplit = split(shuffle_data, shuffle_data$run)
-      shuffleAUCs = sapply(shuffleSplit, function(t){
-        pracma::trapz(t[`Test set` == "Test"]$x, 
-                      t[`Test set` == "Test"]$y)
-      })  
+      if("Test" %in% unique(perf.long$`Test set`)){
+        shuffleAUCs = sapply(shuffleSplit, function(t){
+          pracma::trapz(t[`Test set` == "Test"]$x, 
+                        t[`Test set` == "Test"]$y)
+        })  
+      }else{
+        shuffleSplit = split(shuffle_data, shuffle_data$`Test set`)
+        shuffleAUCs = sapply(shuffleSplit, function(t){
+          pracma::trapz(t$x, 
+                        t$y)
+        })    
+      }
+      
       if(length(shuffleSplit) > 1){
         # test normality
         lbl = "NA"
@@ -1175,20 +1189,25 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
         AUC_txt = "NA"
       }
     })
+    if("Test" %in% shuffle_data$`Test set`){
+      needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
+      needs.ci$shuffled$`Performance` = 'Shuffled'  
+    }else{
+      needs.ci$shuffled = shuffle_data
+      needs.ci$shuffled$`Performance` = 'Shuffled'
+    }
     
-    needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
-    needs.ci$shuffled$`Performance` = 'Shuffled'
   }else{
     AUC_txt = paste0("AUC: ", sprintf("%.4s", AUC))
   }
   
   needs.ci$training = perf.long[!(shuffled)]
-  needs.ci$training$`Performance` = "Training"
+  needs.ci$training$`Performance` = "Training CV"
   ci.table = data.table::rbindlist(needs.ci)
   ci.table$Performance = as.factor(ci.table$Performance)
   
   summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
-                        conf.interval=.95, .drop=TRUE) {
+                        conf.interval=0.95, .drop=TRUE) {
     library(plyr)
     
     # New version of length which can handle NA's: if na.rm==T, don't count them
@@ -1220,15 +1239,15 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     # Confidence interval multiplier for standard error
     # Calculate t-statistic for confidence interval: 
     # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
-    ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+    print(conf.interval)
+    ciMult <- qt(p = conf.interval/2 + .5, df = datac$N-1)
     datac$ci <- datac$se * ciMult
-    
     return(datac)
   }
   
   ci.table <<- ci.table
 
-  ci.table[grep("Fold", `Test set`)]$`Test set` <- "Training"
+  ci.table[grep("Fold", `Test set`)]$`Test set` <- "Training CV"
   ci.table$test_set = ci.table$`Test set`
   
   summ.table = summarySE(data = ci.table, 
@@ -1249,11 +1268,17 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                  mapping = aes(x = x,
                                y = y,
                                color = Performance),
-                 fun = median, 
+                 fun = mean, 
                  geom = "line") +
     ggplot2::geom_step(data = test_data,
                        mapping = aes(x = x, y = y),
                        cex = 2, color = "black") +
+    ggplot2::geom_smooth(
+      data = ci.table,
+      mapping = aes(y = y,
+                    x = x,
+                    fill = Performance,
+                    color = Performance))+
     ggplot2::xlab(ml_performance$names$x) + 
     ggplot2::ylab(ml_performance$names$y) + 
     ggplot2::scale_x_continuous(breaks = seq(0,1,0.25),

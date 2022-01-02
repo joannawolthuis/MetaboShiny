@@ -585,11 +585,11 @@ shiny::observe({
                                            data = list()
                                            try({
                                              data = ml_run(settings = settings, 
-                                                          mSet = small_mSet,
-                                                          input = input,
-                                                          cl = ml_cl,
-                                                          tmpdir = dirname(tempfile()), 
-                                                          use_slurm=F)  
+                                                           mSet = small_mSet,
+                                                           input = input,
+                                                           cl = ml_cl,
+                                                           tmpdir = dirname(tempfile()), 
+                                                           use_slurm=F)  
                                            })
                                            data
                                          },

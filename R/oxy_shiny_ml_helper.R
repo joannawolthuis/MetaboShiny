@@ -24,6 +24,7 @@ getMLperformance = function(ml_res, pos.class,
     spl.fold.performance = split(ml_res$train.performance,
                                  ml_res$train.performance$Resample)
     coord.collection = lapply(spl.fold.performance, function(l){
+      print(l)
       prediction = ROCR::prediction(predictions = l[,pos.class],
                                     labels = l$obs)
       coords = ROCR::performance(prediction,
@@ -33,14 +34,15 @@ getMLperformance = function(ml_res, pos.class,
     })  
   }
   
-  prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
-                                ml_res$labels)
-  
-  coords = ROCR::performance(prediction,
-                             x.measure = x.metric,
-                             measure = y.metric) 
-  
-  coord.collection$Test = coords
+  if(nrow(ml_res$prediction) > 0){
+    print("!")
+    prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
+                                  ml_res$labels)
+    coords = ROCR::performance(prediction,
+                               x.measure = x.metric,
+                               measure = y.metric) 
+    coord.collection$Test = coords
+  }
   
   coords.dt = data.table::rbindlist(lapply(1:length(coord.collection), function(i){
     coords = coord.collection[[i]]
@@ -62,9 +64,10 @@ getMLperformance = function(ml_res, pos.class,
     }
   }
   
+  print(head(coords.dt))
   list(coords = coords.dt,
-       names = list(x = coords@x.name,
-                    y = coords@y.name,
+       names = list(x = coord.collection[[1]]@x.name,
+                    y = coord.collection[[1]]@y.name,
                     alpha = "Cutoff"))
 }
 
@@ -102,6 +105,7 @@ runML <- function(training,
                   maximize=T,
                   cl=0,
                   shuffle = F,
+                  n_repeats = 5,
                   n_permute = 10,
                   shuffle_mode = "train",
                   silent = F,
@@ -115,6 +119,13 @@ runML <- function(training,
   
   # shuffle if shuffle
   trainOrders = list(1:nrow(training))
+  if(n_repeats > 1){
+    for(i in 1:n_permute){
+      reg_order = 1:nrow(training)
+      trainOrders = append(trainOrders, list(reg_order))
+    }
+  }
+  
   if(shuffle & shuffle_mode == "train"){
     for(i in 1:n_permute){
       shuffled_order = sample(1:nrow(training))
@@ -176,10 +187,13 @@ runML <- function(training,
     #rslurm::cleanup_files(batch_job) #cleanup files
     
   }else{
-    print("parallel mode")
     if(length(cl) > 0){
-      doParallel::registerDoParallel(cl)  
+      if(cl[1] != 0){
+        print("parallel mode")
+        doParallel::registerDoParallel(cl)   
+      }
     }
+    
     results = lapply(trainOrders, 
                      ml_single_run,
                      train_fn = train_fn, 
@@ -207,10 +221,12 @@ ml_single_run <- function(trainOrder,
   testing = qs::qread(test_fn)
   
   training$label <- as.factor(training$label)
-  testing$label <- as.factor(testing$label)
-  
   levels(training$label) = make.names(levels(training$label))
-  levels(testing$label) = make.names(levels(testing$label))
+  
+  if(length(testing) > 0){
+    testing$label <- as.factor(testing$label)
+    levels(testing$label) = make.names(levels(testing$label))
+  }
   
   hasProb = !is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)
   
@@ -263,10 +279,16 @@ ml_single_run <- function(trainOrder,
     )
   }
   
-  result.predicted.prob <- stats::predict(fit, 
-                                          testing,
-                                          type = if(hasProb) "prob" else "raw") # Prediction
-  
+  if(length(testing) > 0){
+    result.predicted.prob <- stats::predict(fit, 
+                                            testing,
+                                            type = if(hasProb) "prob" else "raw") # Prediction
+    testing_label = testing$label
+  }else{
+    result.predicted.prob <- data.table::data.table()
+    testing_label = NULL
+  }
+   
   train.performance = fit$pred
 
   caret.mdls <- caret::getModelInfo()
@@ -277,11 +299,13 @@ ml_single_run <- function(trainOrder,
     best.model = fit$bestTune,
     train.performance = train.performance,
     importance = if(has.importance) caret::varImp(fit)$importance else data.table::data.table(unavailable = "method has no variable importance!"),
-    labels = testing$label,
+    labels = testing_label,
     in_test = rownames(testing),
     prediction = result.predicted.prob,
     shuffled = shuffled)
+  
   return(l)
+  
 }
 
 ml_prep_data <- function(settings, mSet, input, cl){
@@ -434,7 +458,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
   # resampling
   
   if(settings$ml_sampling != "none"){
-    print(settings$ml_sampling)
     # split on factor (either batch or placeholder to create one result)
     if(settings$ml_batch_balance){
       split.fac = training_data$config[, setdiff(settings$ml_batch_covars, "individual"), with=F][[1]]
@@ -575,7 +598,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
   {
     
     if(length(settings$ml_batch_covars) == 1 & 
-       settings$ml_batch_covars[1] == ""){
+      settings$ml_batch_covars[1] == ""){
       settings$ml_batch_covars <- c()
       settings$ml_batch_balance = F
     }
@@ -625,7 +648,10 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     
     # replace training data with the new stuff
     training_data$config$split <- "train"
-    testing_data$config$split <- "test"
+    
+    if(nrow(testing_data$curr) > 0){
+      testing_data$config$split <- "test"
+    }
     
     # remove columns that should not be in prediction
     keep.config = unique(c("label", "split", settings$ml_include_covars))
@@ -644,10 +670,10 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
       NULL
     } else {
        if(!settings$ml_covar_fold_seperate & length(settings$ml_batch_covars) == 0){
-        # caret::createFolds(fold_variable, 
-        #                    k = as.numeric(settings$ml_folds),
-        #                    list = TRUE,returnTrain = T)
-        NULL
+        caret::createFolds(fold_variable,
+                           k = as.numeric(settings$ml_folds),
+                           list = TRUE,returnTrain = T)
+        #NULL
       }else if(length(settings$ml_batch_covars) > 0){
         nfold = min(as.numeric(settings$ml_folds),
                     length(table(fold_variable)))
@@ -655,8 +681,6 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
                           k = nfold)
       }
     }
-    
-    print(folds)
     
     if(!is.null(folds)){
       fold_translation <- lapply(1:length(folds), function(i){
@@ -671,13 +695,17 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     settings$samps_per_fold = fold_translation
     
     training_data$config = training_data$config[, ..keep.config]
-    testing_data$config = testing_data$config[, keep.config]
+    if(nrow(testing_data$curr) > 0){
+      testing_data$config = testing_data$config[, keep.config]
+    }
     
     # merge back into one
     training = cbind(training_data$config,
                      training_data$curr)
-    testing = cbind(testing_data$config[, colnames(training_data$config)],
-                    testing_data$curr)
+    if(nrow(testing_data$curr) > 0){
+      testing = cbind(testing_data$config[, colnames(training_data$config)],
+                      testing_data$curr)
+    }
     
     if(!is.null(settings$ml_mtry)){
       if(!is.na(settings$ml_mtry)){
@@ -733,14 +761,17 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     # make sure levels of predicted class aren't numeric
     levels(training$label) <- paste0("class",  Hmisc::capitalize(levels(training$label)))
     levels(training$label) <- ordered(levels(training$label))
-    levels(testing$label) <- paste0("class",  Hmisc::capitalize(levels(testing$label)))
-    levels(testing$label) <- ordered(levels(testing$label))
-    
-    # correct mzs in case model cannot handle numeric column names
     colnames(training) <- make.names(colnames(training))
-    colnames(testing) <- make.names(colnames(testing))
     
-    # run ML
+    if(exists("testing")){
+      levels(testing$label) <- paste0("class",  Hmisc::capitalize(levels(testing$label)))
+      levels(testing$label) <- ordered(levels(testing$label))
+      colnames(testing) <- make.names(colnames(testing))
+    }else{
+      testing = data.table::data.table()
+    }
+    
+    # one for the 'set' train/test
     ml_res = runML(training = training,
                    testing = testing,
                    ml_method = settings$ml_method,
@@ -750,6 +781,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
                    tuneGrid = tuneGrid,
                    folds = folds,
                    maximize = T,
+                   n_repeats = settings$ml_n_repl,
                    shuffle = settings$ml_label_shuffle,
                    n_permute = settings$ml_n_shufflings,
                    shuffle_mode = if(settings$ml_shuffle_mode) "train" else "test",
