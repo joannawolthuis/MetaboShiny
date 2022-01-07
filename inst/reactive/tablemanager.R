@@ -284,11 +284,24 @@ shiny::observe({
                          params = data.table::data.table(unavailable = "No parameters saved for this model...")
                        }
                        
-                       no_shuffle = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]
-                       res2 = no_shuffle$importance
-                       rownames(res2) = gsub("^X", "", rownames(res2))
-                       rownames(res2) = gsub("\\.$", "-", rownames(res2))
-                       res2 = data.frame(importance=res2[,1], row.names=rownames(res2))
+                       no_shuffle = data$res[which(unlist(sapply(data$res, function(x) !x$shuffle)))]
+                       res2 = data.table::rbindlist(lapply(no_shuffle, function(l){
+                         df = l$importance
+                         cbind(mz = rownames(df), df)
+                       }))
+                       res2$mz = gsub("^X", "", res2$mz)
+                       res2$mz = gsub("\\.$", "-", res2$mz)
+                       
+                       # -- average if multi --
+                       if(length(no_shuffle) > 1){
+                         cols <- setdiff(colnames(res2), "mz")
+                         # compute means for selected columns and rename the output
+                         res2 <- res2[, lapply(.SD, mean), .SDcols = cols, by = mz]
+                       }
+                       # ----------------------
+                       
+                       res2 = data.frame(importance=res2[,2], row.names=res2$mz)
+                       colnames(res2) <- "importance" 
                        lcl$tables$ml_imp <<- res2
                        
                        list(ml_overview_tab = res,

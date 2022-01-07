@@ -402,7 +402,7 @@ shiny::observe({
                                                           "orig", "norm", 
                                                           "covars")]
                      
-                     ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]
+                     #ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]
                      uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
                      if(uses.specific.mzs){
                        keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
@@ -512,7 +512,7 @@ shiny::observe({
                                                     ".metshi"))
                          qs::qsave(mSet, file = fn)
                 
-                         mem_gb = "50G"
+                         mem_gb = "100G"
                          pars_filt = pars#[9981:10000,]
                          jobname=paste0("METSHI_ML_",
                                         lcl$proj_name,

@@ -1108,10 +1108,17 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   perf.long = ml_performance$coords
   
   if("Test" %in% unique(perf.long$`Test set`)){
-    AUC = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
-                        perf.long[`Test set` == "Test" & !(shuffled)]$y)
+    test_runs = perf.long[`Test set` == "Test" & !(shuffled)]
+    if(length(unique(test_runs$run)) > 1){
+      AUCs = sapply(split(test_runs, test_runs$run), function(l){
+        pracma::trapz(l$x, l$y)
+      })
+    }else{
+      AUCs = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
+                          perf.long[`Test set` == "Test" & !(shuffled)]$y)  
+    }
   }else{
-    AUC = mean(sapply(unique(perf.long$`Test set`), function(t){
+    AUCs = mean(sapply(unique(perf.long$`Test set`), function(t){
       pracma::trapz(perf.long[`Test set` == t & !(shuffled)]$x, 
                         perf.long[`Test set` == t & !(shuffled)]$y)}
       ))
@@ -1159,9 +1166,19 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
         AUC_txt = "NA"
         try({
           p = shapiro.test(shuffleAUCs)
-          if(p$p.value > 0.05){
+          if(length(AUCs) > 1){
+            p2 = shapiro.test(AUCs)
+          }else{
+            p2 = p
+          }
+          
+          if(p$p.value > 0.05 & p$p.value > 0.05){
             # chance of shuffled being better than AUC -> get p value from this
-            tt_res = t.test(shuffleAUCs, mu = AUC, alternative = "less")
+            if(length(AUCs) == 1){
+              tt_res = t.test(shuffleAUCs, mu = AUCs, alternative = "less")
+            }else{
+              tt_res = t.test(shuffleAUCs,y = AUCs, alternative = "less")
+            }
             p = tt_res$p.value
             stars = MetaboShiny::p2stars(p)
             sigmeasure = paste0("(",stars,")")
@@ -1172,13 +1189,21 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
           }  
         })
         
-        dens_dat = data.table::data.table(auc = shuffleAUCs)
-        dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled..)) + 
-          ggplot2::geom_density(color="gray",fill="gray") +
+        if(length(AUCs) > 1){
+          dens_dat = data.table::data.table(auc = c(shuffleAUCs, AUCs),
+                                            shuffled = c(rep(T, length(shuffleAUCs)),
+                                                        rep(F, length(AUCs))))
+        }else{
+          dens_dat = data.table::data.table(auc = shuffleAUCs, shuffled = T)
+        }
+        dens = ggplot2::ggplot(data = dens_dat, mapping = ggplot2::aes(x = auc, y = ..scaled.., 
+                                                                       fill = shuffled, color = shuffled)) + 
+          ggplot2::geom_density(alpha=0.2,show.legend=F) +
           ggplot2::geom_segment(mapping = aes(y=.3, yend=0, 
                                               x = AUC, xend = AUC), color = "black", cex=0.5,
                                 arrow = ggplot2::arrow(type = "closed",length = unit(.1, "npc")))+
-          #ggplot2::annotate("text", x = AUC, y = 1.16, label = lbl) +
+          ggplot2::scale_fill_manual(values = list("FALSE"="black","TRUE"="red")) +
+          ggplot2::scale_color_manual(values = list("FALSE"="black","TRUE"="red")) +
           ggplot2::theme_void() + ggplot2::expand_limits(x=c(0.9),y=c(0,1.5))
         
         inset.df <- tibble::tibble(x = 0.92, y = 0.1,
@@ -1270,9 +1295,6 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                                color = Performance),
                  fun = mean, 
                  geom = "line") +
-    ggplot2::geom_step(data = test_data,
-                       mapping = aes(x = x, y = y),
-                       cex = 2, color = "black") +
     ggplot2::geom_smooth(
       data = ci.table,
       mapping = aes(y = y,
@@ -1295,6 +1317,15 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                       x = 0.82, y = 0.05, size=7, lineheight = .5) +
     ggplot2::expand_limits(x = 0, y = 0)
   
+  myplot = if(length(unique(test_data$run)) == 1){
+    myplot + ggplot2::geom_step(data = test_data,
+                       mapping = aes(x = x, y = y),
+                       cex = 2, color = "black")
+  }else{myplot + ggplot2::geom_smooth(data = test_data,
+                             mapping = aes(x = x, y = y),
+                             cex = 2, color = "black")}
+    
+    
   if(nrow(inset.df)>0){
     myplot = myplot +
       ggpp::geom_plot_npc(data = inset.df,

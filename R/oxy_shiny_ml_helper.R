@@ -35,7 +35,6 @@ getMLperformance = function(ml_res, pos.class,
   }
   
   if(nrow(ml_res$prediction) > 0){
-    print("!")
     prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
                                   ml_res$labels)
     coords = ROCR::performance(prediction,
@@ -64,7 +63,6 @@ getMLperformance = function(ml_res, pos.class,
     }
   }
   
-  print(head(coords.dt))
   list(coords = coords.dt,
        names = list(x = coord.collection[[1]]@x.name,
                     y = coord.collection[[1]]@y.name,

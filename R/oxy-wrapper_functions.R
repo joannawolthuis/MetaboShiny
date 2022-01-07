@@ -1239,8 +1239,22 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          }
                          
                          if(ncol(data$res[[1]]$importance) > 1){
-                           no_shuffle_imp = data$res[[which(unlist(sapply(data$res, function(x) !x$shuffle)))]]$importance
-                           barplot_data <- ggPlotBar(data = no_shuffle_imp,
+                           no_shuffle = data$res[which(unlist(sapply(data$res, function(x) !x$shuffle)))]
+                           res2 = data.table::rbindlist(lapply(no_shuffle, function(l){
+                             df = l$importance
+                             cbind(mz = rownames(df), df)
+                           }))
+                           res2$mz = gsub("^X", "", res2$mz)
+                           res2$mz = gsub("\\.$", "-", res2$mz)
+                           
+                           # -- average if multi --
+                           if(length(no_shuffle) > 1){
+                             cols <- setdiff(colnames(res2), "mz")
+                             # compute means for selected columns and rename the output
+                             res2 <- res2[, lapply(.SD, mean), .SDcols = cols, by = mz]
+                           }
+                           
+                           barplot_data <- ggPlotBar(data = res2,
                                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                                      topn = input$ml_topn,
                                                      ml_name = data$params$ml_name,
