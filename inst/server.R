@@ -149,7 +149,7 @@ function(input, output, session) {
     if(exists("lcl")){
       # - - - 
       home = path.expand('~')
-
+      
       # create dir for options
       basedir=gsubfn::fn$paste("$home/MetaboShiny")
       if(!dir.exists(basedir)) dir.create(basedir,recursive = T)
@@ -191,9 +191,9 @@ omit_unknown = yes
 beep = no')
         writeLines(contents, lcl$paths$opt.loc)
       }
-    
+      
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
-
+      
       # ==================
       
       if(opts$work_dir == ""){
@@ -223,6 +223,7 @@ beep = no')
       }
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
+        print("!")
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
       }
       
@@ -231,6 +232,67 @@ beep = no')
       }
       
       adducts[adducts == ''|adducts == ' '] <<- NA
+      
+      lapply(c("mummi_adducts", 
+               "score_adducts",
+               "filter_adducts"), function(id){
+                 cats = setdiff(colnames(adducts), colnames(MetaDBparse::adducts))
+                 pickerID = paste0(id, "_cat_picker")
+                 output[[paste0(id, "_cats")]] <- shiny::renderUI(if(length(cats) > 0){
+                   shinyWidgets::checkboxGroupButtons(
+                     inputId = pickerID,
+                     label = "Adduct categories:",
+                     choices = cats,
+                     justified = TRUE,
+                     checkIcon = list(
+                       yes = icon("plus", 
+                                  lib = "glyphicon"))
+                   )
+                 }else{
+                   list()
+                 })
+                 # observers
+                 shiny::observeEvent(input[[pickerID]],{
+                   if(length(input[[pickerID]]) > 0){
+                     sel_adducts = lapply(input[[pickerID]], function(colu){
+                       col = adducts[[colu]] == "v"
+                       col[is.na(col)] <- FALSE
+                       col
+                     })
+                     if(length(sel_adducts) == 1){
+                       sel_adducts = sel_adducts[[1]]
+                     }else{
+                       sel_adducts = lapply(sel_adducts, as.list)
+                       sel_adduct_table = data.table::rbindlist(sel_adducts)
+                       sel_adduct_sums = colSums(sel_adduct_table)
+                       sel_adducts = sel_adduct_sums > 0
+                     }
+                     if(!grepl("filter", pickerID)){
+                       shinyWidgets::updatePickerInput(session, id, selected = adducts$Name[sel_adducts])
+                     }else{
+                       # also do pie chart filter?
+                       if(!is.null(pieinfo)){
+                         adds_in_search = as.character(pieinfo$add$Var.1)
+                         for(mzMode in c("positive", "negative")){
+                           sel_adducts_mode = sel_adducts & adducts$Ion_mode == mzMode
+                           keep_sel_adducts <- intersect(adducts$Name[sel_adducts_mode], adds_in_search)
+                           result_filters$add[[mzMode]] <- keep_sel_adducts
+                           search$go <- T
+                         }  
+                       }
+                     }  
+                   }else{
+                     if(grepl("filter", pickerID)){
+                       if(!is.null(pieinfo) & my_selection$mz != ""){
+                         result_filters$add$positive <- result_filters$add$negative <- character(0)
+                         search$go <- T 
+                       }  
+                     }else{
+                       shinyWidgets::updatePickerInput(session, id, selected = character(0))
+                     }
+                   }
+                 },ignoreNULL = FALSE)
+               })
       
       addResourcePath('www', system.file('www', package = 'MetaboShiny'))
       tmp = tempdir()
@@ -337,7 +399,7 @@ beep = no')
                                value = min(maxcores-1, as.numeric(opts$cores)), 
                                min = 1, 
                                max = maxcores)
-
+      
       if("adducts" %in% names(opts)){
         fav_adducts <- opts$adducts
         fav_adducts <- stringr::str_split(fav_adducts, pattern = "&")[[1]]  
@@ -352,7 +414,7 @@ beep = no')
       }
       
       # === GOOGLE FONT SUPPORT FOR GGPLOT2 ===
-
+      
       # Download a webfont
       if(online){
         try({
@@ -478,7 +540,7 @@ beep = no')
                                     label = paste("Choose colour", i),
                                     value = lcl$aes$mycols[i],
                                     allowTransparent = F)
-          })
+        })
       })
       
       # create color1, color2 etc variables to use in plotting functions
@@ -496,7 +558,7 @@ beep = no')
         }
       })
       shiny::updateSelectInput(session, "beep", 
-                              selected = opts$beep)
+                               selected = opts$beep)
       shiny::updateSelectInput(session, "ggplot_theme", 
                                selected = opts$gtheme)
       shiny::updateSelectInput(session, "color_ramp", 
@@ -701,7 +763,7 @@ beep = no')
       target.mat = grep("\\.mat", names(anal),value = T)
       choices = colnames(anal[[target.mat]])
       shiny::selectInput("combi_anal1_var",label = "A result column:", choices=choices,selected = 1)
-      }else{list()}
+    }else{list()}
   })
   
   output$combi_anal2_picker <- shiny::renderUI({
@@ -711,7 +773,7 @@ beep = no')
       choices = colnames(anal[[target.mat]])
       shiny::selectInput("combi_anal2_var",label = "B result column:", choices=choices,selected = 1)
     }else{list()}
-    })
+  })
   
   shiny::observeEvent(input$debug_metshi, {
     assign("lcl", lcl, envir = .GlobalEnv)
@@ -935,69 +997,8 @@ beep = no')
     }
   })
   
-  lapply(c("mummi_adducts", 
-           "score_adducts",
-           "filter_adducts"), function(id){
-             cats = setdiff(colnames(adducts), colnames(MetaDBparse::adducts))
-             pickerID = paste0(id, "_cat_picker")
-             output[[paste0(id, "_cats")]] <- shiny::renderUI(if(length(cats) > 0){
-               shinyWidgets::checkboxGroupButtons(
-                 inputId = pickerID,
-                 label = "Adduct categories:",
-                 choices = cats,
-                 justified = TRUE,
-                 checkIcon = list(
-                   yes = icon("plus", 
-                              lib = "glyphicon"))
-               )
-             }else{
-               list()
-             })
-             # observers
-             shiny::observeEvent(input[[pickerID]],{
-               if(length(input[[pickerID]]) > 0){
-                 sel_adducts = lapply(input[[pickerID]], function(colu){
-                   col = adducts[[colu]] == "v"
-                   col[is.na(col)] <- FALSE
-                   col
-                 })
-                 if(length(sel_adducts) == 1){
-                   sel_adducts = sel_adducts[[1]]
-                 }else{
-                   sel_adducts = lapply(sel_adducts, as.list)
-                   sel_adduct_table = data.table::rbindlist(sel_adducts)
-                   sel_adduct_sums = colSums(sel_adduct_table)
-                   sel_adducts = sel_adduct_sums > 0
-                 }
-                 if(!grepl("filter", pickerID)){
-                   shinyWidgets::updatePickerInput(session, id, selected = adducts$Name[sel_adducts])
-                 }else{
-                   # also do pie chart filter?
-                   if(!is.null(pieinfo)){
-                     adds_in_search = as.character(pieinfo$add$Var.1)
-                     for(mzMode in c("positive", "negative")){
-                       sel_adducts_mode = sel_adducts & adducts$Ion_mode == mzMode
-                       keep_sel_adducts <- intersect(adducts$Name[sel_adducts_mode], adds_in_search)
-                       result_filters$add[[mzMode]] <- keep_sel_adducts
-                       search$go <- T
-                     }  
-                   }
-                 }  
-               }else{
-                 if(grepl("filter", pickerID)){
-                   if(!is.null(pieinfo) & my_selection$mz != ""){
-                     result_filters$add$positive <- result_filters$add$negative <- character(0)
-                     search$go <- T 
-                   }  
-                 }else{
-                   shinyWidgets::updatePickerInput(session, id, selected = character(0))
-                 }
-               }
-             },ignoreNULL = FALSE)
-           })
-  
   onStop(function() {
-    print("Closing MetaboShiny ~ヾ(＾∇＾)")
+    print("Closing MetaboShiny...")
     if(!is.null(session_cl)){
       parallel::stopCluster(session_cl)
     }

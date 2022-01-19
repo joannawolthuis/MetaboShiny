@@ -267,6 +267,14 @@ shiny::observe({
                                                           colnames(mSet$dataSet$covars)[!(colnames(mSet$dataSet$covars) %in% c("label", "sample", "individual"))]),
                                               selected = "")
                      
+                     # --- SLURM ---
+                     has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
+                     if(has_slurm){
+                       output$ml_slurm_mem_ui <- shiny::renderUI(shinyWidgets::sliderTextInput(inputId = "ml_slurm_job_mem",
+                                                                               label = "Memory per SLURM job (ex. 500M, 10G):",
+                                                                               choices = c("100M", "500M", "1G", "5G", "10G", "50G", "100G", "500G"),
+                                                                               selected = "10G")  )
+                     }
                       
                      # --- ML PCA ---
                      npc = nrow(mSet$dataSet$norm) - 1

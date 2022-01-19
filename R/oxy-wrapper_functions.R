@@ -804,10 +804,28 @@ getAllHits <- function(mSet, expname, randomize = F){
                    ml = {
                      ml_name = gsub(paste0(base_name, " - "), "", name)
                      mdls = analysis$ml[[base_name]][[ml_name]]$res
-                     final_nonshuffle = mdls[[which(sapply(mdls, function(mdl) !mdl$shuffled))]]
-                     res = data.frame(`m/z` = gsub("\\.$", "-", gsub("^X", "", rownames(final_nonshuffle$importance))),
-                                      value =  c(0),
-                                      stastistic = final_nonshuffle$importance[,1])
+                     importance = data.table::rbindlist(lapply(mdls, function(mdl){
+                       if(!mdl$shuffled){
+                         data.table::as.data.table(mdl$importance, keep.rownames=T)
+                       }else{
+                         data.table::data.table()
+                       }
+                     }))
+                     res = data.frame(`m.z` = gsub("\\.$", "-", gsub("^X", "", 
+                                                                     importance$rn)),
+                                      value =  ifelse(importance[[2]] != 0, 0, 1),
+                                      statistic = as.numeric(importance[[2]]))
+                     # aggregate duplicates
+                     if(any(duplicated(res$m.z))){
+                       res = data.table::as.data.table(res)
+                       res_aggr = aggregate(res[,2:3], by = list(res$m.z), FUN = mean)
+                       colnames(res_aggr)[1] <- "m.z"
+                       res = res_aggr
+                     }
+                     
+                     #####################
+                     
+                     res$rn <- NULL
                      res
                    },
                    {metshiAlert("Not currently supported...")
@@ -1238,7 +1256,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            
                          }
                          
-                         if(ncol(data$res[[1]]$importance) > 1){
+                         if(ncol(data$res[[1]]$importance) > 0){
                            no_shuffle = data$res[which(unlist(sapply(data$res, function(x) !x$shuffle)))]
                            res2 = data.table::rbindlist(lapply(no_shuffle, function(l){
                              df = l$importance
@@ -1246,7 +1264,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            }))
                            res2$mz = gsub("^X", "", res2$mz)
                            res2$mz = gsub("\\.$", "-", res2$mz)
-                           
+                           res2 <- res2[res2[[2]] != 0,]
                            # -- average if multi --
                            if(length(no_shuffle) > 1){
                              cols <- setdiff(colnames(res2), "mz")

@@ -9,7 +9,8 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
 
 getMLperformance = function(ml_res, pos.class, 
                             x.metric, y.metric,
-                            silent = F){
+                            silent = F,
+                            ignore.train = F){
   
   if(!("Resample" %in% names(ml_res$train.performance))){
     is.loocv = TRUE
@@ -18,13 +19,20 @@ getMLperformance = function(ml_res, pos.class,
   }
   
   if(is.loocv){
-    if(!silent) print("Cannot estimate train performance.")
-    coord.collection = list()
+    if(!silent) print("LOOCV mode.")
+    coord.collection = {
+      prediction = ROCR::prediction(predictions = ml_res$train.performance[,pos.class],
+                                    labels = ml_res$train.performance$obs)
+      coords = ROCR::performance(prediction,
+                                 x.measure = x.metric,
+                                 measure = y.metric)
+      list(coords)
+    } 
+    names(coord.collection) = "FoldLOOCV"
   }else{
     spl.fold.performance = split(ml_res$train.performance,
                                  ml_res$train.performance$Resample)
     coord.collection = lapply(spl.fold.performance, function(l){
-      print(l)
       prediction = ROCR::prediction(predictions = l[,pos.class],
                                     labels = l$obs)
       coords = ROCR::performance(prediction,
@@ -118,7 +126,7 @@ runML <- function(training,
   # shuffle if shuffle
   trainOrders = list(1:nrow(training))
   if(n_repeats > 1){
-    for(i in 1:n_permute){
+    for(i in 1:n_repeats){
       reg_order = 1:nrow(training)
       trainOrders = append(trainOrders, list(reg_order))
     }
@@ -144,6 +152,8 @@ runML <- function(training,
   qs::qsave(training, train_fn)
   qs::qsave(testing, test_fn)
   
+  print(folds)
+  
   iterations = length(trainOrders)
   params = data.frame(
     train_fn = rep(train_fn, iterations),
@@ -153,7 +163,8 @@ runML <- function(training,
     ml_method = rep(ml_method, iterations),
     #ml_preproc = rep(ml_preproc, iterations),
     maximize = rep(maximize, iterations),
-    trainOrder = I(trainOrders))
+    trainOrder = I(trainOrders),
+    folds = I(lapply(1:iterations, function(i) folds)))
   
   has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
   
@@ -168,7 +179,7 @@ runML <- function(training,
                                     pkgs = c("MetaboShiny",
                                              "caret",
                                              "data.table"),
-                                    global_objects = c("folds", "tuneGrid"),
+                                    global_objects = c("tuneGrid"),
                                     slurm_options = list(time = "00:30:00"))
     completed = F
     
@@ -200,7 +211,8 @@ runML <- function(training,
                      ml_folds = ml_folds,
                      ml_method = ml_method,
                      ml_preproc = ml_preproc,
-                     maximize = maximize)
+                     maximize = maximize,
+                     folds = folds)
   }
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
@@ -208,6 +220,7 @@ runML <- function(training,
 }
 
 ml_single_run <- function(trainOrder,
+                          folds,
                           train_fn,
                           test_fn,
                           ml_perf_metr, 
@@ -238,6 +251,8 @@ ml_single_run <- function(trainOrder,
   
   shuffled = !all(training$label == orig.lbl)
   ml_folds <- if(!is.null(folds)) length(folds) else ml_folds
+  
+  print(folds)
   
   trainCtrl <- caret::trainControl(verboseIter = T,
                                    allowParallel = T,
@@ -286,9 +301,9 @@ ml_single_run <- function(trainOrder,
     result.predicted.prob <- data.table::data.table()
     testing_label = NULL
   }
-   
+  
   train.performance = fit$pred
-
+  
   caret.mdls <- caret::getModelInfo()
   has.importance = "varImp" %in% names(caret.mdls[[ml_method]])
   
@@ -300,6 +315,7 @@ ml_single_run <- function(trainOrder,
     labels = testing_label,
     in_test = rownames(testing),
     prediction = result.predicted.prob,
+    model = fit,
     shuffled = shuffled)
   
   return(l)
@@ -327,7 +343,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
   keep.config = setdiff(unique(c(settings$ml_include_covars, settings$ml_batch_covars,
                                  settings$ml_train_subset[[1]], settings$ml_test_subset[[1]])),
                         c("label", "", " "))
- 
+  
   sample_names = mSet$dataSet$covars$sample
   
   if(length(keep.config) > 0){
@@ -583,7 +599,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
       curr = data.table::rbindlist(lapply(resampled.data.list, function(x) x$curr),use.names = T),
       config = data.table::rbindlist(lapply(resampled.data.list, function(x) x$config), use.names = T)
       #samples = training.rownames
-      )
+    )
     resampled.data.list <- NULL
   }
   setwd(olddir)
@@ -596,7 +612,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
   {
     
     if(length(settings$ml_batch_covars) == 1 & 
-      settings$ml_batch_covars[1] == ""){
+       settings$ml_batch_covars[1] == ""){
       settings$ml_batch_covars <- c()
       settings$ml_batch_balance = F
     }
@@ -665,18 +681,27 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     }
     
     folds <- if(settings$ml_folds == "LOOCV"){
+      print("LOOCV")
       NULL
     } else {
-       if(!settings$ml_covar_fold_seperate & length(settings$ml_batch_covars) == 0){
+      if(!settings$ml_covar_fold_seperate & length(settings$ml_batch_covars) == 0){
         caret::createFolds(fold_variable,
                            k = as.numeric(settings$ml_folds),
-                           list = TRUE,returnTrain = T)
+                           list = TRUE,
+                           returnTrain = T)
         #NULL
       }else if(length(settings$ml_batch_covars) > 0){
-        nfold = min(as.numeric(settings$ml_folds),
-                    length(table(fold_variable)))
-        caret::groupKFold(fold_variable,
-                          k = nfold)
+        if(settings$ml_covar_fold_seperate){
+          nfold = min(as.numeric(settings$ml_folds),
+                      length(table(fold_variable)))
+          caret::groupKFold(fold_variable,
+                            k = nfold)  
+        }else{
+          caret::createFolds(fold_variable,
+                             k = as.numeric(settings$ml_folds),
+                             list = TRUE,
+                             returnTrain = T) 
+        }
       }
     }
     
@@ -849,7 +874,9 @@ slurm_apply_metshi <- function (f, params, ..., jobname = NA, nodes = 2, cpus_pe
                                 processes_per_node = cpus_per_node, preschedule_cores = TRUE, 
                                 global_objects = NULL, add_objects = NULL, pkgs = rev(.packages()), 
                                 libPaths = NULL, rscript_path = NULL, r_template = NULL, 
-                                sh_template = NULL, slurm_options = list(), submit = TRUE){
+                                sh_template = NULL, slurm_options = list(), 
+                                submit = TRUE,
+                                max_simul=2){
   print("altered MetShi slurm_apply")
   #print("a")
   if (!is.function(f)) {
@@ -923,10 +950,11 @@ slurm_apply_metshi <- function (f, params, ..., jobname = NA, nodes = 2, cpus_pe
   if (is.null(rscript_path)) {
     rscript_path <- file.path(R.home("bin"), "Rscript")
   }
+  template_sh = gsub("#SBATCH --array=0-\\{\\{\\{max_node\\}\\}\\}" , "#SBATCH --array=0-{{{max_node}}}%{{max_simul}}", template_sh)
   script_sh <- whisker::whisker.render(template_sh, list(max_node = nodes - 
                                                            1, cpus_per_node = cpus_per_node, jobname = jobname, 
                                                          flags = slurm_options$flags, options = slurm_options$options, 
-                                                         rscript = rscript_path))
+                                                         rscript = rscript_path, max_simul=max_simul))
   writeLines(script_sh, file.path(tmpdir, "submit.sh"))
   #print("g")
   if (submit && system("squeue", ignore.stdout = TRUE)) {
@@ -968,10 +996,10 @@ ml_slurm <- function(i,
       library(MetaDBparse)
     }) 
     res = ml_run(settings = settings, 
-                              mSet = small_mSet,
-                              cl = ml_session_cl,
-                              tmpdir = tmpdir, 
-                              use_slurm = T)
+                 mSet = small_mSet,
+                 cl = ml_session_cl,
+                 tmpdir = tmpdir, 
+                 use_slurm = T)
   })
   res
 }

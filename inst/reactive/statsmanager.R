@@ -152,11 +152,12 @@ shiny::observe({
                    #similarly to venn diagram
                    flattened <- list(getAllHits(mSet,
                                                 input$mummi_anal))
-                   if(input$mummi_enr_method & grepl("combi", input$mummi_anal)){
-                     head(flattened)
+                   
+                   if(input$mummi_enr_method){
                      flattened[[1]]$value <- 1
                      flattened[[1]]$significant <- F
-                     flattened[[1]] <- flattened[[1]][order(abs(flattened[[1]]$significant),decreasing = T),]
+                     flattened[[1]] <- flattened[[1]][order(abs(flattened[[1]]$statistic),
+                                                            decreasing = T),]
                      flattened[[1]]$value[1:input$mummi_topn] <- 0
                      flattened[[1]]$significant[1:input$mummi_topn] <- T
                    }
@@ -187,7 +188,7 @@ shiny::observe({
                    print("Preview of input table:")
                    print(head(tbl))
                    
-                   fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
+                   data.table::fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
                    
                    enr_mSet <- MetaboAnalystR::InitDataObjects("mass_all",
                                                                "mummichog",
@@ -242,7 +243,8 @@ shiny::observe({
                    
                    # === PerformAdductMapping ===
                    myAdds <- enr_mSet$dataSet$adduct.list
-                   hit.inx <- match(tolower(myAdds), tolower(add_db_cust$Ion_Name))
+                   hit.inx <- match(tolower(myAdds), 
+                                    tolower(add_db_cust$Ion_Name))
                    match.values <- add_db_cust[hit.inx, ]
                    sel.add <- nrow(match.values)
                    if (sel.add > 0) {
@@ -292,7 +294,8 @@ shiny::observe({
                        }) 
                      }
                      names(mw_modified) <- c("neg", "pos")
-                     return(mw_modified)}
+                     return(mw_modified)
+                     }
                    
                    shiny::setProgress(0.8)
                    
@@ -305,9 +308,6 @@ shiny::observe({
                    # ==== BUILD CUSTOM DB HERE ====
                    
                    map_id = input$mummi_org
-                   
-                   print(map_id)
-                   
                    lib_name <- paste0(map_id, "_kegg")
                    file_name <- paste0(lib_name, ".qs")
                    
@@ -512,8 +512,9 @@ shiny::observe({
                                                     ".metshi"))
                          qs::qsave(mSet, file = fn)
                 
-                         mem_gb = "100G"
-                         pars_filt = pars#[9981:10000,]
+                         
+                         mem_gb = input$ml_slurm_job_mem #"100G"
+                         pars_filt = pars#[4500:4510,]
                          jobname=paste0("METSHI_ML_",
                                         lcl$proj_name,
                                         "_",
@@ -523,15 +524,18 @@ shiny::observe({
                          maxjobs = 500
                          nodecount = floor(maxjobs / first_job_parallel_count)
                          nodecount =  min(nodecount, nrow(pars_filt))
+                         print("Max concurrent jobs set to:")
+                         print(nodecount)
                          
                          batch_job <- slurm_apply_metshi(ml_slurm, 
                                                          pars_filt,#[5000,], 
                                                          cpus_per_node = 1,
                                                          jobname = jobname,
-                                                         nodes = nodecount,#[1],
+                                                         nodes = nrow(pars_filt),
                                                          global_objects = "gbl",
                                                          slurm_options = list(time = job_time,
-                                                                              mem = mem_gb))
+                                                                              mem = mem_gb),
+                                                         max_simul=nodecount)
                          
                          completed = F
                          
@@ -554,6 +558,7 @@ shiny::observe({
                          print("Cluster batch job complete! Collecting results...")
                          ml_queue_res <- get_slurm_out_jw(batch_job,
                                                           outtype = "raw")
+                         
                          
                          names(ml_queue_res) <- sapply(ml_queue_res, function(x) x$params$ml_name)
                          rslurm::cleanup_files(batch_job) #cleanup files
@@ -589,7 +594,7 @@ shiny::observe({
                                                            input = input,
                                                            cl = ml_cl,
                                                            tmpdir = dirname(tempfile()), 
-                                                           use_slurm=F)  
+                                                           use_slurm=F)
                                            })
                                            data
                                          },
