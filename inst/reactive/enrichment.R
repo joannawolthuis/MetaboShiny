@@ -24,9 +24,9 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       mz_rows = mzs_withvals[identifier == cpd_id]
       if(nrow(mz_rows) > 0){
         if(grey_nonsig){
-          mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
-        }else{
           mz_rows$stastistic <- ifelse(mz_rows$significant, 1, 0)
+        }else{
+          mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
         }
         all.dat = data.table::data.table(id = cpd_id,
                                          value = mz_rows$stastistic)
@@ -82,20 +82,20 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     
     library(pathview)
     pv.out <- pathview::pathview(cpd.data = multi.state.table[,-1], 
-                                          #na.col = "black",
-                                          pathway.id = pw.code, 
-                                          species = species,
-                                          out.suffix = "metaboshiny", 
-                                          keys.align = "y",
-                                          match.data = TRUE,
-                                          kegg.native = if(input$enrich_pathway_plot_mode) T else F,
-                                          multi.state = is.multi,
-                                          same.layer = TRUE,
-                                          low = list(gene = "green", cpd = "blue"), 
-                                          mid = list(gene = "gray", cpd = "gray"), 
-                                          high = list(gene = "red", cpd = "red"),
-                                          kegg.dir = tmpdir,
-                                          min.nnodes = 1)   
+                                 #na.col = "black",
+                                 pathway.id = pw.code, 
+                                 species = species,
+                                 out.suffix = "metaboshiny", 
+                                 keys.align = "y",
+                                 match.data = TRUE,
+                                 kegg.native = if(input$enrich_pathway_plot_mode) T else F,
+                                 multi.state = is.multi,
+                                 same.layer = TRUE,
+                                 low = list(gene = "green", cpd = "blue"), 
+                                 mid = list(gene = "gray", cpd = "gray"), 
+                                 high = list(gene = "red", cpd = "red"),
+                                 kegg.dir = tmpdir,
+                                 min.nnodes = 1)   
     
     fn.add = ifelse(is.multi, "multi", "single")
     fn.partial = paste0(species, pw.code, ".metaboshiny.", fn.add)

@@ -243,11 +243,13 @@ shiny::observe({
                                  ml_performance = getMLperformance(res, 
                                                                    pos.class = input$ml_plot_posclass,
                                                                    x.metric=input$ml_plot_x,
-                                                                   y.metric=input$ml_plot_y)
+                                                                   y.metric=input$ml_plot_y,
+                                                                   ignore.training =  if(data$params$ml_perf_metr == "none") T else F)
                                  ml_performance$coords$shuffled = c(res$shuffled)
                                  ml_performance$coords$run = i
                                  ml_performance
                                })
+                               
                                coords = data.table::rbindlist(lapply(ml_performance_rows, function(x) x$coords))
                                ml_performance = list(coords = coords,
                                                      names = ml_performance_rows[[1]]$names)

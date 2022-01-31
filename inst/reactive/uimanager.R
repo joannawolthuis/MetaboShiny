@@ -272,8 +272,8 @@ shiny::observe({
                      if(has_slurm){
                        output$ml_slurm_mem_ui <- shiny::renderUI(shinyWidgets::sliderTextInput(inputId = "ml_slurm_job_mem",
                                                                                label = "Memory per SLURM job (ex. 500M, 10G):",
-                                                                               choices = c("100M", "500M", "1G", "5G", "10G", "50G", "100G", "500G"),
-                                                                               selected = "10G")  )
+                                                                               choices = c("100M", "500M", "1G", "2G", "5G", "10G", "50G", "100G", "500G"),
+                                                                               selected = "2G")  )
                      }
                       
                      # --- ML PCA ---
@@ -310,7 +310,8 @@ shiny::observe({
                          perf = getMLperformance(ml_res = data$res[[1]], 
                                                  pos.class = pos.class.test,
                                                  x.metric = input$ml_plot_x,
-                                                 y.metric = input$ml_plot_y)
+                                                 y.metric = input$ml_plot_y,
+                                                 ignore.train = data$params$ml_perf_metr == "none")
                          t = perf$coords
                          pracma::trapz(t[`Test set` == "Test"]$x, 
                                        t[`Test set` == "Test"]$y)
@@ -329,6 +330,7 @@ shiny::observe({
                          model.names = names(mSet$analSet$ml[[method]])
                          choices <- c(choices, paste0(method, " - ", paste0(model.names)))
                        }
+                       
                        
                        shiny::updateSelectizeInput(session, "ml_samp_distr", 
                                                 choices = c(" ", choices))

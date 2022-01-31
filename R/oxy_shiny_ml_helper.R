@@ -10,36 +10,46 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
 getMLperformance = function(ml_res, pos.class, 
                             x.metric, y.metric,
                             silent = F,
-                            ignore.train = F){
+                            ignore.training = F){
   
-  if(!("Resample" %in% names(ml_res$train.performance))){
-    is.loocv = TRUE
-  }else{
-    is.loocv = FALSE
-  }
-  
-  if(is.loocv){
-    if(!silent) print("LOOCV mode.")
-    coord.collection = {
+  if(!ignore.training){
+    if(!("Resample" %in% colnames(ml_res$train.performance))){
+      is.loocv = TRUE
+    }else{
+      is.loocv = FALSE
+    }
+    if(is.loocv){
+      if(!silent) print("LOOCV mode.")
+      coord.collection = {
+        prediction = ROCR::prediction(predictions = ml_res$train.performance[,pos.class],
+                                      labels = ml_res$train.performance$obs)
+        coords = ROCR::performance(prediction,
+                                   x.measure = x.metric,
+                                   measure = y.metric)
+        list(coords)
+      } 
+      names(coord.collection) = "FoldLOOCV"
+    }else{
+      spl.fold.performance = split(ml_res$train.performance,
+                                   ml_res$train.performance$Resample)
+      coord.collection = lapply(spl.fold.performance, function(l){
+        prediction = ROCR::prediction(predictions = l[,pos.class],
+                                      labels = l$obs)
+        coords = ROCR::performance(prediction,
+                                   x.measure = x.metric,
+                                   measure = y.metric)
+        coords
+      })
+      # also add a single CV curve
       prediction = ROCR::prediction(predictions = ml_res$train.performance[,pos.class],
-                                    labels = ml_res$train.performance$obs)
+                                   labels = ml_res$train.performance$obs)
       coords = ROCR::performance(prediction,
                                  x.measure = x.metric,
                                  measure = y.metric)
-      list(coords)
-    } 
-    names(coord.collection) = "FoldLOOCV"
+      coord.collection$TrainSingleCurve <- coords
+    }  
   }else{
-    spl.fold.performance = split(ml_res$train.performance,
-                                 ml_res$train.performance$Resample)
-    coord.collection = lapply(spl.fold.performance, function(l){
-      prediction = ROCR::prediction(predictions = l[,pos.class],
-                                    labels = l$obs)
-      coords = ROCR::performance(prediction,
-                                 x.measure = x.metric,
-                                 measure = y.metric)
-      coords
-    })  
+    coord.collection = list()
   }
   
   if(nrow(ml_res$prediction) > 0){
@@ -152,8 +162,6 @@ runML <- function(training,
   qs::qsave(training, train_fn)
   qs::qsave(testing, test_fn)
   
-  print(folds)
-  
   iterations = length(trainOrders)
   params = data.frame(
     train_fn = rep(train_fn, iterations),
@@ -180,7 +188,7 @@ runML <- function(training,
                                              "caret",
                                              "data.table"),
                                     global_objects = c("tuneGrid"),
-                                    slurm_options = list(time = "00:30:00"))
+                                    slurm_options = list(time = "02:00:00"))
     completed = F
     
     print("Waiting on cluster to finish jobs...")
@@ -252,8 +260,6 @@ ml_single_run <- function(trainOrder,
   shuffled = !all(training$label == orig.lbl)
   ml_folds <- if(!is.null(folds)) length(folds) else ml_folds
   
-  print(folds)
-  
   trainCtrl <- caret::trainControl(verboseIter = T,
                                    allowParallel = T,
                                    method = if(ml_folds == "LOOCV") "LOOCV" else as.character(ml_perf_metr),
@@ -315,7 +321,7 @@ ml_single_run <- function(trainOrder,
     labels = testing_label,
     in_test = rownames(testing),
     prediction = result.predicted.prob,
-    model = fit,
+    #model = fit,
     shuffled = shuffled)
   
   return(l)
@@ -641,18 +647,24 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
             mzs = getAllHits(mSet = mSet,
                              expname = settings$ml_specific_mzs,
                              randomize = settings$ml_mzs_rand)
-            #print(mzs)
-            #print(settings$ml_mzs_topn)
             
-            mzs = mzs$m.z[1:settings$ml_mzs_topn]
-            #print(mzs[1:10])
+            mzs = mzs$m.z
             
+            if(!settings$ml_mzs_use_top){
+              mzs = rev(mzs)
+            }
+            
+            mzs = mzs[1:settings$ml_mzs_topn]
             mzs = gsub("^X", "", mzs)
-            #print(mzs[1:10])
-            
             mzs = gsub("\\.$", "-", mzs)
             #print(mzs[1:10])
-            training_data$curr <- as.data.frame(training_data$curr[, mzs])
+            if(settings$ml_mzs_exclude){
+              print("excluding these top m/z")
+              mzs_keep = setdiff(colnames(training_data$curr), mzs)
+              training_data$curr <- as.data.frame(training_data$curr[, mzs_keep])
+            }else{
+              training_data$curr <- as.data.frame(training_data$curr[, mzs])
+            }
           }
         }else{
           curr <- data.table::data.table() # only use configs
@@ -697,8 +709,9 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
           caret::groupKFold(fold_variable,
                             k = nfold)  
         }else{
+          nfold = as.numeric(settings$ml_folds)
           caret::createFolds(fold_variable,
-                             k = as.numeric(settings$ml_folds),
+                             k = nfold,
                              list = TRUE,
                              returnTrain = T) 
         }
@@ -955,6 +968,7 @@ slurm_apply_metshi <- function (f, params, ..., jobname = NA, nodes = 2, cpus_pe
                                                            1, cpus_per_node = cpus_per_node, jobname = jobname, 
                                                          flags = slurm_options$flags, options = slurm_options$options, 
                                                          rscript = rscript_path, max_simul=max_simul))
+  cat(script_sh)
   writeLines(script_sh, file.path(tmpdir, "submit.sh"))
   #print("g")
   if (submit && system("squeue", ignore.stdout = TRUE)) {

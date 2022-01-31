@@ -1836,8 +1836,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   # sanity check data
   mSet <- MetaboAnalystR::SanityCheckData(mSet)
   
-  #shiny::setProgress(session=session, value= .6)
-  
+
   # missing value imputation
   if(req(mSet$metshiParams$miss_type) != "none"){
     if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
@@ -1924,8 +1923,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   
   mSet$dataSet$prenorm <- NULL
   
-  #shiny::setProgress(session=session, value= .8)
-  
+
   # get sample names
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
@@ -2028,8 +2026,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     mSet$dataSet$norm <- as.data.frame(trunc)
   }
   
-  #shiny::setProgress(session=session, value= .9)
-  
+
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
   
   # make sure covars order is consistent with mset$..$norm order
@@ -2212,3 +2209,617 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs,
 
 assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")
 
+# ---
+runStats <- function(mSet, input,lcl, analysis, ml_queue){
+  switch(analysis,
+         vennrich = {
+           if("storage" %not in% names(mSet)){
+             mSet$storage <- list()
+           }
+           # TODO: use this in venn diagram creation
+           mSet <- MetaboShiny::store.mSet(mSet, name = mSet$settings$cls.name, proj.folder = lcl$paths$proj_dir)
+         },
+         corr = {
+           mSet <- metshiCorr(mSet, input)
+         },
+         diffcorr = {
+           mSet <- metshiDiffCorr(mSet, input)
+         },
+         pca = {
+           mSet <- metshiPCA(mSet, input)
+         },
+         ica = {
+           mSet <- metshiICA(mSet, input)
+         },
+         umap = {
+           mSet <- metshiUMAP(mSet, input)
+         },
+         meba = {
+             mSet <- MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
+         },
+         asca = {
+           # perform asca analysis
+             mSet <- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
+             mSet <- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
+           
+         },
+         network = {
+           mSet <- metshiNetwork(mSet, input)
+           output$network_now <- shiny::renderText(input$network_table)
+         },
+         enrich = {
+
+             tbl <- metshiGetEnrichInput(mSet, input)
+             
+             tmpfile <- tempfile()
+             
+             print("Preview of input table:")
+             print(head(tbl))
+             
+             data.table::fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
+             
+             ppm <- mSet$ppm
+             
+             enr_mSet <- doEnrich(input, tmpfile, ppm)
+             
+             # ---------
+             
+             mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
+                                         mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
+                                         mumResTable = enr_mSet$dataSet$mumResTable,
+                                         mummi.input = enr_mSet$dataSet$mummi.proc,
+                                         path.nms = enr_mSet$path.nms,
+                                         path.hits = enr_mSet$path.hits,
+                                         path.all = enr_mSet$pathways,
+                                         path.lib = enr_mSet$lib.organism,
+                                         cpd.value = enr_mSet$cpd_exp_dict,
+                                         orig.input = flattened[[1]],
+                                         enr.method = if(input$mummi_enr_method | !hasT) "mum" else "gsea")
+             enr_mSet <- NULL
+         },
+         featsel = {
+           print("Feature selection start...")
+           curr = cbind(label = mSet$dataSet$cls, 
+                        mSet$dataSet$norm)
+           boruta_res = Boruta::Boruta(x = curr[,2:ncol(curr)],
+                                       y = as.factor(curr[[1]]))
+           mSet$analSet$featsel <- list(boruta_res)
+         },
+         ml = {
+           {
+             #assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
+             #assign("input", shiny::isolate(input), envir = .GlobalEnv)
+             
+             mSet_loc <- mSetForML(mSet, ml_queue, input)
+             
+             has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
+             use_slurm = T
+             
+             if(has_slurm & use_slurm){
+               
+               job_time = "24:00:00"
+               
+               print("Attempting to submit jobs through slurm!")
+               
+               settings_loc <- tempfile()
+               first_job_parallel_count = if(ml_queue$jobs[[1]]$ml_label_shuffle){
+                 ml_queue$jobs[[1]]$ml_n_shufflings + 1
+               }else{
+                 1
+               }
+               qs::qsave(ml_queue$jobs, file = settings_loc)
+               
+               pars = data.frame(i = 1:length(ml_queue$jobs),
+                                 mloc = c(mSet_loc),
+                                 sloc = c(settings_loc),
+                                 tmpdir = c(dirname(tempfile())))
+               
+               success = F
+               
+               try({
+                 fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
+                                            ".metshi"))
+                 qs::qsave(mSet, file = fn)
+                 
+                 
+                 mem_gb = input$ml_slurm_job_mem #"100G"
+                 pars_filt = pars#[4500:4510,]
+                 jobname=paste0("METSHI_ML_",
+                                lcl$proj_name,
+                                "_",
+                                gsub("file","",
+                                     basename(tempfile())))
+                 
+                 maxjobs = 500
+                 nodecount = floor(maxjobs / first_job_parallel_count)
+                 nodecount =  min(nodecount, nrow(pars_filt))
+                 print("Max concurrent jobs set to:")
+                 print(nodecount)
+                 
+                 batch_job <- slurm_apply_metshi(ml_slurm, 
+                                                 pars_filt,#[5000,], 
+                                                 cpus_per_node = 1,
+                                                 jobname = jobname,
+                                                 nodes = nrow(pars_filt),
+                                                 global_objects = "gbl",
+                                                 slurm_options = list(time = job_time,
+                                                                      mem = mem_gb),
+                                                 max_simul=nodecount)
+                 
+                 completed = F
+                 
+                 print("Waiting on cluster to finish jobs...")
+                 
+                 jobs_ntot = length(ml_queue$jobs)
+                 
+                 pb = pbapply::startpb(max = jobs_ntot)
+                 while(!completed){
+                   Sys.sleep(5)
+                   running_jobs = list.files(paste0("_rslurm_", 
+                                                    batch_job$jobname),
+                                             pattern = "rslurm")
+                   pbapply::setpb(pb, value = length(running_jobs))
+                   completed = slurm_job_complete(batch_job)
+                 }
+                 
+                 #rslurm::print_job_status(batch_job)
+                 # my ver has a progress bar
+                 print("Cluster batch job complete! Collecting results...")
+                 ml_queue_res <- get_slurm_out_jw(batch_job,
+                                                  outtype = "raw")
+                 
+                 
+                 names(ml_queue_res) <- sapply(ml_queue_res, function(x) x$params$ml_name)
+                 rslurm::cleanup_files(batch_job) #cleanup files
+                 
+                 success = T
+               })
+               if(success){
+                 print("reloading mSet...")
+                 # load in mSet back
+                 mSet <- qs::qread(fn)
+               }else{
+                 stop("ml failed")
+               }
+             }else{
+               try({
+                 parallel::clusterExport(ml_session_cl, c("ml_run",
+                                                          "gbl", 
+                                                          "mSet_loc"),
+                                         envir = environment())
+                 
+                 read_in = parallel::clusterEvalQ(ml_session_cl,{
+                   small_mSet <- qs::qread(mSet_loc)
+                 })  
+               })
+               
+               ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
+                                                 cl = if(length(ml_queue$jobs) > 1) ml_session_cl else 0, 
+                                                 function(settings, ml_cl){
+                                                   data = list()
+                                                   try({
+                                                     data = ml_run(settings = settings, 
+                                                                   mSet = small_mSet,
+                                                                   input = input,
+                                                                   cl = ml_cl,
+                                                                   tmpdir = dirname(tempfile()), 
+                                                                   use_slurm=F)
+                                                   })
+                                                   data
+                                                 },
+                                                 ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
+             }
+           }
+           
+           print("Done!")
+           
+           #shiny::showNotification("Gathering results...")
+           
+           ml_queue_res = ml_queue_res[unlist(sapply(ml_queue_res, function(l) length(l) > 0))]
+           
+           if(!("ml" %in% names(mSet$analSet))){
+             mSet$analSet$ml <- list()
+           }
+           
+           for(res in ml_queue_res){
+             mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
+             settings <- res$params
+           }
+           
+           if(length(mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]]) > 0){
+             mSet$analSet$ml$last <- list(name = settings$ml_name,
+                                          method = settings$ml_method)  
+             #shiny::showNotification("Done!")
+           }else{
+             #shiny::showNotification("Failed...")
+           }
+           try({
+             parallel::stopCluster(ml_session_cl)
+           })
+           lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
+           print("ML done and saved.")
+         },
+         heatmap = {
+           # reset
+           mSet <- calcHeatMap(mSet, 
+                               signif.only = input$heatsign,
+                               source.anal = input$heattable,
+                               top.hits = input$heatmap_topn,
+                               cols = lcl$aes$mycols,
+                               which.data = input$heatmap_source)
+           output$heatmap_now <- shiny::renderText(input$heattable)
+         },
+         tt = {
+             mSet <- Ttests.Anal.JW(mSet,
+                                    nonpar = input$tt_nonpar,
+                                    threshp = input$tt_p_thresh,
+                                    paired = mSet$dataSet$ispaired,
+                                    equal.var = input$tt_eqvar,
+                                    multicorr_method = input$tt_multi_test)
+           
+         },
+         fc = {
+             mSet$dataSet$combined.method = T
+             if(mSet$dataSet$ispaired){
+               mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
+                                                      as.numeric(input$fc_thresh),
+                                                      1)  
+             }else{
+               mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
+                                                        as.numeric(input$fc_thresh), # TODO: make this threshold user defined
+                                                        1) 
+             }
+             if(!is.null(mSet$analSet$fc$sig.mat)){
+               rownames(mSet$analSet$fc$sig.mat) <- gsub(rownames(mSet$analSet$fc$sig.mat), 
+                                                         pattern = "^X",
+                                                         replacement = "")
+             }else{
+               mSet$analSet$fc$sig.mat <- data.frame()
+             }
+         },
+         aov = {
+           aovtype = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
+           redo = aovtype %not in% names(mSet$analSet)
+           if(redo){ # if done, don't redo
+             
+               mSet <- switch(mSet$settings$exp.type,
+                              "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.1,post.hoc = "fdr",nonpar = F),
+                              "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "", 1, 1),
+                              "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time0", 1, 1),
+                              "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time", 1, 1))
+             
+           }
+         },
+         combi = {
+           
+           anal1 = input$combi_anal1 #"corr"
+           anal2 = input$combi_anal2 #"aov"
+           anal1_col = input$combi_anal1_var #"correlation"
+           anal2_col = input$combi_anal2_var #"-log10(p)"
+           anal1_res = mSet$analSet[[anal1]]
+           anal2_res = mSet$analSet[[anal2]]
+           anal1_res_table = data.table::as.data.table(anal1_res[grepl("\\.mat", names(anal1_res))][[1]],keep.rownames=T)
+           anal2_res_table = data.table::as.data.table(anal2_res[grepl("\\.mat", names(anal2_res))][[1]],keep.rownames=T)
+           
+           translator=list(
+             "t.stat" = "t.score",
+             "p.value" = "p.value",
+             "-log10(p)" = "p.log",
+             "Fold Change" = "fc.all",
+             "log2(FC)" = "fc.log",
+             "correlation" = "correlation"
+           )
+           
+           if(anal1_col %in% names(translator)){
+             anal1_all_res = anal1_res[[translator[[anal1_col]]]]
+           }else{
+             anal1_all_res = anal1_res_table[[anal1_col]]
+             names(anal1_all_res) <- anal1_res_table$rn
+           }
+           
+           if(anal2_col %in% names(translator)){
+             anal2_all_res = anal2_res[[translator[[anal2_col]]]]
+           }else{
+             anal2_all_res = anal2_res_table[[anal2_col]]
+             names(anal2_all_res) <- anal2_res_table$rn
+           }
+           
+           anal1_trans = "none"
+           anal2_trans = "none"
+           
+           # if(input$combi_anal1_trans != "none"){
+           #   try({
+           #     transFun= switch(input$combi_anal1_trans,
+           #                      "log10"=log10,
+           #                      "-log10"=function(x) -log10(x),
+           #                      "abs"=abs) 
+           #     anal1_res_table[[anal1_col]] <- transFun(anal1_res_table[[anal1_col]])
+           #     anal1_trans = input$combi_anal1_trans
+           #   })
+           # }
+           # if(input$combi_anal2_trans != "none"){
+           #   try({
+           #     transFun= switch(input$combi_anal2_trans,
+           #                      "log10"=log10,
+           #                      "-log10"=function(x) -log10(x),
+           #                      "abs"=abs) 
+           #     anal2_res_table[[anal2_col]] <- transFun(anal2_res_table[[anal2_col]])
+           #     anal2_trans = input$combi_anal2_trans
+           #   })
+           # }
+           
+           if(anal1 != anal2){
+             mzInBoth = intersect(rownames(anal1_res_table),rownames(anal2_res_table))
+             if(length(mzInBoth) > 0){
+               combined_anal = merge(
+                 anal1_res_table,
+                 anal2_res_table,
+                 by = "rn"
+               )
+               keep.cols = c(1, which(colnames(combined_anal) %in% c(anal1_col,anal2_col)))
+               dt <- as.data.frame(combined_anal)[,keep.cols]
+               mSet$analSet$combi <- list(sig.mat = dt, 
+                                          all.vals = list(x=anal1_all_res, y=anal2_all_res),
+                                          trans = list(x=anal1_trans, y=anal2_trans),
+                                          source = list(x=anal1, y=anal2))
+             }  
+           }else{
+             mSet$analSet$combi <- list(sig.mat = anal1_res_table[, c("rn",
+                                                                      anal1_col,
+                                                                      anal2_col), with=F], 
+                                        all.vals = list(x=anal1_all_res, y=anal2_all_res),
+                                        trans = list(x=anal1_trans, y=anal2_trans),
+                                        source = list(x=anal1, y=anal2))
+           }
+           
+           
+         },
+         volcano = {
+             mSet <- MetaboAnalystR::Volcano.Anal(mSetObj = mSet,
+                                                  paired = mSet$dataSet$paired, 
+                                                  fcthresh = 1.1, cmpType = 0,
+                                                  percent.thresh = 0.75,
+                                                  nonpar = F, threshp = 0.1,
+                                                  equal.var = TRUE,
+                                                  pval.type = "fdr") # TODO: make thresholds user-defined
+           
+         },
+         tsne = {
+             inTbl = switch(input$tsne_source, 
+                            original = mSet$dataSet$prog,
+                            "pre-batch correction" = mSet$dataSet$prebatch,
+                            normalized = mSet$dataSet$norm)
+             coords = tsne::tsne(inTbl, k = 3,
+                                 initial_dims = input$tsne_dims,
+                                 perplexity = input$tsne_perplex,
+                                 max_iter = input$tsne_maxiter)
+             colnames(coords) <- paste("t-SNE dimension", 1:3)
+             mSet$analSet$tsne <- list(x = coords)
+           
+         },
+         plsda = {
+           library(e1071)
+           library(pls)
+           # depending on type, do something else
+           # TODO: enable sparse and orthogonal PLS-DA
+           switch(input$plsda_type,
+                  normal={
+                    require(caret)
+                      mSet <- MetaboAnalystR::PLSR.Anal(mSet) # perform pls regression
+                      mSet <- MetaboAnalystR::PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+                      mSet <- MetaboAnalystR::PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+                    
+                  },
+                  sparse ={
+                    mSet <- MetaboAnalystR::SPLSR.Anal(mSet, comp.num = 3)
+                  })
+         },
+         power = {
+             pwr.analyses = lapply(input$power_comps, function(combi){
+               mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
+               mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
+                                                                  fdr.lvl = input$power_fdr, 
+                                                                  smplSize = input$power_nsamp)  
+               mSet.temp$analSet$power
+             })   
+           names(pwr.analyses) <- input$power_comps
+           mSet$analSet$power <- pwr.analyses 
+         },
+         wordcloud = {
+           if(input$wordcloud_manual){
+               abstracts = MetaboShiny::getAbstracts(searchTerms = input$wordcloud_searchTerm,
+                                                     mindate = input$wordcloud_dateRange[1],
+                                                     maxdate = input$wordcloud_dateRange[2],
+                                                     retmax = input$wordcloud_absFreq)
+               lcl$tables$abstracts <- abstracts
+               lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(abstracts$abstract)
+               lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig
+           }else{
+             if(nrow(shown_matches$forward_full) > 0){
+               lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(shown_matches$forward_full$description)
+               lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig
+             }
+           }
+         })
+  return(list(lcl = lcl, 
+              mSet = mSet))
+}
+
+doUpdate <- function(mSet, lcl, input, do){
+  
+  mSet <- store.mSet(mSet, proj.folder = file.path(lcl$paths$work_dir,
+                                                   lcl$proj_name)) # save analyses
+  
+  
+  if("load" %in% do){
+    # more mem friendly??
+    mSet <- load.mSet(mSet, 
+                      input$storage_choice, 
+                      proj.folder = file.path(lcl$paths$work_dir,
+                                              lcl$proj_name))
+  }else{
+    
+    oldSettings <- mSet$settings
+    
+    mSet <- reset.mSet(mSet,
+                       fn = file.path(lcl$paths$proj_dir, 
+                                      paste0(lcl$proj_name,
+                                             "_ORIG.metshi")))
+    
+    orig.count <- mSet$metshiParams$orig.count
+    
+    if(!("unsubset" %in% do)){
+      mSet.settings <- if("load" %in% do) mSet$storage[[input$storage_choice]]$settings else oldSettings
+      if(length(mSet.settings$subset) > 0){
+        subs = mSet.settings$subset
+        subs = subs[!(names(subs) %in% c("sample", "mz"))]
+        if(length(subs) > 0){
+          for(i in 1:length(subs)){
+            mSet <- subset_mSet(mSet, 
+                                subset_var = names(subs)[i], 
+                                subset_group = subs[[i]])  
+          }  
+        }
+      }
+    }else{
+      mSet.settings <- oldSettings
+    }
+    
+    mSet$settings <- mSet.settings
+    
+    if("refresh" %in% do | 
+       "load" %in% do | 
+       "subset" %in% do | 
+       "subset_mz" %in% do | 
+       "unsubset" %in% do){
+      mSet$dataSet$ispaired <- mSet.settings$ispaired
+    }
+    if("change" %in% do){
+      mSet$dataSet$ispaired <- if(input$stats_type %in% c("t", "t1f") | input$paired) TRUE else FALSE 
+    }
+    if("subset_mz" %in% do){
+      if(input$subset_mzs == "prematched"){
+        keep.mzs = get_prematched_mz(patdb = lcl$paths$patdb,
+                                     mainisos = input$subset_mz_iso)
+      }
+      mSet <- subset_mSet_mz(mSet,
+                             keep.mzs = keep.mzs)
+    }
+    if("subset" %in% do){
+      mSet <- subset_mSet(mSet,
+                          subset_var = input$subset_var, 
+                          subset_group = input$subset_group)
+    }
+    if("unsubset" %in% do){
+      mSet$settings$subset <- list()
+    }
+    
+    mSet$analSet <- list(type = "stat")
+    mSet$analSet$type <- "stat"
+    
+    if("change" %in% do){
+      if(input$omit_unknown & grepl("^1f", input$stats_type)){
+        #shiny::showNotification("omitting 'unknown' labeled samples...")
+        knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , input$stats_var, with=F][[1]] != "unknown")]
+        if(length(knowns) > 0){
+          mSet <- subset_mSet(mSet,
+                              subset_var = "sample", 
+                              subset_group = knowns) 
+        }
+      }else{
+        knowns = mSet$dataSet$covars$sample
+      }
+      mSet <- change.mSet(mSet, 
+                          stats_var = input$stats_var, 
+                          stats_type = input$stats_type, 
+                          time_var = input$time_var)
+    }else{
+      if(input$omit_unknown & grepl("^1f", mSet$settings$exp.type)){
+        #shiny::showNotification("omitting 'unknown' labeled samples...")
+        knowns = mSet$dataSet$covars$sample[which(mSet$dataSet$covars[ , mSet$settings$exp.var, with=F][[1]] != "unknown")]
+        if(length(knowns) > 0){
+          mSet <- subset_mSet(mSet,
+                              subset_var = "sample", 
+                              subset_group = knowns) 
+        }
+      }else{
+        knowns = mSet$dataSet$covars$sample
+      }
+      mSet <- change.mSet(mSet, 
+                          stats_var = mSet.settings$exp.var, 
+                          time_var =  mSet.settings$time.var,
+                          stats_type = mSet.settings$exp.type)
+    }
+    
+    samps = mSet$dataSet$covars$sample
+    # CHECK IF DATASET WITH SAME SAMPLES ALREADY THERE
+    matching.samps = sapply(mSet$storage, function(saved){
+      samplist = saved$samples
+      if(length(samps) == length(samplist)){
+        all(knowns == samplist)  
+      }else{
+        F
+      }
+    })
+    
+    if(!("renorm" %in% names(mSet$metshiParams))){
+      mSet$metshiParams$renorm <- TRUE
+    }
+    
+    # === PAIR ===
+    
+    if(mSet$dataSet$ispaired){
+      print("Paired analysis a-c-t-i-v-a-t-e-d")
+      mSet$settings$ispaired <- TRUE
+      mSet <- pair.mSet(mSet)
+    }else{
+      mSet.settings$ispaired <- FALSE
+    }
+    
+    # ============
+    already.normalized = any(matching.samps) & oldSettings$ispaired == input$paired
+    
+    if(already.normalized){
+      tables = c("orig", "norm", "proc", "prebatch", "covars")
+      print("recycling from another meta-dataset!")
+      use.dataset = names(which(matching.samps))[1]
+      use.dataset = gsub(pattern = "[^\\w]", replacement = "_", x = use.dataset, perl = T)
+      recycle.mSet = qs::qread(file.path(lcl$paths$work_dir,
+                                         lcl$proj_name,
+                                         paste0(use.dataset, ".metshi")))
+      for(tbl in tables){
+        mSet$dataSet[[tbl]] <- recycle.mSet$dataSet[[tbl]]
+      }
+      mSet$report <- recycle.mSet$report
+    }else{
+      if(mSet$metshiParams$renorm){
+        mSet$dataSet$orig <- mSet$dataSet$start
+        mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- NULL
+        mSet <- metshiProcess(mSet, cl = session_cl) #mSet1
+      }  
+    }
+    
+    new.name = if(do == "load") input$storage_choice else name.mSet(mSet)
+    
+    if(new.name %in% names(mSet$storage)){
+      mSet <- load.mSet(mSet, 
+                        new.name, 
+                        proj.folder = lcl$paths$proj_dir)
+    }
+    
+    mSet$settings$cls.name <- new.name
+    
+    if(grepl(mSet$settings$exp.type, pattern = "^1f")){
+      if(mSet$dataSet$cls.num == 2){
+        mSet$settings$exp.type <- "1fb"
+      }else{
+        mSet$settings$exp.type <- "1fm"
+      }  
+    }
+  }   
+  
+  return(list(
+    lcl = lcl,
+    mSet = mSet
+  ))
+}

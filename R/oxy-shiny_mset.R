@@ -809,3 +809,95 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
            batch_normalized
          })
 }
+
+mSetForML <- function(mSet, ml_queue, input){
+  small_mSet <- list(metshiParams=mSet$metshiParams)
+  small_mSet$dataSet <- mSet$dataSet[c("cls", "orig.cls", 
+                                       "orig", "norm", 
+                                       "covars")]
+  
+  #ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]
+  uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
+  if(uses.specific.mzs){
+    keep.analyses <- gsub(" \\(.*$", "", sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs))
+    keep.analyses <- unique(keep.analyses[keep.analyses != "no"])
+    #if("pca" %in% names(small_mSet$analSet)) keep.analyses <- unique(c("pca", keep.analyses))
+    small_mSet$analSet <- mSet$analSet[keep.analyses]
+    small_mSet$storage <- lapply(mSet$storage, function(store){
+      store$analSet <- store$analSet[keep.analyses]
+      store
+    })
+  }else{
+    small_mSet$analSet <- NULL
+    small_mSet$storage <- list()
+  }
+  has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
+  use_slurm = T
+  
+  net_cores = input$ncores# - 1
+  if(net_cores > 0 & ((!has_slurm | !use_slurm) | input$ml_resource_friendly)){
+    try({
+      parallel::stopCluster(session_cl)
+      parallel::stopCluster(ml_session_cl)
+    })
+    logfile <- tempfile()
+    print("Log file at:")
+    print(logfile)
+    #if(file.exists(logfile)) file.remove(logfile)
+    ml_session_cl <- parallel::makeCluster(net_cores, outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+    # send specific functions/packages to other threads
+    parallel::clusterEvalQ(ml_session_cl, {
+      library(data.table)
+      library(iterators)
+      library(MetaboShiny)
+      library(MetaDBparse)
+    })  
+  }else{
+    ml_session_cl <- 0
+  }
+  
+  mSet_loc <- tempfile()
+  qs::qsave(small_mSet, mSet_loc)
+  
+  resource_saver_mode = input$ml_resource_friendly # only make the datasets once, for example with resampling
+  if(resource_saver_mode){
+    vars.require.dataset.change <- c("ml_test_subset",
+                                     "ml_train_subset",
+                                     "ml_sampling",
+                                     "ml_batch_balance",
+                                     "ml_batch_covars",
+                                     "ml_batch_size_sampling",
+                                     "ml_groupsize",
+                                     "ml_include_covars",
+                                     "ml_used_table",
+                                     "ml_pca_corr",
+                                     "ml_train_perc",
+                                     "ml_keep_pcs",
+                                     "ml_pca_corr"
+    )
+    rows.changes.dataset <- lapply(ml_queue$jobs, function(job){
+      job[vars.require.dataset.change]
+    })
+    unique.dataset.change.jobs = unique(rows.changes.dataset)
+    print(paste("preparing", length(unique.dataset.change.jobs), "dataset(s) for jobs"))
+    train.test.unique <- pbapply::pblapply(unique.dataset.change.jobs, 
+                                           cl = 0,#ml_session_cl, # TODO: make parallel
+                                           function(job, mSet_loc, input){
+                                             small_mSet = qs::qread(mSet_loc)
+                                             tr_te = ml_prep_data(settings = job, 
+                                                                  mSet = small_mSet,
+                                                                  input = input, cl=0)
+                                           }, mSet_loc = mSet_loc, input = input)
+    
+    mapper = data.table::rbindlist(lapply(1:length(rows.changes.dataset), function(i){
+      job = rows.changes.dataset[[i]]
+      jobi = which(sapply(unique.dataset.change.jobs, 
+                          function(uniq.job) identical(job, uniq.job)))
+      data.table::data.table(ml_name = ml_queue$jobs[[i]]$ml_name, unique_data_id=jobi)
+    }))
+    small_mSet$dataSet$for_ml <- list(datasets = train.test.unique, 
+                                      mapper = mapper)
+  }
+  qs::qsave(small_mSet, mSet_loc)
+  return(mSet_loc)
+}
