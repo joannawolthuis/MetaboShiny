@@ -39,6 +39,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "ml",
                      "plsda", 
                      "fc", 
+                     'cliffd',
                      "rf", 
                      "aov", 
                      "corr",
@@ -108,7 +109,31 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                  hit_tbl = data.table::as.data.table(mSet$analSet$enrich$mumResTable)
                  myHits <- hit_tbl[Matched.Compound %in% unlist(cpds)]
                  myHits$Mass.Diff <- as.numeric(myHits$Mass.Diff)/(as.numeric(myHits$Query.Mass)*1e-6)
-                 colnames(myHits) <- c("rn", "identifier", "adduct", "dppm")
+                 colnames(myHits) <- c("rn", "compoundname", "identifier", "adduct", "dppm")
+                 
+                 if(any(!(as.character(myHits$rn) %in% colnames(mSet$dataSet$norm)))){
+                   myHits$rn <- sapply(as.character(myHits$rn), function(mz){
+                     orig.mzs = gsub("-", "", colnames(mSet$dataSet$norm))
+                     unalt.match = mz %in% orig.mzs
+                     if(unalt.match){
+                       return(mz) 
+                     }else{
+                       alt.match = paste0(mz, "0") %in% orig.mzs
+                       if(alt.match){
+                         paste0(mz, "0")
+                       }else{
+                         mz
+                       }
+                     }
+                   })
+                   adduct.addition = ifelse(myHits$adduct %in% adducts[Ion_mode == "positive"]$Name, "", "-")
+                   myHits$rn = paste0(myHits$rn, adduct.addition)
+                 }
+                 
+                 sig.hits = mSet$analSet$enrich$orig.input[mSet$analSet$enrich$orig.input$significant, "m.z"]
+                 myHits$significant = ifelse(myHits$rn %in% sig.hits, "yes", "no")  
+                 
+                 
                  enrich$current <- myHits
                },
                venn = {

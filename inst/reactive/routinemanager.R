@@ -215,9 +215,7 @@ routinemanager <- shiny::reactive({
       pb = pbapply::startpb(max = length(routines$tasks))
       
       for(i in 1:length(routines$tasks)){
-        print(i)
         task = routines$tasks[[i]]
-        print(task$type)
         task_type = if(task$type %in% c("subset","change","load")) "update" else "analyse"
         # do task...
         done = switch(task_type,

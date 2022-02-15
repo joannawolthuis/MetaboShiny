@@ -4,7 +4,7 @@ plotmanager <- shiny::reactiveValues()
 # preload pca/plsda
 shiny::observe({
   if(is.null(plotmanager$make)){
-    NULL # if not reloading anything, nevermind
+    NULL # if not reloading anything, nevermin
   }else{
     if(!is.null(mSet)){
       success = F
@@ -43,7 +43,7 @@ shiny::observe({
               if(plotName != "network"){
                 list(conditionalPanel(
                   condition = 'input.ggplotly == true',
-                  plotly::plotlyOutput(paste0(plotName, "_interactive")),#, height = "100%")) ,
+                  plotly::plotlyOutput(paste0(plotName, "_interactive"))),#, height = "100%")) ,
                   conditionalPanel(
                     condition = 'input.ggplotly == false',
                     list(fluidRow(align="right",
@@ -51,7 +51,7 @@ shiny::observe({
                                                  label = icon("download"))),
                          plotOutput(plotName)#, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
                     )
-                  )))
+                  ))
               }else{
                 visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
                                              #,height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
@@ -90,7 +90,7 @@ shiny::observe({
                           myY = rlang::quo_get_expr(myplot$mapping[['y']])
                           myText = rlang::quo_get_expr(myplot$mapping[['text']])
                           myCol = rlang::quo_get_expr(myplot$mapping[['colour']])
-                          flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+                          flip = grepl("tt|fc|aov|var|samp|corr|cliffd", plotName)
                           
                           if(length(myplot$data) == 0){
                             myplot$data = myplot$layers[[1]]$data  
@@ -119,7 +119,9 @@ shiny::observe({
                   plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
                                      plotName), collapse="_") 
                   if(grepl(x=plotFn, "ml")){
-                    plotFn <- paste(plotFn, mSet$analSet$ml$last$method, mSet$analSet$ml$last$name, sep = "_")
+                    plotFn <- paste(plotFn, 
+                                    mSet$analSet$ml$last$method, 
+                                    mSet$analSet$ml$last$name, sep = "_")
                   }
                 }
                 

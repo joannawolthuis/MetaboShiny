@@ -235,7 +235,6 @@ shiny::observeEvent(input$metadata_new_add, {
     new_meta <- data.table::fread(meta_path,fill=TRUE)#,comment.char=.)
     new_meta <- MetaboShiny::reformat.metadata(new_meta)
     colnames(new_meta) <- tolower(colnames(new_meta))
-    mSet$dataSet$covars <- plyr::join(mSet$dataSet$covars[,"sample"], new_meta, type = "left")
     mSet <- MetaboShiny::store.mSet(mSet, 
                                     proj.folder = lcl$paths$proj_dir)
     mSet <- MetaboShiny::reset.mSet(mSet,
@@ -246,28 +245,26 @@ shiny::observeEvent(input$metadata_new_add, {
     save(mSet, file = file.path(lcl$paths$proj_dir,
                                 paste0(lcl$proj_name,"_ORIG.metshi")))
     
-    mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <<- NULL
+    mSet$dataSet$missing <- mSet$dataSet$orig <- mSet$dataSet$start <- NULL
     
-    for(project in names(mSet$storage)){
-      if("dataSet" %in% names(mSet$storage[[project]])){
-        mSet$storage[[project]]$dataSet$covars <- plyr::join(mSet$storage[[project]]$dataSet$covars[,"sample"], 
-                                                             new_meta,
-                                                             type = "left")
-        project_submetshi = file.path(lcl$paths$proj_dir, paste0(project, ".metshi"))
-        subset_mSet = qs::qread(project_submetshi)
-        subset_mSet$dataSet$covars <- plyr::join(subset_mSet$dataSet$covars[,"sample"], 
-                                                 new_meta,
-                                                 type = "left")
-        qs::qsave(subset_mSet, project_submetshi)
-        subset_mSet <- NULL
-        #mSet$storage[[project]]$dataSet$cls <- mSet$storage[[project]]$dataSet$orig.cls
-      }
+    to_adjust = list.files(lcl$paths$proj_dir, pattern = "\\.metshi$")
+    to_adjust = setdiff(to_adjust, paste0(lcl$proj_name, "_ORIG.metshi"))
+    
+    for(project in to_adjust){
+      print(paste0("adjusting metadata in file:", project))
+      project_submetshi = file.path(lcl$paths$proj_dir, project)
+      subset_mSet = qs::qread(project_submetshi)
+      subset_mSet$dataSet$covars <- plyr::join(subset_mSet$dataSet$covars[,"sample"], 
+                                               new_meta,
+                                               type = "left")
+      qs::qsave(subset_mSet, project_submetshi)
+      subset_mSet <- NULL
     }
     success = T
   })
   if(success){
     mSet <<- mSet
-    View(mSet$dataSet$covars)
+    #View(mSet$dataSet$covars)
     shiny::showNotification("Updated metadata!")
     filemanager$do <- "save"
     uimanager$refresh <- "general"

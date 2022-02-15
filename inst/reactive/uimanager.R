@@ -270,10 +270,14 @@ shiny::observe({
                      # --- SLURM ---
                      has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
                      if(has_slurm){
-                       output$ml_slurm_mem_ui <- shiny::renderUI(shinyWidgets::sliderTextInput(inputId = "ml_slurm_job_mem",
-                                                                               label = "Memory per SLURM job (ex. 500M, 10G):",
-                                                                               choices = c("100M", "500M", "1G", "2G", "5G", "10G", "50G", "100G", "500G"),
-                                                                               selected = "2G")  )
+                       output$ml_slurm_mem_ui <- shiny::renderUI(list(
+                         shinyWidgets::switchInput("ml_use_slurm",label = "Use slurm?", onLabel = "yes", offLabel = "no",value = T),
+                         shinyWidgets::sliderTextInput(inputId = "ml_slurm_job_mem",
+                                                                                                    label = "Memory per SLURM job (ex. 500M, 10G):",
+                                                                                                    choices = c("100M", "500M", "1G", "2G", "5G", "10G", "50G", "100G", "500G"),
+                                                                                                    selected = "2G")
+                       )
+                       )
                      }
                       
                      # --- ML PCA ---
@@ -317,8 +321,7 @@ shiny::observe({
                                        t[`Test set` == "Test"]$y)
                        })
                        pos.class <- names(which.max(perf.per.posclass))
-                       print(pos.class)
-                       
+
                        shiny::updateSelectizeInput(session, "ml_plot_posclass", 
                                                    choices = classes, 
                                                    selected = pos.class)

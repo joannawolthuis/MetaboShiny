@@ -18,7 +18,8 @@ shiny::observe({
                             input = input,
                             lcl = lcl,
                             analysis = statsmanager$calculate,
-                            ml_queue = ml_queue)
+                            ml_queue = ml_queue, 
+                            cl = session_cl)
         
         mSet <- results$mSet
         lcl <- results$lcl

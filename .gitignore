@@ -7,3 +7,5 @@
 *.svg
 *.eps
 *.csv
+*_rslurm*
+inst/_rslurm*

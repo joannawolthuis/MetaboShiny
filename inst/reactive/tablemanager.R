@@ -19,7 +19,7 @@ shiny::observe({
                                analysis = mSet$storage[[name]]$analSet
                                analysis_names = names(analysis)
                                # - - -
-                               exclude = c("tsne", "heatmap", "type", "enrich", "power", "network")
+                               exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "ml")
                                analysis_names <- setdiff(analysis_names, exclude)
                                if(length(analysis_names) == 0){
                                  return(data.table::data.table())
@@ -60,8 +60,9 @@ shiny::observe({
                              #}else{
                              #  lcl$vectors$analyses <<- c()
                              #}
-                             # ---
-                             lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
+                             # --- everything that uses preexisting analyses ---
+                             lapply(c("mummi_anal", "heattable", "network_table", 
+                                      "ml_specific_mzs", "enrich_pathway_projection"), function(inputID){
                                shiny::updateSelectizeInput(session,
                                                            inputID, 
                                                            choices = {
@@ -92,7 +93,12 @@ shiny::observe({
                              } 
                              # summary table for papers
                              signif = 0.05
-                             signif_hits <- enrich$overview[enrich$overview[,"EASE"] <= signif,]
+                             if("EASE" %in% colnames(enrich$overview)){
+                               signif_hits <- enrich$overview[enrich$overview[,"EASE"] <= signif,]
+                             }else{
+                               print(head(enrich$overview))
+                               signif_hits <- enrich$overview[enrich$overview[,"p-value"] <= signif,]
+                             }
                              summary_table_blocks <- lapply(rownames(signif_hits), function(curr_pw){
                                pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
                                cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
@@ -349,8 +355,6 @@ shiny::observe({
                                mSet$analSet$combi <- NULL
                              }
                              res = as.data.frame(res)
-                             rownames(res) <- res$rn
-                             res$rn <- NULL
                              # set buttons to proper thingy
                              list(combi_tab = res)
                            },
@@ -363,6 +367,16 @@ shiny::observe({
                                mSet$analSet$fc <- NULL
                              }
                              list(fc_tab = res)
+                           },
+                           cliffd = {
+                             # if none found, give the below table...
+                             # save results to table
+                             res <- mSet$analSet$cliffd$sig.mat
+                             if(is.null(res)){
+                               res <- data.table::data.table("No significant hits found")
+                               mSet$analSet$cliffd <- NULL
+                             }
+                             list(cliffd_tab = res)
                            },
                            heatmap = {
                              NULL

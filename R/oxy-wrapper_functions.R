@@ -518,8 +518,6 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
           search_name <- "ml"
         }
         
-        print(search_name)
-        
         # fetch involved mz values
         tbls <- switch(search_name,
                        ml = {
@@ -618,21 +616,12 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          res
                        },
                        combi = {
+                         values = analysis$combi$distances[order(abs(analysis$combi$distances),
+                                                           decreasing = T)]
+                         
                          # special opt for volcano... TODO: somehow make this work for the others
-                         is.volc = all(colnames(analysis$combi$sig.mat) %in% c("rn",  "log2(FC)", "-log10(p)"))
-                         res = if(is.volc){
-                           print("special volcano plot mode")
-                           abs.fc = abs(analysis$combi$sig.mat$`log2(FC)`)
-                           comb.vals = abs.fc * analysis$combi$sig.mat$`-log10(p)`
-                           res = analysis$combi$sig.mat[order(comb.vals,
-                                                                 decreasing = T),]
-                           res[,2:3] <- NULL
-                           res$value <- c(0)
-                           res = list(res)
-                         }else{
-                           res = list(data.frame("m/z"=analysis$combi$sig.mat$rn,
-                                                 value=c(0)))
-                         }
+                         res = list(data.frame("m/z"=names(values),
+                                               value=values))
                          
                          names(res) = base_name
                          #print(res)
@@ -669,8 +658,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        },
                        return(NULL))
         
-        print(tbls)
-        
+
         if(is.null(tbls)) return(NULL)
         
         # user specified top hits only
@@ -758,10 +746,12 @@ getAllHits <- function(mSet, expname, randomize = F){
                      venn.mzs = analysis$venn$mzs
                      not.in.venn = setdiff(colnames(mSet$dataSet$norm), venn.mzs)
                      res = data.frame(`m/z` = c(venn.mzs, not.in.venn),
-                                      value = c(rep(0, length(venn.mzs)),
-                                                rep(1, length(not.in.venn)))
-                                      #,statistic = c(0)
-                                      )
+                                      value = c(rep(1, length(venn.mzs)),
+                                                rep(0, length(not.in.venn)))
+                                      ,statistic=c(rep(1, length(venn.mzs)),
+                                         rep(0, length(not.in.venn))
+                                      ))
+                     res = res[order(abs(res$statistic),decreasing = T),]
                      
                      # -------------------------
                      res
@@ -772,24 +762,41 @@ getAllHits <- function(mSet, expname, randomize = F){
                                       statistic = analysis$tt$t.score
                      )
                      res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
+                     res = res[order(abs(res$statistic),decreasing = T),]
+                     
                      res
                    },
                    fc = {
                      res = data.frame(`m/z` = names(analysis$fc$fc.all),
-                                      value = analysis$fc$fc.all)
+                                      value = analysis$fc$fc.all,
+                                      statistic = analysis$fc$fc.log)
                      res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$fc$sig.mat))
-                     names(res) = base_name
+                     res = res[order(abs(res$statistic),decreasing = T),]
+                     
                      res
                    },
+                  cliffd = {
+                    res = data.frame(`m/z` = names(analysis$cliffd$cliffd),
+                                     value = analysis$cliffd$cliffd)
+                    res$significant = c(T)
+                    
+                    res = res[order(abs(res$statistic),decreasing = T),]
+                    
+                    res
+                  },
                    combi = {
+                     
                      # --- only volc for now ---
-                     res = data.frame(`m/z` = names(analysis$combi$all.vals$x),
-                                      value = sapply(names(analysis$combi$all.vals$x), function(x) if(x %in% analysis$combi$sig.mat$rn) 0 else 1),
-                                      statistic = analysis$combi$all.vals$x * analysis$combi$all.vals$y)
-                     res$significant = sapply(res$m.z, function(mz) mz %in% analysis$combi$sig.mat$rn)
+                     res = data.frame(`m/z` = names(analysis$combi$distances),
+                                      value = c(0),
+                                      statistic = analysis$combi$distances)
+                     
+                     res = res[order(abs(res$statistic), decreasing = T),]
+                     
+                     res$significant = T
                      # -------------------------
                      res
-                   },
+                  },
                   featsel = {
                     decision = analysis$featsel[[1]]$finalDecision
                     res = data.frame(`m/z` = names(decision),
@@ -799,6 +806,8 @@ getAllHits <- function(mSet, expname, randomize = F){
                                                                                             Tentative = 1, 
                                                                                             Confirmed = 2))
                                      )
+                    res = res[order(abs(res$statistic),decreasing = T),]
+                    
                     res
                   },
                    ml = {
@@ -823,6 +832,8 @@ getAllHits <- function(mSet, expname, randomize = F){
                        res = res_aggr
                      }
                      
+                     res = res[order(abs(res$statistic),decreasing = T),]
+                     
                      #####################
                      
                      res$rn <- NULL
@@ -830,12 +841,8 @@ getAllHits <- function(mSet, expname, randomize = F){
                    },
                    {metshiAlert("Not currently supported...")
                      return(NULL)})
-
-    try({
-      tbl = tbl[order(abs(tbl$statistic),decreasing = T),]
-    }, silent = F)
     
-    if(nrow(tbl)>0){
+    if(nrow(tbl) > 0){
       if(randomize){
         tbl[sample(1:nrow(tbl)),]
       }else{
@@ -1178,7 +1185,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                        if(length(mSet$analSet$ml) > 0){
                          
                          data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
-
+                         
                          if(!is.null(data$res$prediction)){
                            data$res$shuffled = FALSE
                            data$res = list(data$res)
@@ -1209,7 +1216,6 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                              ml_performance <- list(coords = data.table::rbindlist(lapply(perf_faceted, function(x) x$coords)),
                                                     names = perf_faceted[[1]]$names)
                            }else{
-                             #ml_performance = getMultiMLperformance(res$res[[1]])
                              ml_performance = getMLperformance(ml_res = res, 
                                                                pos.class = input$ml_plot_posclass,
                                                                x.metric = input$ml_plot_x,
@@ -1347,6 +1353,14 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                    topn=input$fc_topn)
                      
                      list(fc_plot = p)
+                   },
+                   cliffd = {
+                     # render manhattan-like plot for UI
+                     p <- ggPlotCliffD(mSet,
+                                       gbl$functions$color.functions[[lcl$aes$spectrum]], 20, 
+                                       topn=input$fc_topn)
+                     
+                     list(cliffd_plot = p)
                    },
                    diffcorr = {
                      
@@ -1649,7 +1663,11 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      p = {
                        if("combi" %in% names(mSet$analSet)){
                          ggPlotCombi(mSet,
-                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]])
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                     color_all_vals = T,
+                                     #topn = input$combi_topn,
+                                     add_mz_labels = T,
+                                     only_color_specific = T)
                        }else{
                          NULL
                       }
@@ -1675,7 +1693,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
   
   finalPlots <- mapply(function(myplot, plotName){
     
-    targets = "aov|tt|fc|corr|asca|volcano|meba"
+    targets = "aov|tt|fc|corr|asca|volcano|meba|cliffd"
     
     if(grepl(targets, plotName)){
       
@@ -1751,7 +1769,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
         myY = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['y']])
         myText = rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['text']])
         myCol=rlang::quo_get_expr(myplot[["layers"]][[1]][["mapping"]][['colour']])
-        flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+        flip = grepl("tt|fc|aov|var|samp|corr|cliffd", plotName)
         matchMe = match(data[[myText]], mSet$report$mzStarred[star == TRUE]$mz)
         isMatch = which(!is.na(matchMe))
         xVals = data[[myX]][isMatch]
@@ -2210,7 +2228,7 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs,
 assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")
 
 # ---
-runStats <- function(mSet, input,lcl, analysis, ml_queue){
+runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
   switch(analysis,
          vennrich = {
            if("storage" %not in% names(mSet)){
@@ -2249,20 +2267,26 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
          },
          enrich = {
 
-             tbl <- metshiGetEnrichInput(mSet, input)
+             tbl <- metshiGetEnrichInputTable(mSet, input)
              
              tmpfile <- tempfile()
              
              print("Preview of input table:")
              print(head(tbl))
              
-             data.table::fwrite(if(hasT) tbl else tbl[,1:3], file=tmpfile)
+             data.table::fwrite(if(any(!is.na(tbl$t.score))) tbl else tbl[,1:3], file=tmpfile)
              
              ppm <- mSet$ppm
              
              enr_mSet <- doEnrich(input, tmpfile, ppm)
              
-             # ---------
+             orig_input <- as.data.frame(enr_mSet$dataSet$mummi.orig)
+             if(any(!is.na(orig_input$t.score)) & input$mummi_enr_method){
+               orig_input$significant <- orig_input[['p.value']] <= as.numeric(input$mummi_pval)
+             }else{
+               orig_input$significant <- T
+             }
+             # ---------e
              
              mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
                                          mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
@@ -2273,8 +2297,8 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                                          path.all = enr_mSet$pathways,
                                          path.lib = enr_mSet$lib.organism,
                                          cpd.value = enr_mSet$cpd_exp_dict,
-                                         orig.input = flattened[[1]],
-                                         enr.method = if(input$mummi_enr_method | !hasT) "mum" else "gsea")
+                                         orig.input = orig_input,
+                                         enr.method = if(input$mummi_enr_method) "mum" else "gsea")
              enr_mSet <- NULL
          },
          featsel = {
@@ -2287,13 +2311,18 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
          },
          ml = {
            {
-             #assign("ml_queue", shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
-             #assign("input", shiny::isolate(input), envir = .GlobalEnv)
-             
-             mSet_loc <- mSetForML(mSet, ml_queue, input)
+             mSet_loc <- mSetForML(mSet, 
+                                   ml_queue, 
+                                   input)
              
              has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
-             use_slurm = T
+             if(is.null(input$ml_use_slurm)){
+               use_slurm = F
+             }else{
+               use_slurm = input$ml_use_slurm
+             }
+             
+             tmpdir = tempdir()
              
              if(has_slurm & use_slurm){
                
@@ -2301,7 +2330,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                
                print("Attempting to submit jobs through slurm!")
                
-               settings_loc <- tempfile()
+               settings_loc <- tempfile(tmpdir = tmpdir)
                first_job_parallel_count = if(ml_queue$jobs[[1]]$ml_label_shuffle){
                  ml_queue$jobs[[1]]$ml_n_shufflings + 1
                }else{
@@ -2312,7 +2341,9 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                pars = data.frame(i = 1:length(ml_queue$jobs),
                                  mloc = c(mSet_loc),
                                  sloc = c(settings_loc),
-                                 tmpdir = c(dirname(tempfile())))
+                                 tmpdir = c(tmpdir))
+               
+               sharedpars <<- (head(pars))
                
                success = F
                
@@ -2320,7 +2351,6 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                  fn <- normalizePath(paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), 
                                             ".metshi"))
                  qs::qsave(mSet, file = fn)
-                 
                  
                  mem_gb = input$ml_slurm_job_mem #"100G"
                  pars_filt = pars#[4500:4510,]
@@ -2335,6 +2365,12 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                  nodecount =  min(nodecount, nrow(pars_filt))
                  print("Max concurrent jobs set to:")
                  print(nodecount)
+                 
+                 {
+                 setwd(tempdir())
+                  
+                 print("Working in:")
+                 print(tmpdir)
                  
                  batch_job <- slurm_apply_metshi(ml_slurm, 
                                                  pars_filt,#[5000,], 
@@ -2357,9 +2393,10 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                    Sys.sleep(5)
                    running_jobs = list.files(paste0("_rslurm_", 
                                                     batch_job$jobname),
-                                             pattern = "rslurm")
+                                             pattern = "^results")
                    pbapply::setpb(pb, value = length(running_jobs))
                    completed = slurm_job_complete(batch_job)
+                 }
                  }
                  
                  #rslurm::print_job_status(batch_job)
@@ -2367,7 +2404,6 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                  print("Cluster batch job complete! Collecting results...")
                  ml_queue_res <- get_slurm_out_jw(batch_job,
                                                   outtype = "raw")
-                 
                  
                  names(ml_queue_res) <- sapply(ml_queue_res, function(x) x$params$ml_name)
                  rslurm::cleanup_files(batch_job) #cleanup files
@@ -2382,10 +2418,13 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                  stop("ml failed")
                }
              }else{
+               if(length(cl) == 1){
+                 small_mSet <- qs::qread(mSet_loc)
+               }
                try({
-                 parallel::clusterExport(ml_session_cl, c("ml_run",
-                                                          "gbl", 
-                                                          "mSet_loc"),
+                 parallel::clusterExport(cl, c("ml_run",
+                                               "gbl", 
+                                               "mSet_loc"),
                                          envir = environment())
                  
                  read_in = parallel::clusterEvalQ(ml_session_cl,{
@@ -2394,7 +2433,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                })
                
                ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
-                                                 cl = if(length(ml_queue$jobs) > 1) ml_session_cl else 0, 
+                                                 cl = if(length(ml_queue$jobs) > 1) cl else 0, 
                                                  function(settings, ml_cl){
                                                    data = list()
                                                    try({
@@ -2407,7 +2446,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                                                    })
                                                    data
                                                  },
-                                                 ml_cl = if(length(ml_queue$jobs) > 1) 0 else ml_session_cl)
+                                                 ml_cl = if(length(ml_queue$jobs) > 1) 0 else cl)
              }
            }
            
@@ -2433,10 +2472,10 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
            }else{
              #shiny::showNotification("Failed...")
            }
-           try({
-             parallel::stopCluster(ml_session_cl)
-           })
-           lcl$vectors$ml_train <- lcl$vectors$ml_train <<- NULL
+           #try({
+           #   parallel::stopCluster(cl)
+           #})
+           lcl$vectors$ml_train <- lcl$vectors$ml_train <- NULL
            print("ML done and saved.")
          },
          heatmap = {
@@ -2477,6 +2516,9 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
                mSet$analSet$fc$sig.mat <- data.frame()
              }
          },
+         cliffd = {
+           mSet <- MetaboShiny::metshiCliffD(mSet)
+         },
          aov = {
            aovtype = if(mSet$settings$exp.type %in% c("t", "2f", "t1f")) "aov2" else "aov"
            redo = aovtype %not in% names(mSet$analSet)
@@ -2498,8 +2540,6 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
            anal2_col = input$combi_anal2_var #"-log10(p)"
            anal1_res = mSet$analSet[[anal1]]
            anal2_res = mSet$analSet[[anal2]]
-           anal1_res_table = data.table::as.data.table(anal1_res[grepl("\\.mat", names(anal1_res))][[1]],keep.rownames=T)
-           anal2_res_table = data.table::as.data.table(anal2_res[grepl("\\.mat", names(anal2_res))][[1]],keep.rownames=T)
            
            translator=list(
              "t.stat" = "t.score",
@@ -2510,9 +2550,11 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
              "correlation" = "correlation"
            )
            
+           
            if(anal1_col %in% names(translator)){
              anal1_all_res = anal1_res[[translator[[anal1_col]]]]
            }else{
+             anal1_res_table = data.table::as.data.table(anal1_res[grepl("\\.mat", names(anal1_res))][[1]],keep.rownames=T)
              anal1_all_res = anal1_res_table[[anal1_col]]
              names(anal1_all_res) <- anal1_res_table$rn
            }
@@ -2520,6 +2562,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
            if(anal2_col %in% names(translator)){
              anal2_all_res = anal2_res[[translator[[anal2_col]]]]
            }else{
+             anal2_res_table = data.table::as.data.table(anal2_res[grepl("\\.mat", names(anal2_res))][[1]],keep.rownames=T)
              anal2_all_res = anal2_res_table[[anal2_col]]
              names(anal2_all_res) <- anal2_res_table$rn
            }
@@ -2548,28 +2591,46 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue){
            #   })
            # }
            
-           if(anal1 != anal2){
-             mzInBoth = intersect(rownames(anal1_res_table),rownames(anal2_res_table))
+           anal1_res_table = data.frame(rn = names(anal1_all_res), anal1_all_res)
+           colnames(anal1_res_table)[2] = anal1_col
+           
+           anal2_res_table = data.frame(rn = names(anal2_all_res), anal2_all_res)
+           colnames(anal2_res_table)[2] = anal2_col
+           
+           if(T){#anal1 != anal2){
+             mzInBoth = intersect(anal1_res_table$rn,
+                                  anal2_res_table$rn)
              if(length(mzInBoth) > 0){
                combined_anal = merge(
                  anal1_res_table,
                  anal2_res_table,
                  by = "rn"
                )
-               keep.cols = c(1, which(colnames(combined_anal) %in% c(anal1_col,anal2_col)))
-               dt <- as.data.frame(combined_anal)[,keep.cols]
+               dt <- as.data.frame(combined_anal)
+               
+               if(input$combi_dist_metric == "multiplication"){
+                 distances <- unlist(dt[[anal1_col]] * dt[[anal2_col]])
+               }else{
+                 distances <- pbapply::pbapply(dt[,2:3], 
+                                               MARGIN = 1, 
+                                               FUN = dist, 
+                                               method = input$combi_dist_metric)
+               }
+               
+               names(distances) <- dt$rn
+               
+               dt$distance = distances
+               
+               rownames(dt) <- dt$rn
+               dt$rn <- NULL
+               
                mSet$analSet$combi <- list(sig.mat = dt, 
                                           all.vals = list(x=anal1_all_res, y=anal2_all_res),
                                           trans = list(x=anal1_trans, y=anal2_trans),
-                                          source = list(x=anal1, y=anal2))
+                                          source = list(x=anal1, y=anal2),
+                                          distances = distances,
+                                          distance_metric = input$combi_dist_metric)
              }  
-           }else{
-             mSet$analSet$combi <- list(sig.mat = anal1_res_table[, c("rn",
-                                                                      anal1_col,
-                                                                      anal2_col), with=F], 
-                                        all.vals = list(x=anal1_all_res, y=anal2_all_res),
-                                        trans = list(x=anal1_trans, y=anal2_trans),
-                                        source = list(x=anal1, y=anal2))
            }
            
            

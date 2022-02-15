@@ -609,7 +609,8 @@ beep = no')
       list("overview", "enrich"),#16
       list("dimred", "umap"),#17
       list("dimred", "ica"),#18
-      list("overview", "featsel")#19
+      list("overview", "featsel"),#19,
+      list("permz", "cliffd")#20
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -617,7 +618,7 @@ beep = no')
     if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
@@ -850,7 +851,8 @@ beep = no')
                 "fc", "volcano", "heatmap", 
                 "meba", "asca", "corr", 
                 "enrich", "network", "power",
-                "umap", "ica", "featsel")
+                "umap", "ica", "featsel",
+                "cliffd")
   
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {
