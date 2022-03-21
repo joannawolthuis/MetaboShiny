@@ -471,7 +471,12 @@ beep = no')
       on.exit({
         setwd(old.dir)
       })
-      setwd(lcl$paths$work_dir)
+      
+      if(dir.exists(lcl$paths$work_dir)){
+        setwd(lcl$paths$work_dir)
+      }else{
+        warning(paste("Please go to settings and re-specify work dir. Current does not exist:", lcl$paths$work_dir))
+      }
       
       lcl$texts <<- list(
         list(name='curr_exp_dir', 
@@ -693,7 +698,8 @@ beep = no')
     net_cores = input$ncores# - 1
     if(net_cores > 0){
       shiny::showNotification("Starting new threads...")
-      logfile <<- file.path(lcl$paths$work_dir, "metshiLog.txt")
+      logfile <<- tempfile()
+      print(paste("Log file:", logfile))
       #if(file.exists(logfile)) file.remove(logfile)
       session_cl <<- parallel::makeCluster(net_cores,
                                            outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session

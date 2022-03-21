@@ -1262,7 +1262,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            
                          }
                          
-                         if(ncol(data$res[[1]]$importance) > 0){
+                         if(ncol(data$res[[1]]$importance) > 1){
                            no_shuffle = data$res[which(unlist(sapply(data$res, function(x) !x$shuffle)))]
                            res2 = data.table::rbindlist(lapply(no_shuffle, function(l){
                              df = l$importance
@@ -1442,11 +1442,32 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    network = {
                      
                      pval = input$network_sign
-                     
+                     rthresh = input$network_minr
                      mat = mSet$analSet$network$rcorr
                      matp = mat$P
                      matr = mat$r
-                     matr[matp < pval] <- 0
+                     
+                     #matr[30,] <- -1
+                     #matr[,30] <- -1
+                     
+                     
+                     corrplot::corrplot(matr[1:200,1:200],
+                                        tl.col = "white",
+                                        method = "color",
+                                        #win.asp = 0.5,
+                                        outline = F,addgrid.col = NA,
+                                        sig.level = 0.05,
+                                        insig = "blank",
+                                        col = rev(colorRamps::blue2red(20)),
+                                        #col = colScale,
+                                        diag = F,
+                                        is.corr = T,
+                                        type = "upper",
+                                        p.mat = matp[1:200,1:200],
+                                        order = "original")
+                     
+                     matr_for_network <- matr
+                     matr_for_network[matr_for_network <= rthresh | matp >= input$network_sign] <- 0
                      
                      #palette = colorRampPalette(c("green", "white", "red")) (20)
                      #heatmap(x = matr, col = palette, symm = TRUE)
@@ -1454,7 +1475,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      # justMZ = matr[,"240.04920"]
                      # #
                      
-                     igr = igraph::graph.adjacency(adjmatrix = matr,
+                     igr = igraph::graph.adjacency(adjmatrix = matr_for_network,
                                                    weighted = T,
                                                    diag = F)
                      netw = visNetwork::visIgraph(igr)
@@ -1463,8 +1484,14 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      degr = igraph::degree(igr)
                      cols = cf(max(degr))
                      
+                     
+                     
                      netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
-                       cols[degr[names(degr) == id]]
+                       if(input$network_highlight_top){
+                         ifelse(id %in% colnames(matr)[1:input$network_highlight_top_n], "red", "darkgray")
+                       }else{
+                         cols[degr[names(degr) == id]]
+                       }
                      })
                      
                      netw$x$nodes$title = netw$x$nodes$label
@@ -1493,22 +1520,23 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                        }
                      }
                      # - - - - - - -
-                     matr[matr==1 | lower.tri(matr)] <- NA
-                     
-                     p2 = heatmaply::heatmaply(matr,
-                                               Colv = T,
-                                               Rowv = T,
-                                               branches_lwd = 0.3,
-                                               margins = c(0, 0, 0, 0),
-                                               col = gbl$functions$color.functions[[lcl$aes$spectrum]],
-                                               column_text_angle = 90,
-                                               ylab = "m/z\n",
-                                               showticklabels = if(ncol(matr) <= 95) c(F,T) else c(F,F),
-                                               symm=T,
-                                               symbreaks=T,
-                                               dendrogram="none"
-                     )
-                     lcl$vectors$network_heatmap <- p2$x$layout$yaxis$ticktext
+                     # 
+                     # 
+                     # matr[matr==1 | lower.tri(matr)] <- NA
+                     # p2 = heatmaply::heatmaply(matr,
+                     #                           Colv = T,
+                     #                           Rowv = T,
+                     #                           branches_lwd = 0.3,
+                     #                           margins = c(0, 0, 0, 0),
+                     #                           col = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                     #                           column_text_angle = 90,
+                     #                           ylab = "m/z\n",
+                     #                           showticklabels = if(ncol(matr) <= 95) c(F,T) else c(F,F),
+                     #                           symm=T,
+                     #                           symbreaks=T,
+                     #                           dendrogram="none"
+                     # )
+                     # lcl$vectors$network_heatmap <- p2$x$layout$yaxis$ticktext
                      
                      # - - - - - - - 
                      list(network = p, 
@@ -2263,7 +2291,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
          },
          network = {
            mSet <- metshiNetwork(mSet, input)
-           output$network_now <- shiny::renderText(input$network_table)
+           to_output = list(network_now =  input$network_table)
          },
          enrich = {
 
@@ -2367,7 +2395,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
                  print(nodecount)
                  
                  {
-                 setwd(tempdir())
+                 setwd(tmpdir)
                   
                  print("Working in:")
                  print(tmpdir)
@@ -2391,10 +2419,13 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
                  pb = pbapply::startpb(max = jobs_ntot)
                  while(!completed){
                    Sys.sleep(5)
-                   running_jobs = list.files(paste0("_rslurm_", 
-                                                    batch_job$jobname),
-                                             pattern = "^results")
-                   pbapply::setpb(pb, value = length(running_jobs))
+                   squeue_out <- suppressWarnings(system(paste("squeue -n", 
+                                                               batch_job$jobname), 
+                                                         intern = TRUE))
+                   queue <- read.table(text = squeue_out, header = TRUE)
+                   queue <- queue[!grepl("\\[", queue$JOBID),]
+                   running_jobs = max(as.numeric(gsub("^.*_", "", queue$JOBID)),na.rm = T)
+                   pbapply::setpb(pb, value = running_jobs)
                    completed = slurm_job_complete(batch_job)
                  }
                  }

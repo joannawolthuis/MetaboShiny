@@ -11,7 +11,7 @@ getMLperformance = function(ml_res, pos.class,
                             x.metric, y.metric,
                             silent = F,
                             ignore.training = F){
-  
+  ignore.training = if(nrow(ml_res$train.performance) == 0) T else ignore.training
   if(!ignore.training){
     if(!("Resample" %in% colnames(ml_res$train.performance))){
       is.loocv = TRUE
@@ -263,7 +263,9 @@ ml_single_run <- function(trainOrder,
                                    classProbs = if(is.null(caret::getModelInfo(paste0("^",ml_method,"$"),regex = T)[[1]]$prob)) FALSE else TRUE,
                                    index = folds,
                                    returnResamp = "all",
-                                   savePredictions = "final")
+                                   savePredictions = "final"
+                                   #sampling = ml_sampling
+                                   )
   if(ml_method == "glm"){
     fit <- caret::train(
       label ~ .,
@@ -339,17 +341,18 @@ ml_prep_data <- function(settings, mSet, input, cl){
   if(length(settings$ml_batch_covars) == 0) settings$ml_batch_covars <- c("")
   if(all(settings$ml_batch_covars %in% c("", " "))) settings$ml_batch_covars <- c()
   
-  print(settings$ml_batch_covars)
+  #print(settings$ml_batch_covars)
   
   # covars needed
   keep.config = setdiff(unique(c(settings$ml_include_covars, settings$ml_batch_covars,
-                                 settings$ml_train_subset[[1]], settings$ml_test_subset[[1]])),
+                                 sapply(settings$ml_train_subset, function(x) x[[1]]), 
+                                 sapply(settings$ml_test_subset, function(x) x[[1]]))),
                         c("label", "", " "))
   
   sample_names = mSet$dataSet$covars$sample
   
-  print(keep.config)
-  
+  keep.config = unlist(keep.config)
+
   if(length(keep.config) > 0){
     config = mSet$dataSet$covars[, ..keep.config,drop=F]
   }else{
@@ -360,15 +363,19 @@ ml_prep_data <- function(settings, mSet, input, cl){
   
   # train/test split
   ## get indices
-  if(!is.null(settings$ml_train_subset) | !is.null(settings$ml_test_subset)){
+  if(length(settings$ml_train_subset) > 0 | length(settings$ml_test_subset) > 0){
     # add clause for same train_test
     test_idx = NULL
     train_idx = NULL
-    if(!is.null(settings$ml_test_subset)){
-      test_idx = which(config[[settings$ml_test_subset[[1]]]] %in% settings$ml_test_subset[[2]])
+    if(length(settings$ml_train_subset) > 0){
+      train_idx = Reduce(intersect, lapply(settings$ml_train_subset, function(ss){
+        which(config[[ss[[1]]]] %in% ss[[2]])
+      }))
     }
-    if(!is.null(settings$ml_train_subset)){
-      train_idx = which(config[[settings$ml_train_subset[[1]]]] %in% settings$ml_train_subset[[2]])
+    if(length(settings$ml_test_subset) > 0){
+      test_idx = Reduce(intersect, lapply(settings$ml_test_subset, function(ss){
+        which(config[[ss[[1]]]] %in% ss[[2]])
+      }))
     }
     if(is.null(train_idx)){
       train_idx = setdiff(1:nrow(config), test_idx)  
@@ -498,6 +505,11 @@ ml_prep_data <- function(settings, mSet, input, cl){
     size.global = if(settings$ml_sampling != "down") biggest.group.overall else smallest.group.overall
     size.preset = settings$ml_groupsize
     
+    #print(spl.testing.idx)
+    if(length(spl.testing.idx) == nrow(training_data$curr)){
+      print("Resampling each row")
+    }
+    
     # resample
     print("Resampling data...")
     resampled.data.list = pbapply::pblapply(spl.testing.idx, function(idx){
@@ -514,7 +526,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
         min(table(config.subset$label))
       }
       
-      # all upsampling except "down"
       group.size = 
         if(settings$ml_batch_balance){
           if(settings$ml_batch_size_sampling){ if(size.preset > 0) size.preset else size.global} else size.local
@@ -558,6 +569,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
                new_data = upsample.adj(cbind(config.subset, curr.subset), 
                                        as.factor(config.subset$label), 
                                        maxClass = group.size) 
+               #print(new_data[,1:10])
                config.subset = new_data[,1:nconfig,drop=F]
                curr.subset = new_data[,!(colnames(new_data) %in% c("Class", colnames(config.subset))),drop=F]
              },
@@ -667,12 +679,15 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
             mzs = gsub("^X", "", mzs)
             mzs = gsub("\\.$", "-", mzs)
             
+            training_data$curr = as.data.frame(training_data$curr)
+            testing_data$curr = as.data.frame(testing_data$curr)
+            
             if(settings$ml_mzs_exclude){
               mzs_keep = setdiff(colnames(training_data$curr), mzs)
-              training_data$curr <- as.data.frame(training_data$curr[, mzs_keep])
+              training_data$curr <- training_data$curr[, mzs_keep]
               settings$mz_removed <- mzs
             }else{
-              training_data$curr <- as.data.frame(training_data$curr[, mzs])
+              training_data$curr <- training_data$curr[, mzs]
               settings$mz_used <- mzs
             }
           }
@@ -693,7 +708,8 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     keep.config = unique(c("label", "split", settings$ml_include_covars))
     
     # divvy folds based on batch (doensn't work for now)    
-    has_multiples = sapply(settings$ml_batch_covars, function(x) max(table(training_data$config[[x]])) > 1)
+    has_multiples = sapply(settings$ml_batch_covars, 
+                           function(x) max(table(training_data$config[[x]])) > 1)
     fold_variable = if(length(settings$ml_batch_covars) > 0){
       as.factor(apply(training_data$config[, unique(c("label", 
                                                       settings$ml_batch_covars[has_multiples])),with=F],

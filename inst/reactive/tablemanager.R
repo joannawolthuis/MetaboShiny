@@ -244,10 +244,13 @@ shiny::observe({
                                  data$res = list(data$res)
                                }
                                
+                               pos.class <- if(input$ml_plot_posclass == "placeholder") paste0("class", 
+                                                                                               Hmisc::capitalize(as.character(mSet$dataSet$cls[[1]]))) else input$ml_plot_posclass
+                              
                                ml_performance_rows = lapply(1:length(data$res), function(i){
                                  res = data$res[[i]]
                                  ml_performance = getMLperformance(res, 
-                                                                   pos.class = input$ml_plot_posclass,
+                                                                   pos.class = pos.class,
                                                                    x.metric=input$ml_plot_x,
                                                                    y.metric=input$ml_plot_y,
                                                                    ignore.training =  if(data$params$ml_perf_metr == "none") T else F)

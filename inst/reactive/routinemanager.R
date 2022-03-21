@@ -3,7 +3,9 @@ paper_routine <- list(
   list(type = "change",
        settings = list(stats_var = "group",
                        stats_type = "1f")),
-  # --------
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold01", subset_group = "yes"
   )),
@@ -23,6 +25,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold02", subset_group = "yes"
@@ -43,6 +48,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold03", subset_group = "yes"
@@ -63,6 +71,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold04", subset_group = "yes"
@@ -83,6 +94,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold05", subset_group = "yes"
@@ -103,6 +117,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold06", subset_group = "yes"
@@ -123,6 +140,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold07", subset_group = "yes"
@@ -143,6 +163,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold08", subset_group = "yes"
@@ -163,6 +186,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold09", subset_group = "yes"
@@ -183,6 +209,9 @@ paper_routine <- list(
        settings = list(
          storage_choice = "group"
        )),
+  #list(type = "subset", settings = list(
+  #  subset_var = "averaged", subset_group = "TRUE"
+  #)),
   # -------------------------
   list(type = "subset", settings = list(
     subset_var = "in_featsel_fold10", subset_group = "yes"

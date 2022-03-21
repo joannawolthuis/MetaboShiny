@@ -1351,7 +1351,8 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     myplot <- myplot + ggplot2::geom_step(mapping = aes(x = x,
                                                         y = y,
                                                         color = category,
-                                                        group = curve_number),
+                                                        group = curve_number,
+                                                        key = curve_number),
                                           alpha=0.2) +
       ggplot2::stat_smooth(mapping = aes(x = x, 
                                                           y = y, 
@@ -1362,7 +1363,8 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     myplot <- myplot + ggplot2::geom_step(mapping = aes(x = x,
                                                         y = y,
                                                         color = category,
-                                                        group = curve_number),
+                                                        group = curve_number,
+                                                        key = curve_number),
                                           alpha=1, cex=1)
   }
   

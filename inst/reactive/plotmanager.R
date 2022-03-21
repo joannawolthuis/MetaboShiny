@@ -73,7 +73,8 @@ shiny::observe({
               
               if(!is.null(session$clientData[[empty]])){
                 if(!(plotName %in% c("network",
-                                     "wordcloud"))){
+                                     "wordcloud",
+                                     "ml_roc"))){
                   try({
                     if(length(myplot) > 1){
                       if(plotName == "heatmap_plot") myplot$heatmap_static() else{
@@ -116,13 +117,14 @@ shiny::observe({
                       })  
                     }
                   }, silent = F)
-                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
-                                     plotName), collapse="_") 
-                  if(grepl(x=plotFn, "ml")){
-                    plotFn <- paste(plotFn, 
-                                    mSet$analSet$ml$last$method, 
-                                    mSet$analSet$ml$last$name, sep = "_")
-                  }
+                }
+                
+                plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
+                                   plotName), collapse="_") 
+                if(grepl(x=plotFn, "ml")){
+                  plotFn <- paste(plotFn, 
+                                  mSet$analSet$ml$last$method, 
+                                  mSet$analSet$ml$last$name, sep = "_")
                 }
                 
                 output[[paste0(plotName, "_interactive")]] <- 
