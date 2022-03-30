@@ -448,6 +448,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
     mSet_test <- mSet_train <- config_test <- config_train <- mz.in.both <- mSet$storage <- NULL
   }else{
     curr = as.data.frame(switch(pickedTbl, 
+                                prebatch = mSet$dataSet$prebatch,
                                 orig = mSet$dataSet$orig,
                                 norm = mSet$dataSet$norm,
                                 pca = mSet$analSet$pca$x))
@@ -505,7 +506,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
     size.global = if(settings$ml_sampling != "down") biggest.group.overall else smallest.group.overall
     size.preset = settings$ml_groupsize
     
-    #print(spl.testing.idx)
     if(length(spl.testing.idx) == nrow(training_data$curr)){
       print("Resampling each row")
     }
@@ -662,6 +662,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
           if(length(settings$ml_mzs) > 0){
             training_data$curr <- training_data$curr[, ..settings$ml_mzs]  
           }else{
+            
             mzs = getAllHits(mSet = mSet,
                              expname = settings$ml_specific_mzs)
             
@@ -675,6 +676,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
                          lowfirst = rev(mzs),
                          randomize = sample(mzs))
             
+            print(head(mzs))
             mzs = mzs[1:settings$ml_mzs_topn]
             mzs = gsub("^X", "", mzs)
             mzs = gsub("\\.$", "-", mzs)

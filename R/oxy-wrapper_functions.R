@@ -1467,7 +1467,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                         order = "original")
                      
                      matr_for_network <- matr
-                     matr_for_network[matr_for_network <= rthresh | matp >= input$network_sign] <- 0
+                     matr_for_network[abs(matr_for_network) <= rthresh | matp >= input$network_sign] <- 0
                      
                      #palette = colorRampPalette(c("green", "white", "red")) (20)
                      #heatmap(x = matr, col = palette, symm = TRUE)
@@ -1483,8 +1483,6 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]]
                      degr = igraph::degree(igr)
                      cols = cf(max(degr))
-                     
-                     
                      
                      netw$x$nodes$color <- sapply(netw$x$nodes$id, function(id){
                        if(input$network_highlight_top){
@@ -2395,8 +2393,8 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
                  print(nodecount)
                  
                  {
+                   
                  setwd(tmpdir)
-                  
                  print("Working in:")
                  print(tmpdir)
                  
@@ -2417,15 +2415,34 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
                  jobs_ntot = length(ml_queue$jobs)
                  
                  pb = pbapply::startpb(max = jobs_ntot)
+                 max_job_done = 1
                  while(!completed){
                    Sys.sleep(5)
-                   squeue_out <- suppressWarnings(system(paste("squeue -n", 
-                                                               batch_job$jobname), 
-                                                         intern = TRUE))
-                   queue <- read.table(text = squeue_out, header = TRUE)
-                   queue <- queue[!grepl("\\[", queue$JOBID),]
-                   running_jobs = max(as.numeric(gsub("^.*_", "", queue$JOBID)),na.rm = T)
-                   pbapply::setpb(pb, value = running_jobs)
+                   try({
+                     squeue_out <- suppressWarnings(system(paste("squeue -n", 
+                                                                 batch_job$jobname), 
+                                                           intern = TRUE))
+                     queue <- read.table(text = squeue_out, header = TRUE)
+                     queue <- queue[!grepl("\\[", queue$JOBID),]
+                     curr_running = max(as.numeric(gsub("^.*_", "", queue$JOBID)),na.rm = T)
+                     if(curr_running > max_job_done){
+                       max_job_done = curr_running
+                     }
+                     # get an example log..
+                     out_files <- file.path(tmpdir, paste0("_rslurm_",
+                                                           batch_job$jobname), 
+                                            paste0("slurm_", 
+                                                   
+                                                   0:(batch_job$nodes - 
+                                                        1), ".out"))
+                     if(length(out_files) > 0){
+                       log <- paste0(readLines(out_files[1]), collapse = "\n")
+                       cat("\n")
+                       cat(log)
+                       cat("\n")               
+                     }
+                     pbapply::setpb(pb, value = max_job_done)  
+                   })
                    completed = slurm_job_complete(batch_job)
                  }
                  }
@@ -2738,6 +2755,8 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl){
 }
 
 doUpdate <- function(mSet, lcl, input, do){
+  
+  print(lcl)
   
   mSet <- store.mSet(mSet, proj.folder = file.path(lcl$paths$work_dir,
                                                    lcl$proj_name)) # save analyses

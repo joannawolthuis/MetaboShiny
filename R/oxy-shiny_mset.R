@@ -814,6 +814,7 @@ mSetForML <- function(mSet, ml_queue, input){
   small_mSet <- list(metshiParams=mSet$metshiParams)
   small_mSet$dataSet <- mSet$dataSet[c("cls", "orig.cls", 
                                        "orig", "norm", 
+                                       "prebatch",
                                        "covars")]
   
   #ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]

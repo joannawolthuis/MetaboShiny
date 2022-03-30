@@ -1,7 +1,6 @@
 shiny::fluidPage(theme = "metaboshiny.css",
                  class="hidden",id="metshi",
                  ECharts2Shiny::loadEChartsLibrary(),
-                 shinyalert::useShinyalert(), 
                  shinyjs::useShinyjs(),
                  tags$head(tags$script(src="cursor.js")),
                  shiny::div(style = 'position: absolute;

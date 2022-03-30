@@ -208,6 +208,18 @@ beep = no')
         dbdir = opts$db_dir
       }
       
+      if(!is.null(opts$add_paths)){
+        print("Trying to add custom user paths to file selection menu")
+        try({
+          for(path in stringr::str_split(opts$add_paths, pattern = ";")[[1]]){
+            print(path)
+            
+            spl_path = stringr::str_split(path, pattern = "\\:")[[1]]
+            gbl$paths$volumes[spl_path[1]] <<-normalizePath(spl_path[2], mustWork=T)
+          }  
+        })
+      }
+      
       lcl$paths$work_dir <<- userfolder
       lcl$paths$db_dir <<- dbdir
       
