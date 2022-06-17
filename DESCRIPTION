@@ -87,7 +87,6 @@ Imports:
   missForest,
   ggfortify, 
   fdrtool, 
-  plsdepot,
   vroom,
   qs,
   ctc,
