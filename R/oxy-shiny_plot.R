@@ -932,7 +932,7 @@ ggPlotCombi <- function(mSet,
       p <- p + ggrepel::geom_label_repel(data = label_dat, 
                                     mapping = ggplot2::aes(label = `m/z`, x = x, y = y),
                                     max.overlaps = Inf,
-                                    force = 20,size=3) 
+                                    force = 20,size=4)
     }
     p
   }
@@ -2558,4 +2558,75 @@ ggPlotMummi <- function(mSet, cf,
                 ggplot2::scale_fill_gradientn(colours = cf(20)) +
                 ggplot2::scale_y_continuous(labels=scaleFUN))
   p
+}
+
+#' @title Generate multirank plot
+#' @description Function to generate ggplot or plotly plot for multirank
+#' @param mSet mSet object
+#' @param lcl lcl object including aesthetics
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[ggplot2]{labs}},
+#'  \code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotMultirank
+#' @export 
+#' @importFrom ggplot2 ylab xlab scale_colour_gradientn
+ggPlotMultirank <- function(mSet, cf, 
+                            type = "bump", 
+                            topn = 1000){
+  print("test multirank plotting")
+  scaleFUN <- function(x) sprintf("%.0f", x)
+  for_plot = mSet$analSet$multirank$result_table
+  data.table::setkeyv(for_plot, cols = c("m.z", "group"))
+  for_plot_mean = for_plot[group == "mean"]
+  for_plot_mean$ranking.mean = for_plot_mean$ranking
+  for_plot_nomean = for_plot[group != "mean"]
+  for_plot = merge(for_plot_nomean, 
+                   for_plot_mean[,c("m.z", "ranking.mean")], by = "m.z")
+  for_plot = rbind(for_plot, for_plot_mean)
+  included_mz = for_plot_mean[group == "mean" & ranking <= topn]$`m.z`
+  for_plot = for_plot[`m.z` %in% included_mz]
+  for_plot$group = as.factor(for_plot$group)
+  for_plot$group = relevel(for_plot$group, "mean")
+  # check if same prefix
+  preflength = sapply(3:length(levels(for_plot$group)), function(i){
+    pref = Biostrings::lcprefix(levels(for_plot$group)[i], 
+                                levels(for_plot$group)[i-1])
+    pref
+  })
+  
+  if(T){#length(unique(preflength)) == 1){
+    if(preflength[1] > 0){
+      levels(for_plot$group)[2:length(levels(for_plot$group))] <- stringr::str_sub(levels(for_plot$group)[2:length(levels(for_plot$group))], 
+                                                 start = preflength[1] + 1, 
+                                                 end = stringr::str_length(levels(for_plot$group)[2:length(levels(for_plot$group))]))  
+    }
+  }
+  # check if same suffix
+  suflength = sapply(3:length(levels(for_plot$group)), function(i){
+    Biostrings::lcsuffix(levels(for_plot$group)[i], 
+                         levels(for_plot$group)[i-1])
+  })
+  if(length(unique(suflength)) == 1){
+    if(suflength[1] > 0){
+      levels(for_plot$group)[2:length(levels(for_plot$group))] <- sapply(levels(for_plot$group)[2:length(levels(for_plot$group))], function(name){
+        len = stringr::str_length(name)
+        suffix = stringr::str_sub(name, len - suflength[1] + 1, len)
+        stringr::str_sub(name, start = 1, end = len - suflength[1])
+      })  
+    }
+  }
+  
+  p=ggplot2::ggplot(data = for_plot[group != "mean"], ggplot2::aes(x = group, y = ranking, group=`m.z`)) +
+    ggplot2::geom_line(ggplot2::aes(color = ranking.mean), size = 1) +
+    ggplot2::geom_point(ggplot2::aes(color = ranking.mean), size = 5) +
+    ggplot2::geom_text(#data = for_plot[group == levels(group)[2]], 
+              mapping=aes(label=ranking.mean),
+              size = 3,color="white",check_overlap = T)+
+    ggplot2::scale_y_reverse(breaks = seq(1, max(for_plot$ranking), length.out = 20), 
+                    position = "right", 
+                    labels=scaleFUN) +
+    ggplot2::scale_color_gradientn(colors = cf(nrow(for_plot))) 
+  return(p)
 }

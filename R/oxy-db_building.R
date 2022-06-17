@@ -1,9 +1,11 @@
-getMissing <- function(peakpath, nrow=NULL){
-  
+getMissing <- function(peakpath, 
+                       dim = "per_mz", 
+                       nrow=NULL){
+
   bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
   reallyBig = if(bigFile == "0 Gb") F else T
   
-  nrow = length(vroom::vroom_lines(peakpath)) - 1L
+  nrow = length(vroom::vroom_lines(peakpath,skip_empty_rows = T)) - 1L
   
   print("Checking missing values...")
   
@@ -30,7 +32,9 @@ getMissing <- function(peakpath, nrow=NULL){
     peaklist <- data.table::dcast(peaklist_melty, sample ~ mzmed, value.var = "into")
     considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
     peaklist = peaklist[, ..considerMe]
-    totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
+    totalMissing = switch(dim,
+                          per_mz = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist)),
+                          per_samp = rowSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist)))
   }else{
     if(!reallyBig){
       peaklist <- data.table::fread(peakpath,
@@ -38,7 +42,9 @@ getMissing <- function(peakpath, nrow=NULL){
                                     fill=TRUE)
       considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
       peaklist = peaklist[, ..considerMe]
-      totalMissing = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist))
+      totalMissing = switch(dim, 
+                            per_mz = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist)),
+                            per_samp = colSums(peaklist == "0" | peaklist == 0 | peaklist == "" | is.na(peaklist)))
     }else{
       considerMe=which(!(tolower(cols) %in% skipCols))
       mzs = cols[3:length(cols)]
@@ -92,7 +98,8 @@ import.pat.csvs <- function(metapath,
                             missperc.mz = 99,
                             missperc.samp = 100,
                             missList = c(pos=c(),neg=c()),
-                            roundMz = T){
+                            roundMz = T,
+                            batchcorr=F){
   ppm = as.numeric(ppm)
 
   metadata = NULL

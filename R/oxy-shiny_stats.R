@@ -56,16 +56,16 @@ metshiDiffCorr <- function(mSet, input){
 
 metshiPCA <- function(mSet, input){
   if(input$pca_source != "normalized"){
-    mSet_orig = mSet
-    mSet$dataSet$norm <- switch(input$pca_source,
+    mSet_pca = mSet
+    mSet_pca$dataSet$norm <- switch(input$pca_source,
                                 "pre-batch correction" = mSet$dataSet$prebatch,
                                 original = mSet$dataSet$proc)
-    pcaRes <- MetaboAnalystR::PCA.Anal(mSet)$analSet$pca # perform PCA analysis
-    mSet = mSet_orig
+    pcaRes <- MetaboAnalystR::PCA.Anal(mSet_pca)$analSet$pca # perform PCA analysis
     mSet$analSet$pca <- pcaRes  
   }else{
     mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
   }
+  return(mSet)
 }
 
 metshiICA <- function(mSet, input){
@@ -141,7 +141,27 @@ metshiGetEnrichInputTable <- function(mSet, input){
   return(tbl)
 }
 
-doEnrich <- function(input, tempfile, ppm){
+metshiMultirank <- function(input, mSet, lcl, multirank_yes){
+  analyses = unlist(multirank_yes$now$name)
+  print(analyses)
+  results = data.table::rbindlist(lapply(analyses, function(an){
+    hits = MetaboShiny::getAllHits(mSet, an)
+    hits$ranking = 1:nrow(hits)
+    hits$analysis=an
+    return(hits)
+  }))
+  results.avg <- results[,lapply(.SD, mean, na.rm=TRUE),by=`m.z`,.SDcols=c("ranking")]
+  results.avg <- results.avg[order(ranking, decreasing = F)]
+  results.avg$ranking <- rank(results.avg$ranking,ties.method = "average")
+  results.avg$group = "mean"
+  results$group = results$analysis
+  results.merged = rbind(results.avg,
+                         results[,c("m.z", "ranking", "group")])
+  mSet$analSet$multirank = list(result_table = results.merged)
+  mSet
+}
+
+doEnrich <- function(input, tempfile, ppm, lcl){
   
   tbl <- data.table::fread(tempfile)
   dataSet <- list()
@@ -253,17 +273,9 @@ doEnrich <- function(input, tempfile, ppm){
                                                                                     1.007825, x)))))
     mw_modified.pos <- do.call(cbind, mass.user.pos)
     if(!is.null(mw_modified.pos)) colnames(mw_modified.pos) <- ion.name.pos
-    mw_modified <- list(mw_modified.neg, mw_modified.pos)
+    mw_modified <- list(mw_modified.neg, 
+                        mw_modified.pos)
     
-    if(use.rules){
-      mw_modified <- lapply(mw_modified, function(mw_adds){
-        for(i in 1:nrow(mw_adds)){
-          ok.adducts <- iden.vs.add[i,]$adduct
-          mw_adds[i, !(colnames(mw_adds) %in% ok.adducts)] <- 0
-        }
-        mw_adds
-      }) 
-    }
     names(mw_modified) <- c("neg", "pos")
     return(mw_modified)
   }
@@ -289,9 +301,53 @@ doEnrich <- function(input, tempfile, ppm){
   mummi.adducts <- new_adduct_mzlist(enr_mSet,
                                      mw = mummichog.lib$cpd.lib$mw)
   
+  cpds = mummichog.lib$cpd.lib$id
   mummi.adducts <- list(dpj_positive = mummi.adducts$pos,
                         positive = mummi.adducts$pos,
                         negative = mummi.adducts$neg)
+  
+  if(use.rules){
+    kegg_user_db = MetaDBparse::showAllBase(lcl$paths$db_dir, "kegg")
+    keep = data.table::as.data.table(kegg_user_db[kegg_user_db$identifier %in% cpds,])
+    setkey(keep, "identifier")
+    
+    adduct_rows = pbapply::pblapply(cpds, 
+                                   function(cpd){
+      row = keep[identifier == cpd]
+      if(nrow(row) > 0){
+        ext_info = MetaDBparse::searchRev(row$structure,
+                                          ext.dbname = "extended",
+                                          outfolder = lcl$paths$db_dir)
+        if(nrow(ext_info) > 0){
+          use_info = unique(ext_info[ext_info$isoprevalence == 100, c("adduct", "fullmz")])
+          use_info$identifier = cpd  
+          reshape2::dcast(use_info, identifier ~ adduct, value.var ="fullmz")  
+        }else{
+          data.table::data.table()
+        }
+      }else{
+        data.table::data.table()
+      }
+      })
+    adducts_from_db = data.table::rbindlist(adduct_rows, fill = T)
+    remaining_cpds = adducts_from_db$identifier
+    adducts_from_db$identifier=NULL
+    adducts_from_db[is.na(adducts_from_db)] <- -9999
+    # split in positive/negative
+    pos_cols = colnames(mummi.adducts$pos)
+    neg_cols = colnames(mummi.adducts$neg)
+    pos_adducts = adducts_from_db[,..pos_cols]
+    neg_adducts = adducts_from_db[,..neg_cols]
+    
+    mummi.adducts <- list(dpj_positive = pos_adducts,
+                          positive = pos_adducts,
+                          negative = neg_adducts)
+    
+    mummichog.lib$cpd.lib$id <- remaining_cpds
+    mummichog.lib$cpd.lib$name
+    print("in progress...")
+
+  }
   
   mummichog.lib$cpd.lib$adducts <- mummi.adducts
   cpd.tree <- list()

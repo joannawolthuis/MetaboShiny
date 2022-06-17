@@ -124,11 +124,35 @@ shiny::observeEvent(input$checkMiss, {
   if(files.present){
     if(hasPos){
       nrows = length(vroom::vroom_lines(pospath, altrep = TRUE, progress = TRUE)) - 1L
-      missValues$pos = getMissing(pospath, nrow=nrows)
+      missValues$per_mz = list(pos = getMissing(pospath, dim="per_mz", nrow=nrows))
     }
     if(hasNeg){
       nrows = length(vroom::vroom_lines(negpath, altrep = TRUE, progress = TRUE)) - 1L
-      missValues$neg = getMissing(negpath, nrow=nrows)
+      missValues$per_mz = list(neg = getMissing(negpath, dim="per_mz", nrow=nrows))
+    }
+  }else{
+    MetaboShiny::metshiAlert("Please select files first!")
+  }
+})
+
+shiny::observeEvent(input$checkMissSamp, {
+  files.present = all(sapply(input$ms_modes, function(ionMode){
+    !is.null(input[[paste0("outlist_", ionMode)]])
+  }))
+  
+  hasPos = "pos" %in% input$ms_modes
+  hasNeg = "neg" %in% input$ms_modes
+  pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
+  negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()
+  
+  if(files.present){
+    if(hasPos){
+      nrows = length(vroom::vroom_lines(pospath, altrep = TRUE, progress = TRUE)) - 1L
+      missValues$per_samp = list(pos = getMissing(pospath, dim="per_sample", nrow=nrows))
+    }
+    if(hasNeg){
+      nrows = length(vroom::vroom_lines(negpath, altrep = TRUE, progress = TRUE)) - 1L
+      missValues$per_samp = list(neg = getMissing(negpath, dim="per_sample", nrow=nrows))
     }
   }else{
     MetaboShiny::metshiAlert("Please select files first!")

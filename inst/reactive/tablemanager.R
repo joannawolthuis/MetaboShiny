@@ -19,7 +19,9 @@ shiny::observe({
                                analysis = mSet$storage[[name]]$analSet
                                analysis_names = names(analysis)
                                # - - -
-                               exclude = c("tsne", "heatmap", "type", "enrich", "power", "network", "ml")
+                               exclude = c("tsne", "heatmap", "type", 
+                                           "enrich", "power", 
+                                           "network", "ml")
                                analysis_names <- setdiff(analysis_names, exclude)
                                if(length(analysis_names) == 0){
                                  return(data.table::data.table())
@@ -79,8 +81,9 @@ shiny::observe({
                                                            }, server = T) 
                              })
                              # --- 
-                             venn_no$start <- report_no$start <- analyses_table
+                             venn_no$start <- report_no$start <- multirank_no$start <- analyses_table
                              venn_no$now <- venn_no$start
+                             multirank_no$now <- multirank_no$start
                              report_no$now <- report_no$start
                              
                              list()
@@ -145,6 +148,16 @@ shiny::observe({
                              })
                              enrich$summary <- data.table::rbindlist(summary_table_blocks)
                              list()
+                           },
+                           multirank = {
+                             res = mSet$analSet$multirank$result_table
+                             res = res[group == "mean",]
+                             res$group = NULL
+                             res = as.data.frame(res)
+                             rownames(res) <- res$m.z
+                             res$m.z <- NULL
+                             list(multirank_tab = res[order(res$ranking,
+                                                            decreasing = F),,drop=F])
                            },
                            corr = {
                              res =if(is.null(mSet$analSet$corr$cor.mat)){

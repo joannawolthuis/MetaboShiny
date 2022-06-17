@@ -7,6 +7,13 @@ venn_no = shiny::reactiveValues(
                         start = data.frame(c("a", "b", "c")),
                         now = data.frame(c("a", "b", "c")))
 
+multirank_yes = shiny::reactiveValues(start = data.frame(),
+                                 now = data.frame())
+
+multirank_no = shiny::reactiveValues(
+  start = data.frame(c("a", "b", "c")),
+  now = data.frame(c("a", "b", "c")))
+
 venn_members <- shiny::reactiveValues(mzvals = list())
 
 shiny::observeEvent(input$venn_add, {
@@ -25,6 +32,24 @@ shiny::observeEvent(input$venn_remove, {
   removed = venn_yes$now[rows,]
   venn_no$now <<- rbind(venn_yes$now, removed)
   venn_yes$now <<- data.frame(venn_yes$now[-rows,])
+})
+
+shiny::observeEvent(input$multirank_add, {
+  # add to the 'selected' table
+  rows <- input$multirank_unselected_rows_selected
+  # get members and send to members list
+  added = multirank_no$now[rows,]
+  multirank_yes$now <<- rbind(multirank_yes$now, added)
+  multirank_no$now <<- multirank_no$now[-rows,]
+})
+
+shiny::observeEvent(input$multirank_remove, {
+  # add to the 'selected' table
+  rows <- input$multirank_selected_rows_selected
+  # get members and send to non members list
+  removed = multirank_yes$now[rows,]
+  multirank_no$now <<- rbind(multirank_yes$now, removed)
+  multirank_yes$now <<- data.frame(multirank_yes$now[-rows,])
 })
 
 output$venn_threshold_ui <- shiny::renderUI({
@@ -79,6 +104,28 @@ output$venn_selected <- DT::renderDataTable({
   res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
   try({
     res = DT::datatable(venn_yes$now,rownames = FALSE, colnames=c("result","threshold"), 
+                        selection = "multiple")
+  })
+  res
+})
+
+# the 'non-selected' table
+output$multirank_unselected <- DT::renderDataTable({
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
+  try({
+    res = DT::datatable(multirank_no$now, 
+                        rownames = FALSE, 
+                        colnames=c("result","threshold"), 
+                        selection = "multiple")
+  })
+  res
+})
+
+# the 'selected' table
+output$multirank_selected <- DT::renderDataTable({
+  res = DT::datatable(data.table::data.table(), rownames=FALSE, colnames=c("result","threshold"))
+  try({
+    res = DT::datatable(multirank_yes$now,rownames = FALSE, colnames=c("result","threshold"), 
                         selection = "multiple")
   })
   res

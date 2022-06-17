@@ -431,7 +431,9 @@ vectors = list(
 )
 )
 
-gbl$vectors$kegg_pathways <- KEGGREST::keggList("pathway")
+try({
+  gbl$vectors$kegg_pathways <- KEGGREST::keggList("pathway")
+}, silent = T)
 gbl$vectors$db_categories$all <- gbl$vectors$db_list
 gbl$vectors$example_sizes <- file.size(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
 gbl$vectors$example_md5s <- tools::md5sum(list.files(gbl$paths$volumes[["Examples"]],full.names = T))

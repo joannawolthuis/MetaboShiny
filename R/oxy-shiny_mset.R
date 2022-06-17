@@ -170,9 +170,9 @@ name.mSet <- function(mSet) {
     info_vec = c(info_vec, "paired")
   }
   
-  if("mz" %in% names(mSet$settings$subset)){
-    info_vec = c(info_vec, "prematched m/z only")
-  }
+  #if("mz" %in% names(mSet$settings$subset)){
+  #  info_vec = c(info_vec, "filtered m/z")
+  #}
   
   if (length(mSet$settings$subset) > 0) {
     subsetgroups = sapply(1:length(mSet$settings$subset), function(i) {

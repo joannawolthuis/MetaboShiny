@@ -14,9 +14,6 @@ function(input, output, session) {
   options(shiny.maxRequestSize=50000*1024^2)
   setTimeLimit(cpu = Inf)
   
-  # EMPTY DEBUG
-  debug_browse_content <- debug_result_filters <- debug_pieinfo <- debug_input <- debug_lcl <- debug_mSet <- debug_matches <- debug_enrich <- debug_selection <- debug_venn_yes <- debug_report_yes <- list()
-  
   # FIX FOR NORMALIZATION
   OFFtoJSON <- function(obj, ...){
     print("Disabled in MetaboShiny!")
@@ -627,7 +624,8 @@ beep = no')
       list("dimred", "umap"),#17
       list("dimred", "ica"),#18
       list("overview", "featsel"),#19,
-      list("permz", "cliffd")#20
+      list("permz", "cliffd"),#20,
+      list("overview", "multirank")#21
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -635,22 +633,22 @@ beep = no')
     if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
     }else if(interface$mode == '1fm'){
-      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18,19)]
+      show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18,19,21)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(setdiff(gbl$constants$ml.models,
                                                          gbl$constants$ml.twoonly)))
     }else if(interface$mode == '2f'){
-      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18,19)]
+      show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18,19,21)]
     }else if(interface$mode == 't1f'){
-      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18,19)]
+      show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18,19,21)]
     }else if(interface$mode == 't'){
-      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18,19)]
+      show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18,19,21)]
     }else{
       show.tabs <- hide.tabs[1]
     }
@@ -807,6 +805,7 @@ beep = no')
     assign("result_filters",  shiny::isolate(shiny::reactiveValuesToList(result_filters)), envir = .GlobalEnv)
     assign("report_yes",  shiny::isolate(shiny::reactiveValuesToList(report_yes)), envir = .GlobalEnv)
     assign("venn_yes",  shiny::isolate(shiny::reactiveValuesToList(venn_yes)), envir = .GlobalEnv)
+    assign("multirank_yes",  shiny::isolate(shiny::reactiveValuesToList(multirank_yes)), envir = .GlobalEnv)
     assign("ml_queue",  shiny::isolate(shiny::reactiveValuesToList(ml_queue)), envir = .GlobalEnv)
   })
   
@@ -834,7 +833,7 @@ beep = no')
         
         uimanager$refresh <- input$statistics
         
-        if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml")){
+        if(input$statistics %in% c("venn", "enrich", "heatmap", "network", "ml", "multirank")){
           print("vennrich")
           statsmanager$calculate <- "vennrich"
           tablemanager$make <- "vennrich"
@@ -870,7 +869,8 @@ beep = no')
                 "meba", "asca", "corr", 
                 "enrich", "network", "power",
                 "umap", "ica", "featsel",
-                "cliffd")
+                "cliffd",
+                "multirank")
   
   lapply(analyses, function(an){
     shiny::observeEvent(input[[paste0("do_", an)]], {

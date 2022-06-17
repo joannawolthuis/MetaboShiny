@@ -486,23 +486,24 @@ ml_prep_data <- function(settings, mSet, input, cl){
   
   if(settings$ml_sampling != "none"){
     # split on factor (either batch or placeholder to create one result)
-    if(settings$ml_batch_balance){
-      split.fac = training_data$config[, settings$ml_batch_covars, with=F][[1]]
-    }else{
-      split.fac = rep(1, nrow(training_data$config))
+    split.fac = if(settings$ml_batch_balance){
+      paste0(training_data$config$label, "_", 
+             training_data$config[, settings$ml_batch_covars, with=F][[1]])
+    }else{rep(1, nrow(training_data$config))
     }
+    
+    print(split.fac)
+    balance.overview = table(split.fac)
+    biggest.group.overall = max(balance.overview)
+    smallest.group.overall = min(balance.overview)
+    print(balance.overview)
+    
     split.fac = if(settings$ml_batch_balance){
       training_data$config[, settings$ml_batch_covars, with=F][[1]]
     }else{rep(1, nrow(training_data$config))
     }
-    
     spl.testing.idx = split(1:nrow(training_data$curr), split.fac)
-    balance.overview = table(split.fac)
-    biggest.group.overall = max(balance.overview)
-    smallest.group.overall = min(balance.overview)
-    
     orig.samp.distr = table(training_data$config$label)
-    
     size.global = if(settings$ml_sampling != "down") biggest.group.overall else smallest.group.overall
     size.preset = settings$ml_groupsize
     
@@ -510,6 +511,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
       print("Resampling each row")
     }
     
+    print("new ver...")
     # resample
     print("Resampling data...")
     resampled.data.list = pbapply::pblapply(spl.testing.idx, function(idx){
@@ -526,10 +528,16 @@ ml_prep_data <- function(settings, mSet, input, cl){
         min(table(config.subset$label))
       }
       
+      print("!")
+      print(table(config.subset$label))
+      print(settings$ml_batch_balance)
+      
       group.size = 
         if(settings$ml_batch_balance){
           if(settings$ml_batch_size_sampling){ if(size.preset > 0) size.preset else size.global} else size.local
         }else size.local
+      
+      print(group.size)
       
       curr.group.sizes = table(config.subset$label)
       

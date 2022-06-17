@@ -67,8 +67,7 @@ shiny::observe({
                 whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne|umap|ica")[,1]
                 is3D <- !input[[paste0(whichAnal, "_2d3d")]]
               }else{
-                is3D <- plotName %in% c("network", 
-                                        "network_heatmap")
+                is3D <- plotName %in% c("network")
               }
               
               if(!is.null(session$clientData[[empty]])){
@@ -130,7 +129,10 @@ shiny::observe({
                 output[[paste0(plotName, "_interactive")]] <- 
                   
                   if(plotName == "network"){
-                    visNetwork::renderVisNetwork(myplot)
+                    print("!network change")
+                    visNetwork::renderVisNetwork({
+                      myplot %>% visNetwork::visExport(type="png", name=plotFn, label="download png")
+                      })
                   }else if(plotName == "wordcloud"){
                     wordcloud2::renderWordcloud2(myplot)
                   }else{

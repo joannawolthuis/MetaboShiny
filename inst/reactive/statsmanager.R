@@ -19,6 +19,7 @@ shiny::observe({
                             lcl = lcl,
                             analysis = statsmanager$calculate,
                             ml_queue = ml_queue, 
+                            multirank_yes = multirank_yes,
                             cl = session_cl)
         
         mSet <- results$mSet
