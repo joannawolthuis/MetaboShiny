@@ -90,6 +90,7 @@ Imports:
   vroom,
   qs,
   ctc,
+  pathview,
   gdata,
   glasso,
   huge,
