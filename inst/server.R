@@ -5,9 +5,9 @@ function(input, output, session) {
   library(data.table)
   library(plotly)
   library(ggplot2)
-  library(SPARQL)
+  #library(SPARQL)
   library(MetaboShiny)
-  library(MetaDBparse)
+  #library(MetaDBparse)
   library(plyr)
   library(dplyr)
   

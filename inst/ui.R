@@ -358,7 +358,10 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                        shinyBS::bsCollapse(id = "collapse_summary",
                                                                                                                                            shinyBS::bsCollapsePanel(title = tags$b(icon("caret-down"), "show/hide selected m/z abundance", icon("caret-down")),
                                                                                                                                                                     style = "info",
-                                                                                                                                                                    shinyjqui::jqui_resizable(shiny::uiOutput("summary_plot_wrap")))
+                                                                                                                                                                    shinyjqui::jqui_resizable(
+                                                                                                                                                                      shiny::uiOutput("summary_plot_wrap")
+                                                                                                                                                                    )
+                                                                                                                                                                    )
                                                                                                                        )),
                                                                                                        shiny::tabsetPanel(id="statistics", selected = "inf",
                                                                                                                           # TODO: T-SNE

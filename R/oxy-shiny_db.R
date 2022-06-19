@@ -644,16 +644,44 @@ metshiRevSearch = function(mSet, structure, ext.dbname, db_dir){
   }), fill=T)
 }
 
-build.enrich.KEGG <- function(map_id){
+build.enrich.KEGG <- function(map_id, filter_out_module_regex = ""){
   print("Downloading pathway information...")
   
   map_info = KEGGREST::keggGet(map_id)
   use_ko = grepl("map", map_id)
-  
+  if(grepl("gga", map_id)){
+    ###### FIND IMPOSSIBLES FOR G.GALLUS ########
+    ### cannot synthesize: arginine, cysteine, histidine, isoleucine, leucine, lysine, methionine, 
+    #### phenylalanine, proline, threonine, tryptophan, tyrosine, and valine (https://doi.org/10.1016/j.animal.2021.100213)
+    has_essential_aa_synthesis = grepl("=> (arginine|cysteine|histidine|isoleucine|leucine|lysine|methionine|phenylalanine|proline|threonine|tryptophan|tyrosine|valine)", 
+                             map_info[[1]]$MODULE)
+    impossible_modules = map_info[[1]]$MODULE[has_essential_aa_synthesis]
+    impossible_pathways = map_info[[1]]$REL_PATHWAY[grepl("(arginine|cysteine|histidine|isoleucine|leucine|lysine|methionine|phenylalanine|proline|threonine|tryptophan|tyrosine|valine).*biosynthesis", 
+                                map_info[[1]]$REL_PATHWAY,ignore.case = T)]
+  }else{
+    impossible_modules = c()
+    impossible_pathways =c()
+  }
+
   print("Finding all compounds...")
   pw_compound_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
     pw_name = map_info[[1]]$REL_PATHWAY[i]
+    if(length(impossible_pathways) > 0){
+      if(pw_name %in% impossible_pathways){
+        print(paste(pw_name, "removed due to not being possible in chicken"))
+        return(data.table::data.table())
+      }
+    }
     pw_info = KEGGREST::keggGet(names(pw_name))[[1]]
+    #### FOR GALLUS GALLUS ONLY - FILTER OUT IMPOSSIBLES ###
+    if(length(impossible_modules) > 0 & length(pw_info$MODULE) > 0){
+      impossibles = intersect(impossible_modules, pw_info$MODULE)
+      if(length(impossibles > 0)){
+        print(impossibles)
+        return(data.table::data.table())
+      }
+    }
+    ########################################################
     pw_code = if(use_ko) pw_info$KO_PATHWAY else names(pw_name)
     if(use_ko){
       pw_info = KEGGREST::keggGet(pw_code)[[1]]
