@@ -104,8 +104,6 @@ observeEvent(input$set_proj_name, {
   lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(lcl$proj_name,".csv"))
 })
 
-
-
 observe({
   if(filemanager$do == "load"){
     fn <- paste0(tools::file_path_sans_ext(lcl$paths$csv_loc), ".metshi")

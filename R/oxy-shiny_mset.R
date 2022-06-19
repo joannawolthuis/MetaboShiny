@@ -170,9 +170,9 @@ name.mSet <- function(mSet) {
     info_vec = c(info_vec, "paired")
   }
   
-  if("mz" %in% names(mSet$settings$subset)){
-    info_vec = c(info_vec, "prematched m/z only")
-  }
+  #if("mz" %in% names(mSet$settings$subset)){
+  #  info_vec = c(info_vec, "filtered m/z")
+  #}
   
   if (length(mSet$settings$subset) > 0) {
     subsetgroups = sapply(1:length(mSet$settings$subset), function(i) {
@@ -814,6 +814,7 @@ mSetForML <- function(mSet, ml_queue, input){
   small_mSet <- list(metshiParams=mSet$metshiParams)
   small_mSet$dataSet <- mSet$dataSet[c("cls", "orig.cls", 
                                        "orig", "norm", 
+                                       "prebatch",
                                        "covars")]
   
   #ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]

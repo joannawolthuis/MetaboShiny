@@ -1,3 +1,16 @@
+metshiCliffD <- function(mSet, input){
+  matrices = split(mSet$dataSet$norm, 
+                   mSet$dataSet$cls)
+  scores = MetaboShiny::cliffDelta(x = matrices[[1]], 
+                                   y = matrices[[2]])
+  res = data.frame(cliffD = scores)
+  rownames(res) <- colnames(mSet$dataSet$norm)
+  names(scores) <- colnames(mSet$dataSet$norm)
+  mSet$analSet$cliffd <- list(cliffd = scores, 
+                              sig.mat = res)
+  return(mSet)
+}
+
 metshiCorr <- function(mSet, input){
   lvls = levels(mSet$dataSet$cls)
   pat = input$corr_seq_order
@@ -43,16 +56,16 @@ metshiDiffCorr <- function(mSet, input){
 
 metshiPCA <- function(mSet, input){
   if(input$pca_source != "normalized"){
-    mSet_orig = mSet
-    mSet$dataSet$norm <- switch(input$pca_source,
+    mSet_pca = mSet
+    mSet_pca$dataSet$norm <- switch(input$pca_source,
                                 "pre-batch correction" = mSet$dataSet$prebatch,
                                 original = mSet$dataSet$proc)
-    pcaRes <- MetaboAnalystR::PCA.Anal(mSet)$analSet$pca # perform PCA analysis
-    mSet = mSet_orig
+    pcaRes <- MetaboAnalystR::PCA.Anal(mSet_pca)$analSet$pca # perform PCA analysis
     mSet$analSet$pca <- pcaRes  
   }else{
     mSet <- MetaboAnalystR::PCA.Anal(mSet) # perform PCA analysis
   }
+  return(mSet)
 }
 
 metshiICA <- function(mSet, input){
@@ -83,6 +96,7 @@ metshiUMAP <- function(mSet, input){
 }
 
 metshiGetEnrichInputTable <- function(mSet, input){
+  
   flattened <- list(getAllHits(mSet,
                                input$mummi_anal))
   
@@ -127,7 +141,27 @@ metshiGetEnrichInputTable <- function(mSet, input){
   return(tbl)
 }
 
-doEnrich <- function(input, tempfile, ppm){
+metshiMultirank <- function(input, mSet, lcl, multirank_yes){
+  analyses = unlist(multirank_yes$now$name)
+  print(analyses)
+  results = data.table::rbindlist(lapply(analyses, function(an){
+    hits = MetaboShiny::getAllHits(mSet, an)
+    hits$ranking = 1:nrow(hits)
+    hits$analysis=an
+    return(hits)
+  }))
+  results.avg <- results[,lapply(.SD, mean, na.rm=TRUE),by=`m.z`,.SDcols=c("ranking")]
+  results.avg <- results.avg[order(ranking, decreasing = F)]
+  results.avg$ranking <- rank(results.avg$ranking,ties.method = "average")
+  results.avg$group = "mean"
+  results$group = results$analysis
+  results.merged = rbind(results.avg,
+                         results[,c("m.z", "ranking", "group")])
+  mSet$analSet$multirank = list(result_table = results.merged)
+  mSet
+}
+
+doEnrich <- function(input, tempfile, ppm, lcl){
   
   tbl <- data.table::fread(tempfile)
   dataSet <- list()
@@ -146,7 +180,9 @@ doEnrich <- function(input, tempfile, ppm){
   enr_mSet$msgSet$msg.vec <- vector(mode = "character")
   enr_mSet$cmdSet <- vector(mode = "character")
   MetaboAnalystR:::.init.global.vars("mummichog")
-  shiny::showNotification("MetaboAnalyst R objects initialized ...")
+  try({
+    shiny::showNotification("MetaboAnalyst R objects initialized ...")
+  })
   
   hasP <- all(tbl$`p.value` == 0)
   hasT <- all(is.na(tbl$`t.score`))
@@ -161,7 +197,7 @@ doEnrich <- function(input, tempfile, ppm){
                                                          "yes",
                                                          0.02);
   
-  enr_mSet <- MetaboAnalystR::Read.PeakListData(enr_mSet, tmpfile);
+  enr_mSet <- MetaboAnalystR::Read.PeakListData(enr_mSet, tempfile);
   
   enr_mSet <- MetaboAnalystR::SanityCheckMummichogData(enr_mSet)
   enr_mSet <- MetaboAnalystR::Setup.AdductData(enr_mSet, input$mummi_adducts);
@@ -201,12 +237,15 @@ doEnrich <- function(input, tempfile, ppm){
                    tolower(add_db_cust$Ion_Name))
   match.values <- add_db_cust[hit.inx, ]
   sel.add <- nrow(match.values)
-  if (sel.add > 0) {
-    shiny::showNotification(paste("A total of ", sel.add, 
-                                  " adducts were successfully selected!", sep = ""))
-  }else{
-    shiny::showNotification("No adducts were selected!")
-  }
+  try({
+    if (sel.add > 0) {
+      shiny::showNotification(paste("A total of ", sel.add, 
+                                    " adducts were successfully selected!", sep = ""))
+    }else{
+      shiny::showNotification("No adducts were selected!")
+    }  
+  })
+  
   
   enr_mSet$add.map <- match.values
   
@@ -234,17 +273,9 @@ doEnrich <- function(input, tempfile, ppm){
                                                                                     1.007825, x)))))
     mw_modified.pos <- do.call(cbind, mass.user.pos)
     if(!is.null(mw_modified.pos)) colnames(mw_modified.pos) <- ion.name.pos
-    mw_modified <- list(mw_modified.neg, mw_modified.pos)
+    mw_modified <- list(mw_modified.neg, 
+                        mw_modified.pos)
     
-    if(use.rules){
-      mw_modified <- lapply(mw_modified, function(mw_adds){
-        for(i in 1:nrow(mw_adds)){
-          ok.adducts <- iden.vs.add[i,]$adduct
-          mw_adds[i, !(colnames(mw_adds) %in% ok.adducts)] <- 0
-        }
-        mw_adds
-      }) 
-    }
     names(mw_modified) <- c("neg", "pos")
     return(mw_modified)
   }
@@ -280,9 +311,53 @@ doEnrich <- function(input, tempfile, ppm){
   mummi.adducts <- new_adduct_mzlist(enr_mSet,
                                      mw = mummichog.lib$cpd.lib$mw)
   
+  cpds = mummichog.lib$cpd.lib$id
   mummi.adducts <- list(dpj_positive = mummi.adducts$pos,
                         positive = mummi.adducts$pos,
                         negative = mummi.adducts$neg)
+  
+  if(use.rules){
+    kegg_user_db = MetaDBparse::showAllBase(lcl$paths$db_dir, "kegg")
+    keep = data.table::as.data.table(kegg_user_db[kegg_user_db$identifier %in% cpds,])
+    setkey(keep, "identifier")
+    
+    adduct_rows = pbapply::pblapply(cpds, 
+                                   function(cpd){
+      row = keep[identifier == cpd]
+      if(nrow(row) > 0){
+        ext_info = MetaDBparse::searchRev(row$structure,
+                                          ext.dbname = "extended",
+                                          outfolder = lcl$paths$db_dir)
+        if(nrow(ext_info) > 0){
+          use_info = unique(ext_info[ext_info$isoprevalence == 100, c("adduct", "fullmz")])
+          use_info$identifier = cpd  
+          reshape2::dcast(use_info, identifier ~ adduct, value.var ="fullmz")  
+        }else{
+          data.table::data.table()
+        }
+      }else{
+        data.table::data.table()
+      }
+      })
+    adducts_from_db = data.table::rbindlist(adduct_rows, fill = T)
+    remaining_cpds = adducts_from_db$identifier
+    adducts_from_db$identifier=NULL
+    adducts_from_db[is.na(adducts_from_db)] <- -9999
+    # split in positive/negative
+    pos_cols = colnames(mummi.adducts$pos)
+    neg_cols = colnames(mummi.adducts$neg)
+    pos_adducts = adducts_from_db[,..pos_cols]
+    neg_adducts = adducts_from_db[,..neg_cols]
+    
+    mummi.adducts <- list(dpj_positive = pos_adducts,
+                          positive = pos_adducts,
+                          negative = neg_adducts)
+    
+    mummichog.lib$cpd.lib$id <- remaining_cpds
+    mummichog.lib$cpd.lib$name
+    print("in progress...")
+
+  }
   
   mummichog.lib$cpd.lib$adducts <- mummi.adducts
   cpd.tree <- list()
@@ -321,8 +396,6 @@ doEnrich <- function(input, tempfile, ppm){
   filenm <- "mummichog_matched_compound_all.csv"
   enr_mSet$dataSet$mumResTable <- data.table::fread(filenm)
   
-  flattened[[1]]$significant = flattened[[1]]$value < if(hasP) as.numeric(gsub(",",".",input$mummi_pval)) else 0.9
-  
   # names to compounds
   cpd2name <- data.table::data.table(Matched.Compound = mummichog.lib$cpd.lib$id,
                                      Compound.Name = mummichog.lib$cpd.lib$name)
@@ -353,3 +426,90 @@ metshiNetwork <- function(mSet, input){
                                order = useHits)
   return(mSet)
 }
+
+#' Calculate Cliff's delta values (for continuous data)
+#'
+#' @rdname cliffDelta
+#'
+#' @description Calculate effect sizes using Cliff's delta values for pairwise continuous variable
+#' comparisons (e.g. comparisons that would be done by a wilcox test or t-test)
+#'
+#' @param x A numeric vector for the 1st group of observations. Alternatively, a matrix, where
+#' comparisons will be performed by row.
+#' @param y Same as x but for the 2nd group of observations.
+#'
+#' @return A numeric vector of Cliff's delta values
+#' @export
+#'
+cliffDelta <- function (x, ...) {
+  UseMethod("cliffDelta", x)
+}
+
+#' @rdname cliffDelta
+#' @method cliffDelta default
+#' @export
+cliffDelta.default <- function(x, y, use.r.implementation=USE_CLIFF_DELTA_R){
+  
+  if(!is.numeric(x) | !is.numeric(y)){ stop('x and y must be numeric matrices') }
+  
+  if(!use.r.implementation){
+    cliffd(x,y)
+  } else {
+    signs <- sign(outer(x, y, FUN="-"))
+    sum(signs, na.rm=T) / length(signs)
+  }
+}
+
+#' @rdname cliffDelta
+#' @method cliffDelta matrix
+#' @export
+cliffDelta.matrix  <- function(x, y, use.r.implementation=USE_CLIFF_DELTA_R){
+  
+  if(ncol(x)!=ncol(y)){ stop('x and y must have the sample number of columns') }
+  x <- as.matrix(x); dimnames(x) <- NULL
+  y <- as.matrix(y); dimnames(y) <- NULL
+  
+  if(!is.numeric(x) & !is.logical(x)){ stop('x must be a numeric or logical matrix') }
+  if(!is.numeric(y) & !is.logical(y)){ stop('y must be a numeric or logical matrix') }
+  
+  if(!use.r.implementation){
+    ## Cpp implementation
+    ## Calculate cliff delta for every col between x and y
+    
+    unlist(pbapply::pblapply(1L:ncol(x), function(i){
+      #i=1
+      cliffd(x[,i],y[,i])
+    }), use.names=F)
+    
+  } else {
+    ## R implementation (~6-7x slower than C++ implementation)
+    n_comparisons <- nrow(x)*nrow(y)
+    
+    ## Rows of x are compared with cols of y
+    ## Therefore need to transpose
+    y <- t(y)
+    
+    ## For every row of x, calculate how many x values are larger than values in the y matrix
+    gt_sums <- rowSums(
+      pbapply::pbapply(x,1,function(i){
+        #i=x[1,]
+        rowSums(i > y)
+      })
+    )
+    
+    ## ... same for less than
+    lt_sums <- rowSums(
+      pbapply::pbapply(x,1,function(i){
+        rowSums(i < y)
+      })
+    )
+    
+    sign_sums <- gt_sums - lt_sums
+    sign_sums / n_comparisons
+  }
+}
+
+#' @rdname cliffDelta
+#' @method cliffDelta data.frame
+#' @export
+cliffDelta.data.frame <- cliffDelta.matrix

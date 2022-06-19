@@ -19,7 +19,9 @@ shiny::observe({
                                analysis = mSet$storage[[name]]$analSet
                                analysis_names = names(analysis)
                                # - - -
-                               exclude = c("tsne", "heatmap", "type", "enrich", "power", "network")
+                               exclude = c("tsne", "heatmap", "type", 
+                                           "enrich", "power", 
+                                           "network", "ml")
                                analysis_names <- setdiff(analysis_names, exclude)
                                if(length(analysis_names) == 0){
                                  return(data.table::data.table())
@@ -60,8 +62,9 @@ shiny::observe({
                              #}else{
                              #  lcl$vectors$analyses <<- c()
                              #}
-                             # ---
-                             lapply(c("mummi_anal", "heattable", "network_table", "ml_specific_mzs"), function(inputID){
+                             # --- everything that uses preexisting analyses ---
+                             lapply(c("mummi_anal", "heattable", "network_table", 
+                                      "ml_specific_mzs", "enrich_pathway_projection"), function(inputID){
                                shiny::updateSelectizeInput(session,
                                                            inputID, 
                                                            choices = {
@@ -78,8 +81,9 @@ shiny::observe({
                                                            }, server = T) 
                              })
                              # --- 
-                             venn_no$start <- report_no$start <- analyses_table
+                             venn_no$start <- report_no$start <- multirank_no$start <- analyses_table
                              venn_no$now <- venn_no$start
+                             multirank_no$now <- multirank_no$start
                              report_no$now <- report_no$start
                              
                              list()
@@ -92,7 +96,12 @@ shiny::observe({
                              } 
                              # summary table for papers
                              signif = 0.05
-                             signif_hits <- enrich$overview[enrich$overview[,"EASE"] <= signif,]
+                             if("EASE" %in% colnames(enrich$overview)){
+                               signif_hits <- enrich$overview[enrich$overview[,"EASE"] <= signif,]
+                             }else{
+                               print(head(enrich$overview))
+                               signif_hits <- enrich$overview[enrich$overview[,"p-value"] <= signif,]
+                             }
                              summary_table_blocks <- lapply(rownames(signif_hits), function(curr_pw){
                                pw_i <- which(mSet$analSet$enrich$path.nms == curr_pw)
                                cpds = unlist(mSet$analSet$enrich$path.hits[[pw_i]])
@@ -139,6 +148,16 @@ shiny::observe({
                              })
                              enrich$summary <- data.table::rbindlist(summary_table_blocks)
                              list()
+                           },
+                           multirank = {
+                             res = mSet$analSet$multirank$result_table
+                             res = res[group == "mean",]
+                             res$group = NULL
+                             res = as.data.frame(res)
+                             rownames(res) <- res$m.z
+                             res$m.z <- NULL
+                             list(multirank_tab = res[order(res$ranking,
+                                                            decreasing = F),,drop=F])
                            },
                            corr = {
                              res =if(is.null(mSet$analSet$corr$cor.mat)){
@@ -238,10 +257,13 @@ shiny::observe({
                                  data$res = list(data$res)
                                }
                                
+                               pos.class <- if(input$ml_plot_posclass == "placeholder") paste0("class", 
+                                                                                               Hmisc::capitalize(as.character(mSet$dataSet$cls[[1]]))) else input$ml_plot_posclass
+                              
                                ml_performance_rows = lapply(1:length(data$res), function(i){
                                  res = data$res[[i]]
                                  ml_performance = getMLperformance(res, 
-                                                                   pos.class = input$ml_plot_posclass,
+                                                                   pos.class = pos.class,
                                                                    x.metric=input$ml_plot_x,
                                                                    y.metric=input$ml_plot_y,
                                                                    ignore.training =  if(data$params$ml_perf_metr == "none") T else F)
@@ -349,8 +371,6 @@ shiny::observe({
                                mSet$analSet$combi <- NULL
                              }
                              res = as.data.frame(res)
-                             rownames(res) <- res$rn
-                             res$rn <- NULL
                              # set buttons to proper thingy
                              list(combi_tab = res)
                            },
@@ -363,6 +383,16 @@ shiny::observe({
                                mSet$analSet$fc <- NULL
                              }
                              list(fc_tab = res)
+                           },
+                           cliffd = {
+                             # if none found, give the below table...
+                             # save results to table
+                             res <- mSet$analSet$cliffd$sig.mat
+                             if(is.null(res)){
+                               res <- data.table::data.table("No significant hits found")
+                               mSet$analSet$cliffd <- NULL
+                             }
+                             list(cliffd_tab = res)
                            },
                            heatmap = {
                              NULL

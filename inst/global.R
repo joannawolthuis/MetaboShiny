@@ -431,7 +431,9 @@ vectors = list(
 )
 )
 
-gbl$vectors$kegg_pathways <- KEGGREST::keggList("pathway")
+try({
+  gbl$vectors$kegg_pathways <- KEGGREST::keggList("pathway")
+}, silent = T)
 gbl$vectors$db_categories$all <- gbl$vectors$db_list
 gbl$vectors$example_sizes <- file.size(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
 gbl$vectors$example_md5s <- tools::md5sum(list.files(gbl$paths$volumes[["Examples"]],full.names = T))
@@ -478,3 +480,32 @@ debug_lcl <- list()
 debug_input <- list()
 
 msg.vec <- c()
+
+#  cliff delta
+USE_CLIFF_DELTA_R <- TRUE
+tryCatch(
+  expr = {
+    Rcpp::cppFunction('double cliffd(NumericVector x, NumericVector y){
+         int len_x = x.size();
+         int len_y = y.size();
+
+         int sign_sum = 0;
+         for(int i = 0; i < len_x; i++){
+            for(int j = 0; j < len_y; j++){
+               if(x[i] < y[j]){
+                  sign_sum--;
+               } else if(x[i] > y[j]){
+                  sign_sum++;
+               }
+            }
+         }
+
+         return sign_sum / ((double)len_x*len_y);
+      }
+      ')
+  },
+  error = function(e){
+    warning('C++ version of cliff delta could not be compiled. Using R version')
+    USE_CLIFF_DELTA_R <<- TRUE
+  }
+)

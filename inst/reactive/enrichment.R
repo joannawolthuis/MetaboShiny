@@ -9,11 +9,14 @@ shiny::observeEvent(input$enrich_plot_pathway, {
                     mz = enrich$current$rn)  
     
     uniq_ids = unique(dt$id)
-    grey_nonsig = any(enrich$current$significant == "yes") & input$enrich_sig_only
     cpds = unique(dt$id)
     
+    vals_for_projection <- getAllHits(mSet, 
+                                      input$enrich_pathway_projection,
+                                      randomize = F)
+    
     mzs_withvals = merge(enrich$current[,c("rn", "identifier")], 
-                         mSet$analSet$enrich$orig.input, by.x="rn", by.y="m.z")
+                         vals_for_projection, by.x="rn", by.y="m.z")
     
     if(!("statistic" %in% names(mzs_withvals))){
       mzs_withvals$statistic = c(1)
@@ -23,15 +26,13 @@ shiny::observeEvent(input$enrich_plot_pathway, {
                                                       function(cpd_id){
       mz_rows = mzs_withvals[identifier == cpd_id]
       if(nrow(mz_rows) > 0){
-        if(grey_nonsig){
-          mz_rows$stastistic <- ifelse(mz_rows$significant, 1, 0)
-        }else{
-          mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
-        }
+        mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
+        
         all.dat = data.table::data.table(id = cpd_id,
+                                         mz = mz_rows$rn,
                                          value = mz_rows$stastistic)
-        reshape2::dcast(unique(all.dat),
-                        formula = id ~ value)  
+        reshape2::dcast(all.dat,
+                        formula = id ~ mz, value.var = "value")  
       }else{
         data.table::data.table()
       }
@@ -114,6 +115,5 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       
       list(src = filename)
     },deleteFile = T)
-    #setwd(old_dir)
   }
 })

@@ -808,6 +808,58 @@ ggPlotFC <- function(mSet, cf, n=20, topn=NULL){
   p
 }
 
+#' @title Generate Cliff's Delta analysis plot
+#' @description Function to generate ggplot or plotly plot for Cliff's Delta analysis
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{geom_abline}},\code{\link[ggplot2]{scale_continuous}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotCliffD
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_point aes geom_vline scale_y_continuous scale_colour_gradientn
+ggPlotCliffD <- function(mSet, cf, n=20, topn=50){
+  
+  profile <- data.table::as.data.table(mSet$analSet$cliffd$cliffd[1:topn],keep.rownames = T)
+  
+  if(nrow(profile)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = T)]
+    profile = profile[1:min(topn, nrow(profile)),]
+  }
+  
+  colnames(profile) <- c("m/z", "cliffD")
+  profile$Peak <- c(1:nrow(profile))
+  scaleFUN <- function(x) sprintf("%.0f", x)
+  # ---------------------------
+  p <- ggplot2::ggplot(data=profile) +
+    ggplot2::geom_point(ggplot2::aes(y=Peak, 
+                                     x=cliffD, 
+                                     color=cliffD, 
+                                     key=`m/z`,
+                                     text=`m/z`)) +
+    ggplot2::geom_segment(aes(y = Peak, 
+                              yend = Peak,
+                              color=cliffD,
+                              x = 0,
+                              xend = cliffD)) +
+    ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
+    ggplot2::scale_y_continuous(labels=scaleFUN) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) + 
+    ggplot2::coord_flip()
+  
+  p
+}
+
 #' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
 ggPlotCombi <- function(mSet,
                         cf,
@@ -818,7 +870,7 @@ ggPlotCombi <- function(mSet,
                         topn = 20,
                         add_mz_labels=F){
   
-  dt = data.table::as.data.table(mSet$analSet$combi$sig.mat)
+  dt = data.table::as.data.table(mSet$analSet$combi$sig.mat, keep.rownames=T)
   anal1_trans = mSet$analSet$combi$trans$x
   anal2_trans = mSet$analSet$combi$trans$y
   
@@ -828,36 +880,17 @@ ggPlotCombi <- function(mSet,
   anal1_col = colnames(dt)[2]
   anal2_col = colnames(dt)[3]
   
-  colnames(dt) <- c("m/z", "x", "y")#anal1_col, anal2_col)
-  dt$col <- abs(dt[,2] * dt[,3])
+  colnames(dt) <- c("m/z", "x", "y", "distance")
   dt$significant <- "YES"
-  
-  if(length(mSet$analSet$combi$all.vals$x) > 0 & length(mSet$analSet$combi$all.vals$y) > 0){
-    x.all = mSet$analSet$combi$all.vals$x
-    x.tbl = data.table::data.table("m/z" = names(x.all),
-                                   x = x.all)
-    y.all = mSet$analSet$combi$all.vals$y
-    y.tbl = data.table::data.table("m/z" = names(y.all),
-                                   x = y.all)
-    dt.merged = merge(x.tbl, y.tbl, by.x="m/z", by.y="m/z")
-    
-    dt.all = data.table::data.table("m/z" = dt.merged$`m/z`,
-                                    x = dt.merged$x.x,
-                                    y = dt.merged$x.y,
-                                    col = c(0),
-                                    significant = "NO")
-    dt.all[`m/z` %in% dt$`m/z`]$significant <- "YES"
-    dt = dt.all
-  }
-  
+
   scaleFUN <- function(x) sprintf("%.2f", x)
   
   anal1_col = if(anal1_trans != "none") paste0(anal1_trans,"(", anal1_col,")") else anal1_col
   anal2_col = if(anal2_trans != "none") paste0(anal2_trans,"(", anal2_col,")") else anal2_col
   
-  dt$V = dt$x * dt$y
-  dt = dt[order(abs(dt$V),decreasing = T),]
-  
+  print(head(dt))
+  dt = dt[order(abs(dt$distance),decreasing = T),]
+
   if(only_color_specific){
     dt$significant <- c("NO")
     dt$significant[1:topn] <- c("YES")
@@ -867,7 +900,7 @@ ggPlotCombi <- function(mSet,
     ggplot2::ggplot() +
       ggplot2::geom_point(data=dt, ggplot2::aes(x=x,
                                                 y=y,
-                                                fill=abs(V),
+                                                fill=distance,
                                                 text=`m/z`,
                                                 key=`m/z`),
                           linesize = 0.5,
@@ -894,10 +927,12 @@ ggPlotCombi <- function(mSet,
       ggplot2::xlab(paste0(anal1, ": ", anal1_col)) + 
       ggplot2::ylab(paste0(anal2, ": ", anal2_col)) 
     if(add_mz_labels){
-      p + ggrepel::geom_label_repel(data = dt[1:topn,], 
+      label_dat = dt[1:topn,]
+      print(head(label_dat))
+      p <- p + ggrepel::geom_label_repel(data = label_dat, 
                                     mapping = ggplot2::aes(label = `m/z`, x = x, y = y),
-                                    max.overlaps = 30,
-                                    force = 20,size=3) 
+                                    max.overlaps = Inf,
+                                    force = 20,size=4)
     }
     p
   }
@@ -1106,6 +1141,8 @@ ggPlotMLMistakes <- function(predictions,
 ggPlotCurves = function(ml_performance, cf = rainbow){
   
   perf.long = ml_performance$coords
+  perf.long = perf.long[grep("Fold", `Test set`, invert = T)]
+  perf.long[`Test set` == "TrainSingleCurve"]$`Test set` = "FoldAll"
   
   train_runs = perf.long[grepl("Fold", `Test set`) & !(shuffled)]
   trainAUCs = sapply(split(train_runs, list(train_runs$run, 
@@ -1223,9 +1260,10 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
                                    plot = list(dens)) 
       }else{
         print("Need more shuffled runs for p-value...")
-        lbl = "NA"
-        AUC_txt = "NA"
+        #lbl = "NA"
+        AUC_txt = paste0("mean AUC: ", sprintf("%.4s", mean(AUCs)))
       }
+      print(AUCs)
     })
     if("Test" %in% shuffle_data$`Test set`){
       needs.ci$shuffled = shuffle_data[`Test set` == "Test"]
@@ -1291,21 +1329,6 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   }
   
   myplot <- ggplot2::ggplot(data = plot_data) +
-    ggplot2::geom_step(mapping = aes(x = x,
-                                     y = y,
-                                     color = category,
-                                     group = curve_number),
-                       alpha=0.2) +
-    #ggplot2::geom_ribbon(data = ribbon_data, aes(x = x, 
-    #                                             ymin=ymin, 
-    #                                             ymax=ymax,
-    #                                             color = category,
-    #                                             fill = category),
-    #                     alpha = 0.1)+
-    ggplot2::stat_smooth(mapping = aes(x = x, 
-                                       y = y, 
-                                       color = category),
-                         geom = "step", cex = 1)+
     ggplot2::xlab(ml_performance$names$x) + 
     ggplot2::ylab(ml_performance$names$y) + 
     ggplot2::scale_x_continuous(breaks = seq(0,1,0.25),
@@ -1319,8 +1342,31 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
     ggplot2::scale_color_manual(values = colMap) +
     ggplot2::scale_fill_manual(values = colMap) +
     ggplot2::annotate(geom = "text", label = AUC_txt,
-                      x = 0.82, y = 0.05, size=7, lineheight = .5) +
+                      x = 0.82, y = 0.05, 
+                      size=7, lineheight = .5) +
     ggplot2::expand_limits(x = 0, y = 0)
+  
+  if(max(plot_data$curve_number) > 4){
+    
+    myplot <- myplot + ggplot2::geom_step(mapping = aes(x = x,
+                                                        y = y,
+                                                        color = category,
+                                                        group = curve_number,
+                                                        key = curve_number),
+                                          alpha=0.2) +
+      ggplot2::stat_smooth(mapping = aes(x = x, 
+                                                          y = y, 
+                                                          color = category),
+                                            geom = "step", 
+                                            cex = 1)
+  }else{
+    myplot <- myplot + ggplot2::geom_step(mapping = aes(x = x,
+                                                        y = y,
+                                                        color = category,
+                                                        group = curve_number,
+                                                        key = curve_number),
+                                          alpha=1, cex=1)
+  }
   
   if(nrow(inset.df)>0){
     myplot = myplot +
@@ -2473,6 +2519,8 @@ ggPlotMummi <- function(mSet, cf,
   if(!show_nonsig | plot_mode == "gsea"){
     df = df[df$pval <= pthresh,]
   }
+  
+  print(head(df))
   p <- switch(plot_mode, 
               gsea = ggplot2::ggplot(df) + ggplot2::geom_bar(ggplot2::aes(y = path.nms, 
                                                                           x = x, 
@@ -2489,10 +2537,12 @@ ggPlotMummi <- function(mSet, cf,
                                                                                 x = x, 
                                                                                 size = `radi.vec`, 
                                                                                 fill = `radi.vec`,
+                                                                                #color = `radi.vec`,
                                                                                 text = path.nms,
                                                                                 key = path.nms),
                                                                    shape = 21,
-                                                                   color = "black") +
+                                                                   color = "black"
+                                                                   ) +
                 ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, cex=0.3) +
                 ggrepel::geom_label_repel(data = df[df$y >= logpthresh,],
                                           mapping = ggplot2::aes(x = x, 
@@ -2508,4 +2558,75 @@ ggPlotMummi <- function(mSet, cf,
                 ggplot2::scale_fill_gradientn(colours = cf(20)) +
                 ggplot2::scale_y_continuous(labels=scaleFUN))
   p
+}
+
+#' @title Generate multirank plot
+#' @description Function to generate ggplot or plotly plot for multirank
+#' @param mSet mSet object
+#' @param lcl lcl object including aesthetics
+#' @param cf Function to get plot colors from
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[ggplot2]{labs}},
+#'  \code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotMultirank
+#' @export 
+#' @importFrom ggplot2 ylab xlab scale_colour_gradientn
+ggPlotMultirank <- function(mSet, cf, 
+                            type = "bump", 
+                            topn = 1000){
+  print("test multirank plotting")
+  scaleFUN <- function(x) sprintf("%.0f", x)
+  for_plot = mSet$analSet$multirank$result_table
+  data.table::setkeyv(for_plot, cols = c("m.z", "group"))
+  for_plot_mean = for_plot[group == "mean"]
+  for_plot_mean$ranking.mean = for_plot_mean$ranking
+  for_plot_nomean = for_plot[group != "mean"]
+  for_plot = merge(for_plot_nomean, 
+                   for_plot_mean[,c("m.z", "ranking.mean")], by = "m.z")
+  for_plot = rbind(for_plot, for_plot_mean)
+  included_mz = for_plot_mean[group == "mean" & ranking <= topn]$`m.z`
+  for_plot = for_plot[`m.z` %in% included_mz]
+  for_plot$group = as.factor(for_plot$group)
+  for_plot$group = relevel(for_plot$group, "mean")
+  # check if same prefix
+  preflength = sapply(3:length(levels(for_plot$group)), function(i){
+    pref = Biostrings::lcprefix(levels(for_plot$group)[i], 
+                                levels(for_plot$group)[i-1])
+    pref
+  })
+  
+  if(T){#length(unique(preflength)) == 1){
+    if(preflength[1] > 0){
+      levels(for_plot$group)[2:length(levels(for_plot$group))] <- stringr::str_sub(levels(for_plot$group)[2:length(levels(for_plot$group))], 
+                                                 start = preflength[1] + 1, 
+                                                 end = stringr::str_length(levels(for_plot$group)[2:length(levels(for_plot$group))]))  
+    }
+  }
+  # check if same suffix
+  suflength = sapply(3:length(levels(for_plot$group)), function(i){
+    Biostrings::lcsuffix(levels(for_plot$group)[i], 
+                         levels(for_plot$group)[i-1])
+  })
+  if(length(unique(suflength)) == 1){
+    if(suflength[1] > 0){
+      levels(for_plot$group)[2:length(levels(for_plot$group))] <- sapply(levels(for_plot$group)[2:length(levels(for_plot$group))], function(name){
+        len = stringr::str_length(name)
+        suffix = stringr::str_sub(name, len - suflength[1] + 1, len)
+        stringr::str_sub(name, start = 1, end = len - suflength[1])
+      })  
+    }
+  }
+  
+  p=ggplot2::ggplot(data = for_plot[group != "mean"], ggplot2::aes(x = group, y = ranking, group=`m.z`)) +
+    ggplot2::geom_line(ggplot2::aes(color = ranking.mean), size = 1) +
+    ggplot2::geom_point(ggplot2::aes(color = ranking.mean), size = 5) +
+    ggplot2::geom_text(#data = for_plot[group == levels(group)[2]], 
+              mapping=aes(label=ranking.mean),
+              size = 3,color="white",check_overlap = T)+
+    ggplot2::scale_y_reverse(breaks = seq(1, max(for_plot$ranking), length.out = 20), 
+                    position = "right", 
+                    labels=scaleFUN) +
+    ggplot2::scale_color_gradientn(colors = cf(nrow(for_plot))) 
+  return(p)
 }

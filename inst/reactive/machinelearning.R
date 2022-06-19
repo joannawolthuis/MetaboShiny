@@ -77,23 +77,42 @@ shiny::observe({
 
 shiny::observeEvent(input$ml_train_ss, {
   keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
-  subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-  lcl$vectors$ml_train <<- list(input$subset_var,
-                                input$subset_group)
+  if(length(lcl$lists$ml_train) > 0){
+    lcl$lists$ml_train[[length(lcl$lists$ml_train) + 1]] <<- list(input$subset_var,
+                                                                  input$subset_group)
+    subset.name <- paste0(sapply(lcl$lists$ml_train, function(ss_pair){
+      paste(ss_pair[1], ss_pair[2], sep = "-")
+    }),collapse = "\n")
+
+  }else{
+    subset.name <- paste(input$subset_var, 
+                         input$subset_group, sep = "-")
+    lcl$lists$ml_train <<- list(list(input$subset_var,
+                                     input$subset_group))
+  }
   output$ml_train_ss <- shiny::renderText(subset.name)
 })
 
 shiny::observeEvent(input$reset_ml_train, {
   subset.name <- "all"
-  lcl$vectors$ml_train <<- NULL
+  lcl$lists$ml_train <<- list()
   output$ml_train_ss <- shiny::renderText(subset.name)
 })
 
 shiny::observeEvent(input$ml_test_ss, {
   keep.samples <- mSet$dataSet$covars$sample[which(mSet$dataSet$covars[[input$subset_var]] %in% input$subset_group)]
-  subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
-  lcl$vectors$ml_test <<- list(input$subset_var,
-                               input$subset_group)
+  if(length(lcl$lists$ml_test) > 0){
+    lcl$lists$ml_test[[length(lcl$lists$ml_test) + 1]] <<- list(input$subset_var,
+                                                               input$subset_group)
+    subset.name <- paste0(sapply(lcl$lists$ml_test, function(ss_pair){
+      paste(ss_pair[1], ss_pair[2], sep = "-")
+      }),collapse = "\n")
+    
+  }else{
+    subset.name <- paste(input$subset_var, input$subset_group, sep = "-")
+    lcl$lists$ml_test <<- list(list(input$subset_var,
+                                     input$subset_group))
+  }
   output$ml_test_ss <- shiny::renderText(subset.name)
 })
 
@@ -107,8 +126,8 @@ shiny::observeEvent(input$queue_ml, {
   imp = shiny::isolate(shiny::reactiveValuesToList(input))
   ml_args = imp[grep(names(imp),pattern = "^ml_")]
   ml_args = ml_args[grep("clicked|current|rows|ss|tab_|mistake|curve|results", names(ml_args),invert = T)]
-  ml_args$ml_train_subset <- lcl$vectors$ml_train
-  ml_args$ml_test_subset <- lcl$vectors$ml_test
+  ml_args$ml_train_subset <- lcl$lists$ml_train
+  ml_args$ml_test_subset <- lcl$lists$ml_test
   # save to queue
   ml_queue$jobs[[ml_args$ml_name]] <- ml_args
   # new random name for next job? TODO: only do if user not specifying their own

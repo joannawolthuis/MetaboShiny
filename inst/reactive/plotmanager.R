@@ -4,7 +4,7 @@ plotmanager <- shiny::reactiveValues()
 # preload pca/plsda
 shiny::observe({
   if(is.null(plotmanager$make)){
-    NULL # if not reloading anything, nevermind
+    NULL # if not reloading anything, nevermin
   }else{
     if(!is.null(mSet)){
       success = F
@@ -68,13 +68,13 @@ shiny::observe({
                 whichAnal <- stringr::str_match(plotName, "pca|plsda|tsne|umap|ica")[,1]
                 is3D <- !input[[paste0(whichAnal, "_2d3d")]]
               }else{
-                is3D <- plotName %in% c("network", 
-                                        "network_heatmap")
+                is3D <- plotName %in% c("network")
               }
               
               if(!is.null(session$clientData[[empty]])){
                 if(!(plotName %in% c("network",
-                                     "wordcloud"))){
+                                     "wordcloud",
+                                     "ml_roc"))){
                   try({
                     if(length(myplot) > 1){
                       if(plotName == "heatmap_plot") myplot$heatmap_static() else{
@@ -91,7 +91,7 @@ shiny::observe({
                           myY = rlang::quo_get_expr(myplot$mapping[['y']])
                           myText = rlang::quo_get_expr(myplot$mapping[['text']])
                           myCol = rlang::quo_get_expr(myplot$mapping[['colour']])
-                          flip = grepl("tt|fc|aov|var|samp|corr", plotName)
+                          flip = grepl("tt|fc|aov|var|samp|corr|cliffd", plotName)
                           
                           if(length(myplot$data) == 0){
                             myplot$data = myplot$layers[[1]]$data  
@@ -117,17 +117,23 @@ shiny::observe({
                       })  
                     }
                   }, silent = F)
-                  plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
-                                     plotName), collapse="_") 
-                  if(grepl(x=plotFn, "ml")){
-                    plotFn <- paste(plotFn, mSet$analSet$ml$last$method, mSet$analSet$ml$last$name, sep = "_")
-                  }
+                }
+                
+                plotFn <- paste0(c(gsub(":|,:", "_", mSet$settings$cls.name), 
+                                   plotName), collapse="_") 
+                if(grepl(x=plotFn, "ml")){
+                  plotFn <- paste(plotFn, 
+                                  mSet$analSet$ml$last$method, 
+                                  mSet$analSet$ml$last$name, sep = "_")
                 }
                 
                 output[[paste0(plotName, "_interactive")]] <- 
                   
                   if(plotName == "network"){
-                    visNetwork::renderVisNetwork(myplot)
+                    print("!network change")
+                    visNetwork::renderVisNetwork({
+                      myplot %>% visNetwork::visExport(type="png", name=plotFn, label="download png")
+                      })
                   }else if(plotName == "wordcloud"){
                     wordcloud2::renderWordcloud2(myplot)
                   }else{
