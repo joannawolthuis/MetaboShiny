@@ -43,15 +43,16 @@ shiny::observe({
               if(plotName != "network"){
                 list(conditionalPanel(
                   condition = 'input.ggplotly == true',
-                  plotly::plotlyOutput(paste0(plotName, "_interactive"))),#, height = "100%")) ,
-                  conditionalPanel(
-                    condition = 'input.ggplotly == false',
-                    list(fluidRow(align="right",
-                                  downloadButton(outputId = paste0("download_", plotName),
-                                                 label = icon("download"))),
-                         plotOutput(plotName)#, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
-                    )
-                  ))
+                  plotly::plotlyOutput(paste0(plotName, "_interactive"))
+                ),
+                conditionalPanel(
+                  condition = 'input.ggplotly == false',
+                  list(fluidRow(align="right",
+                                downloadButton(outputId = paste0("download_", plotName),
+                                               label = icon("download"))),
+                       plotOutput(plotName)#, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
+                  )
+                ))
               }else{
                 visNetwork::visNetworkOutput(paste0(plotName, "_interactive"))
                                              #,height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)

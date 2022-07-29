@@ -288,13 +288,23 @@ doEnrich <- function(input, tempfile, ppm, lcl){
   # ==== BUILD CUSTOM DB HERE ====
   
   map_id = input$mummi_org
+
   lib_name <- paste0(map_id, "_kegg")
   file_name <- paste0(lib_name, ".qs")
   
   if(!file.exists(file_name)){
     mummichog.lib <- build.enrich.KEGG(map_id)
     qs::qsave(mummichog.lib, file = file_name)
-  }
+  }  
+  
+  
+  lib_name <- paste0(map_id, "_kegg")
+  file_name <- paste0(lib_name, ".qs")
+  
+  if(!file.exists(file_name)){
+    mummichog.lib <- build.enrich.KEGG(map_id)
+    qs::qsave(mummichog.lib, file = file_name)
+  }  
   
   mummichog.lib = qs::qread(file_name)
   

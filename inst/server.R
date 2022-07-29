@@ -6,7 +6,7 @@ function(input, output, session) {
   library(plotly)
   library(ggplot2)
   library(MetaboShiny)
-  library(MetaDBparse)
+  #library(MetaDBparse)
   library(plyr)
   library(dplyr)
   
