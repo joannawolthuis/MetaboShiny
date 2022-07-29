@@ -363,6 +363,20 @@ shiny::observe({
                              # set buttons to proper thingy
                              list(tt_tab = res)
                            },
+                           proda = {
+                             # save results to table
+                             res <- as.data.frame(mSet$analSet$proda$tt_res)
+                             rownames(res) <- res$name
+                             res$name <- NULL
+                             colnames(res)[1:2] <- c("p-value", "adj. p-value")
+                             if(is.null(res)){
+                               res <- data.table::data.table("No significant hits found")
+                               mSet$analSet$proda <- NULL
+                             }
+                             
+                             # set buttons to proper thingy
+                             list(proda_tab = res)
+                           },
                            combi = {
                              # save results to table
                              res <- mSet$analSet$combi$sig.mat

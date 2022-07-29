@@ -39,6 +39,7 @@ shiny::observeEvent(plotly::event_data("plotly_click", priority = "event"), {
                      "ml",
                      "plsda", 
                      "fc", 
+                     "proda",
                      'cliffd',
                      "rf", 
                      "aov", 

@@ -5,7 +5,6 @@ function(input, output, session) {
   library(data.table)
   library(plotly)
   library(ggplot2)
-  library(SPARQL)
   library(MetaboShiny)
   library(MetaDBparse)
   library(plyr)
@@ -625,7 +624,8 @@ beep = no')
       list("dimred", "ica"),#18
       list("overview", "featsel"),#19,
       list("permz", "cliffd"),#20,
-      list("overview", "multirank")#21
+      list("overview", "multirank"),#21,
+      list("permz", "proda")#22
     )
     # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
     # then show the relevent tabs
@@ -633,7 +633,7 @@ beep = no')
     if(is.null(interface$mode)){
       show.tabs <- hide.tabs[1]
     }else if(interface$mode == '1fb'){
-      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21)]
+      show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22)]
       shiny::updateSelectInput(session, "ml_method",
                                selected = "rf",
                                choices = as.list(gbl$constants$ml.models))
@@ -870,10 +870,14 @@ beep = no')
                 "enrich", "network", "power",
                 "umap", "ica", "featsel",
                 "cliffd",
-                "multirank")
+                "multirank",
+                "proda")
   
   lapply(analyses, function(an){
+    
     shiny::observeEvent(input[[paste0("do_", an)]], {
+      print("running:")
+      print(an)
       try({
         statsmanager$calculate <- c(statsmanager$calculate, an)
         shinyjs::show(selector = paste0("div.panel[value=collapse_", an, "_tables]"))

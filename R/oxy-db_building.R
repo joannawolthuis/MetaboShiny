@@ -50,10 +50,12 @@ getMissing <- function(peakpath,
       mzs = cols[3:length(cols)]
       totalMissing <- rep(0, length(mzs))
       names(totalMissing) = mzs
+      samps_in_peaklist = c()
       pbapply::pbsapply(2:nrow, function(i){
         line = readLines(con, n = 1) # empty
         splRow = stringr::str_split(line, pattern=",")[[1]]
         sampName = splRow[1]
+        samps_in_peaklist=c(samps_in_peaklist, sampName)
         splRow = splRow[3:length(splRow)]
         isMissing = splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow)
         totalMissing[isMissing] <<- totalMissing[isMissing] + 1
@@ -97,7 +99,7 @@ import.pat.csvs <- function(metapath,
                             wipe.regex = ".*_",
                             missperc.mz = 99,
                             missperc.samp = 100,
-                            missList = c(pos=c(),neg=c()),
+                            missList = c(per_mz=c(),per_samp=c()),
                             roundMz = T,
                             batchcorr=F){
   ppm = as.numeric(ppm)
@@ -112,6 +114,7 @@ import.pat.csvs <- function(metapath,
                             replacement = "", 
                             perl=T)
     metadata = unique(metadata[, ..keep.cols])
+    
     if(!("individual" %in% colnames(metadata))) metadata$individual <- metadata$sample
     meta_col_order = colnames(metadata)
     #meta_col_order = meta_col_order[meta_col_order != "sample"]
@@ -171,8 +174,8 @@ import.pat.csvs <- function(metapath,
     
     print(paste("Importing", ionMode, "mode peaks!"))
     
-    if(length(missList[[ionMode]]) > 0){
-      missCounts = missList[[ionMode]]
+    if(length(missList$per_mz[[ionMode]]) > 0){
+      missCounts = missList$per_mz[[ionMode]]
     }else{
       missCounts = getMissing(peakpath)
     }

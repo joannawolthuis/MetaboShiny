@@ -705,6 +705,64 @@ ggPlotTT <- function(mSet, cf, n=20, topn=NULL){
   p
 }
 
+#' @title Generate T-TEST plot
+#' @description Function to generate ggplot or plotly plot for T-TEST
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT or PLOTLY object(s)
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}},\code{\link[ggplot2]{geom_point}},\code{\link[ggplot2]{aes}},\code{\link[ggplot2]{scale_colour_gradient}}
+#' @rdname ggPlotProDA
+#' @export 
+#' @importFrom data.table as.data.table
+#' @importFrom shiny showNotification
+#' @importFrom ggplot2 ggplot geom_point aes scale_colour_gradientn
+ggPlotProDA <- function(mSet, cf, n=20, topn=NULL){
+  profile <- data.table::data.table(rn = mSet$analSet$proda$tt_res$name,
+                                    V2 = mSet$analSet$proda$tt_res$adj_pval)
+  
+  profile$`-log(p)` <- -log10(profile$V2)
+  if(nrow(profile)==0){
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+  
+  if(!is.null(topn)){
+    profile = profile[order(abs(V2), decreasing = F)]
+    profile = profile[1:min(topn, nrow(profile)),]
+  }
+  
+  profile[,2] <- round(profile[,2], digits = 2)
+  profile[,3] <- round(profile[,3], digits = 2)
+  profile$Peak <- c(1:nrow(profile))
+  colnames(profile)[1:2] <- c("m/z", "adj. p-value")
+  profile[["-log(p)"]] <- as.numeric(sprintf("%.1f", profile[["-log(p)"]]))
+  
+  xaxis = seq(0,600, 50)
+  
+  # ---------------------------
+  
+  p = ggplot2::ggplot() +
+    ggplot2::geom_point(data=profile,ggplot2::aes(y=Peak,
+                                                  x=`-log(p)`,
+                                                  text=`m/z`,
+                                                  color=`-log(p)`, 
+                                                  key=`m/z`),
+                        size=2.5) +
+    ggplot2::geom_segment(data=profile,aes(y = Peak,
+                                           yend = Peak,
+                                           color=`-log(p)`,
+                                           x = 0,
+                                           xend = `-log(p)`)) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) +
+    ggplot2::coord_flip()
+  #ggplot2::scale_y_continuous()
+  p
+}
+
 #' @title Generate pattern analysis plot
 #' @description Function to generate ggplot or plotly plot for pattern analysis
 #' @param mSet mSet object

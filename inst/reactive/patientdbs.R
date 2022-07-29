@@ -53,21 +53,21 @@ shiny::observeEvent(input$ms_modes, {
 
 # create reactive object
 # display should be: "Mz left: 100/120000
-missValues <- shiny::reactiveValues(pos = c(),
-                                    neg = c())
+missValues <- shiny::reactiveValues(per_mz=list(),
+                                    per_samp=list())
 
 output$missMzRatio <- shiny::renderUI({
-  if(length(missValues$pos) > 0){
-    posTotal = length(missValues$pos$missPerc)
-    posPerc = missValues$pos$missPerc/missValues$pos$nrows * 100
+  if(length(missValues$per_mz$pos) > 0){
+    posTotal = length(missValues$per_mz$pos$missPerc)
+    posPerc = missValues$per_mz$pos$missPerc/missValues$per_mz$pos$nrows * 100
     posKeep = length(which(posPerc < input$perc_limit_mz))
     posText = paste0("Remaining (+): ", posKeep, " / ", posTotal)
   }else{
     posText = NULL
   }
-  if(length(missValues$neg) > 0){
-    negTotal = length(missValues$neg$missPerc)
-    negPerc = missValues$neg$missPerc/missValues$neg$nrows * 100
+  if(length(missValues$per_mz$neg) > 0){
+    negTotal = length(missValues$per_mz$neg$missPerc)
+    negPerc = missValues$per_mz$neg$missPerc/missValues$per_mz$neg$nrows * 100
     negKeep = length(which(negPerc < input$perc_limit_mz))
     negText = paste0("Remaining (-):", negKeep, " / ", negTotal)
   }else{
@@ -78,13 +78,13 @@ output$missMzRatio <- shiny::renderUI({
 })
 
 output$missMzPlot <- shiny::renderPlot({
-  if(length(missValues$pos) > 0 | length(missValues$neg) > 0){
-    # plot(density(missValues$pos),col="blue",main="Missing value distribution",xlab = "% missing", lwd=2)
-    # lines(density(missValues$neg),col="red",lwd=2)
+  if(length(missValues$per_mz$pos) > 0 | length(missValues$per_mz$neg) > 0){
+    # plot(density(missValues$per_mz$pos),col="blue",main="Missing value distribution",xlab = "% missing", lwd=2)
+    # lines(density(missValues$per_mz$neg),col="red",lwd=2)
     # abline(v = input$perc_limit_mz, col="black", lwd=1.5, lty=2)
     # text(x = input$perc_limit_mz, y = 0.5, "Current threshold",pos = 4,cex = 1.5)  
-    posPerc = if(length(missValues$pos$missPerc) > 0) missValues$pos$missPerc/missValues$pos$nrows * 100 else c()
-    negPerc = if(length(missValues$neg$missPerc) > 0) missValues$neg$missPerc/missValues$neg$nrows * 100 else c()
+    posPerc = if(length(missValues$per_mz$pos$missPerc) > 0) missValues$per_mz$pos$missPerc/missValues$per_mz$pos$nrows * 100 else c()
+    negPerc = if(length(missValues$per_mz$neg$missPerc) > 0) missValues$per_mz$neg$missPerc/missValues$per_mz$neg$nrows * 100 else c()
     
     data = data.table::data.table(variable = c(rep("pos", length(posPerc)),
                                                rep("neg", length(negPerc))),
@@ -202,22 +202,7 @@ shiny::observeEvent(input$create_csv,{
       
       hasPos = "pos" %in% input$ms_modes
       hasNeg = "neg" %in% input$ms_modes
-      
-      # if(interactive()){
-      #   ppm = input$ppm
-      #   pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
-      #   negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()
-      #   metapath = shinyFiles::parseFilePaths(gbl$paths$volumes, input$metadata)$datapath
-      #   wipe.regex = input$wipe_regex
-      #   missperc.mz = input$perc_limit_mz
-      #   missperc.samp = input$perc_limit_samp
-      #   missList = missValues
-      #   csvpath = lcl$paths$csv_loc
-      #   overwrite = T
-      #   inshiny=F
-      #   roundMz=input$roundMz  
-      # }
-      
+  
       # FOR EXAMPLE DATA: "(^\\d+?_)|POS_|NEG_"
       pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
       negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()

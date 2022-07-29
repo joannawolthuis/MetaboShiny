@@ -72,6 +72,7 @@ shiny::observeEvent(input$initialize, {
                                        excl.cond = c("batch",
                                                      "injection",
                                                      "sample",
+                                                     "individual",
                                                      "sampling_date"), 
                                        min.lev = 2)
       
@@ -115,8 +116,8 @@ shiny::observeEvent(input$initialize, {
       
       # if QC present, only keep QCs that share batches with the other samples (may occur when subsetting data/only loading part of the samples)
       if(any(grepl("QC", metshiCSV$sample)) & batch_corr){
-        metshiCSV <- MetaboShiny::removeUnusedQC(metshiCSV,
-                                                 metshiCSV[,..exp.vars, with=FALSE])
+        metshiCSV <- removeUnusedQC(metshiCSV,
+                                    metshiCSV[,..exp.vars, with=FALSE])
       }
       
       shiny::setProgress(session=session, value= .4)
@@ -155,7 +156,7 @@ shiny::observeEvent(input$initialize, {
       
       anal.type <<- "stat"
       
-      mSet$dataSet$paired <-  mSet$dataSet$ispaired <- mSet$settings$ispaired <- F
+      mSet$dataSet$paired <- mSet$dataSet$ispaired <- mSet$settings$ispaired <- F
       
       # load new csv into empty mSet!
       mSet <- MetaboAnalystR::Read.TextData(mSet,
@@ -167,6 +168,7 @@ shiny::observeEvent(input$initialize, {
       
       mSet$metshiParams <- list(
         filt_type = input$filt_type,
+        default_condition = condition,
         miss_type = input$miss_type,
         norm_type = input$norm_type,
         trans_type = input$trans_type,
@@ -182,10 +184,14 @@ shiny::observeEvent(input$initialize, {
         rf_norm_method = if(input$rf_norm_method) "ranger" else "rf",
         miss_perc = input$miss_perc_2,
         miss_perc_samp = input$miss_perc_samp,
-        orig.count = length(grep("qc",tolower(rownames(mSet$dataSet$orig)),invert = T)),
+        orig.count = length(grep("qc",
+                                 tolower(rownames(mSet$dataSet$orig)),
+                                 invert = T)),
         pca_corr = input$pca_corr,
         keep_pcs = input$keep_pcs,
-        renorm = input$redo_upon_change
+        renorm = input$redo_upon_change,
+        repl_merge = input$repl_merge,
+        repl_merge_fun = input$repl_merge_fun
       )
       
       mSet$dataSet$covars <- data.table::as.data.table(covar_table)

@@ -309,7 +309,6 @@ replRF <- function(mSet, parallelMode, ntree, cl, rf.method){
   imp <- switch(rf.method,
          ranger = {
            print(w.missing[1:10,1:10])
-           w.missing <<- w.missing
            w.missing.df <- as.data.frame(w.missing)
            colnames(w.missing.df) <- paste0("mz", 1:ncol(w.missing.df))
            imp = missRanger.joanna(data = w.missing.df ,formula =  . ~ ., verbose = 0, num.threads = length(cl))
@@ -1366,6 +1365,14 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      
                      list(tt_plot = p)
                    },
+                   proda = {
+                     # render manhattan-like plot for UI
+                     p = ggPlotProDA(mSet,
+                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                  20,topn=input$proda_topn)
+                     
+                     list(proda_plot = p)
+                   },
                    fc = {
                      # render manhattan-like plot for UI
                      p <- ggPlotFC(mSet,
@@ -1863,13 +1870,48 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
 }
 
 metshiProcess <- function(mSet, session, init=F, cl=0){
+  
   if(mSet$metshiParams$miss_perc < 100){
-    sums_mz = colSums(mSet$dataSet$missing)
-    missing.per.mz.perc = sums_mz/nrow(mSet$dataSet$missing)*100
+    if(mSet$metshiParams$repl_merge){
+      samples_noreps = gsub("_REP.*$", "", rownames(mSet$dataSet$missing))
+      tbl_data <- as.data.frame(mSet$dataSet$missing)
+      tbl_data$sample <- samples_noreps
+      tbl_data <- data.table::setDT(tbl_data)[, 
+                                              lapply(.SD, 
+                                                     any), 
+                                              by=sample]
+      tbl_data$sample=NULL
+      sums_mz = colSums(tbl_data)
+      missing.per.mz.perc = sums_mz/nrow(tbl_data)*100
+    }else{
+      sums_mz = colSums(mSet$dataSet$missing)
+      missing.per.mz.perc = sums_mz/nrow(mSet$dataSet$missing)*100
+    }
     good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
+    print(paste("Remaining m/z:", length(which(good.inx))))
     mSet$dataSet$orig.var.nms <- colnames(mSet$dataSet$orig)
+    mSet$dataSet$orig <- mSet$dataSet$orig[,good.inx, drop = FALSE]
   }
   
+  ############## BATCH CORR METHODS THAT DO NOT REQUIRE NORMALIZATION ##########
+  # if(length(mSet$metshiParams$batch_var) > 0){
+  #   if("batch" %in% mSet$metshiParams$batch_var){
+  #     if(mSet$metshiParams$batch_method_a %in% c("batchcorr", "waveica")){
+  #       mSet$dataSet$orig[is.na(mSet$dataSet$orig)] <- 0
+  #       
+  #       corrected = batchCorr_mSet(mSet,
+  #                                  mSet$metshiParams$batch_method_a, 
+  #                                  batch_var=c("batch", "injection"), 
+  #                                  source_table = "orig")
+  #       
+  #       left_batch_vars = setdiff(mSet$metshiParams$batch_var, 
+  #                                 c("batch", "injection"))
+  #       
+  #     }  
+  #   }
+  # }
+  ##############################################################################
+  # TODO: adjust this to technical replicates
   if(mSet$metshiParams$miss_perc_samp < 100){
     sums_samp = rowSums(mSet$dataSet$missing)
     missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
@@ -1906,7 +1948,6 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   # sanity check data
   mSet <- MetaboAnalystR::SanityCheckData(mSet)
   
-
   # missing value imputation
   if(req(mSet$metshiParams$miss_type) != "none"){
     if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
@@ -1941,7 +1982,6 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
       mSet$dataSet$covars$sample
     )
     mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
-    
     norm.vec <<- mSet$dataSet$covars[[mSet$metshiParams$samp_var]]
     norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
   }else{
@@ -1980,7 +2020,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     })
     qc_norm_table = do.call("rbind", normalized_blocks)
     mSet$dataSet$norm <- qc_norm_table
-  }else{
+  }else if(mSet$metshiParams$norm_type != "NULL"){
     data <- qs::qread("prenorm.qs")  
     mSet$dataSet$prenorm <- data
     # normalize dataset with user settings(result: mSet$dataSet$norm)
@@ -1990,11 +2030,11 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
                                           scaleNorm = mSet$metshiParams$scale_type,
                                           ref = mSet$metshiParams$ref_var) 
 
+  }else{
+    mSet$dataSet$norm <- mSet$dataSet$orig
   }
-  
-  mSet$dataSet$prenorm <- NULL
-  
 
+  
   # get sample names
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
@@ -2071,7 +2111,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
           batch_method_a <- "waveica"
         }
         
-        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars, cl=cl)
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars, cl=cl, "norm")
         
         left_batch_vars <- grep(left_batch_vars,
                                 pattern = "batch|injection|sample",
@@ -2083,7 +2123,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
       if(length(left_batch_vars) == 0){
         NULL # if none left, continue after this
       } else{
-        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars, cl=cl) 
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars, cl=cl, "norm") 
       }}
   }
   
@@ -2096,9 +2136,17 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     trunc <- res$x[,pc.use] %*% t(res$rotation[,pc.use])
     mSet$dataSet$norm <- as.data.frame(trunc)
   }
-  
 
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
+  
+  if(mSet$metshiParams$repl_merge & init){
+   print("Combining technical replicates...")
+   mSet <- merge_repl_mSet(mSet, 
+                           repl_regex = "_REP", 
+                           repl_merge_fun = mSet$metshiParams$repl_merge_fun)
+  }else{
+    print("Not combining technical replicates...")
+  }
   
   # make sure covars order is consistent with mset$..$norm order
   rematch = match(
@@ -2108,13 +2156,17 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
   
+  if(has.qc){
+    mSet$dataSet$covars$is_qc = grepl("QC|qc", mSet$dataSet$covars$sample)
+  }
   mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
                                                          star = c(FALSE)))  
   data.table::setkey(mSet$report$mzStarred, mz)
   
-  if(has.qc & !init){
-    mSet <- hideQC(mSet)
-  }
+  #if(has.qc & !init){
+  #  mSet <- subset_mSet(mSet, "sample", no_qc_samps)
+  #  mSet <- hideQC(mSet)
+  #}
   
   rematch = match(
     rownames(mSet$dataSet$norm),
@@ -2187,7 +2239,6 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
     }
   }
   else if (type == "compound") {
-    plot.data <<- plot.data
     if (same.layer != T) {
       nc.cols = ncol(cbind(cols.ts))
       if (nc.cols > 2) {
@@ -2211,8 +2262,6 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
       
       cidx = rep(1:w, each = h)
       ridx = rep(1:h, w)
-      
-      plot.data <<- plot.data
       
       pidx = lapply(1:nn, function(i) {
         ii = which((cidx - plot.data$x[i])^2 + (ridx - 
@@ -2364,6 +2413,36 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            boruta_res = Boruta::Boruta(x = curr[,2:ncol(curr)],
                                        y = as.factor(curr[[1]]))
            mSet$analSet$featsel <- list(boruta_res)
+         },
+         proda = {
+           print("running proda")
+           inp_mat <- as.matrix(t(mSet$dataSet$orig))#[1:260,1:260]
+           vars_in_model = if(input$proda_add_batch){
+             present_batch_vars = intersect(colnames(mSet$dataSet$covars),
+                                            c("batch", "injection"))
+             c(mSet$settings$exp.var, present_batch_vars)
+           }else{
+             mSet$settings$exp.var
+           }
+           
+           fit <- proDA::proDA(inp_mat,
+                        design = as.formula(paste("~", 
+                                                  paste(vars_in_model, 
+                                                        collapse="+"))), 
+                        data_is_log_transformed = F,
+                        col_data = mSet$dataSet$covars,#[1:260,1:260],
+                        cl = session_cl, 
+                        use_slurm=F, 
+                        verbose=T)
+           
+           tt_res = test_diff(fit, paste0(mSet$settings$exp.var, 
+                                          levels(mSet$dataSet$cls)[2]),
+                              n_max = Inf, 
+                              sort_by = "pval",
+                              pval_adjust_method = input$proda_multi_test)
+           
+           mSet$analSet$proda <- list(fit = fit,
+                                      tt_res = tt_res)
          },
          ml = {
            {
@@ -2956,7 +3035,7 @@ doUpdate <- function(mSet, lcl, input, do){
       if(mSet$metshiParams$renorm){
         mSet$dataSet$orig <- mSet$dataSet$start
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- NULL
-        mSet <- metshiProcess(mSet, cl = session_cl) #mSet1
+        mSet <- metshiProcess(mSet, cl = session_cl,init = F) #mSet1
       }else{
         # do missing value check!!!
         if(mSet$metshiParams$miss_perc < 100){

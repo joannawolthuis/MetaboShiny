@@ -8,6 +8,7 @@ shiny::observe({
 # creates observers for click events in the tables defined above
 lapply(c("tt",
          "fc",
+         "proda",
          "cliffd",
          "aov",
          "volcano",
