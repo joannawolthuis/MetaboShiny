@@ -82,6 +82,8 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     rownames(multi.state.table) <- multi.state.table$id
     
     library(pathview)
+    pathview::download.kegg(species = species,
+                            pathway.id = pw.code)
     pv.out <- pathview::pathview(cpd.data = multi.state.table[,-1], 
                                  #na.col = "black",
                                  pathway.id = pw.code, 

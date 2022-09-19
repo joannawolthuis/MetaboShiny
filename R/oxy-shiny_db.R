@@ -658,17 +658,32 @@ build.enrich.KEGG <- function(map_id, filter_out_module_regex = ""){
     impossible_modules = map_info[[1]]$MODULE[has_essential_aa_synthesis]
     impossible_pathways = map_info[[1]]$REL_PATHWAY[grepl("(arginine|cysteine|histidine|isoleucine|leucine|lysine|methionine|phenylalanine|proline|threonine|tryptophan|tyrosine|valine).*biosynthesis", 
                                 map_info[[1]]$REL_PATHWAY,ignore.case = T)]
+  }else if(grepl("hsa", map_id)){
+    has_essential_aa_synthesis = grepl("=> (histidine|isoleucine|leucine|lysine|methionine|phenylalanine|threonine|tryptophan|valine)", 
+                                       map_info[[1]]$MODULE)
+    impossible_modules = map_info[[1]]$MODULE[has_essential_aa_synthesis]
+    impossible_pathways = map_info[[1]]$REL_PATHWAY[grepl("(histidine|isoleucine|leucine|lysine|methionine|phenylalanine|threonine|tryptophan|valine).*biosynthesis", 
+                                                          map_info[[1]]$REL_PATHWAY,ignore.case = T)]
+  }else if(grepl("ssc", map_id)){
+    has_essential_aa_synthesis = grepl("=> (lysine|methionine|tryptophan|threonine|valine|isoleucine|leucine|arginine|histidine|phenylalanine)", 
+                                       map_info[[1]]$MODULE)
+    impossible_modules = map_info[[1]]$MODULE[has_essential_aa_synthesis]
+    impossible_pathways = map_info[[1]]$REL_PATHWAY[grepl("(lysine|methionine|tryptophan|threonine|valine|isoleucine|leucine|arginine|histidine|phenylalanine).*biosynthesis", 
+                                                          map_info[[1]]$REL_PATHWAY,ignore.case = T)]
   }else{
     impossible_modules = c()
     impossible_pathways =c()
   }
 
+  if(length(impossible_pathways) > 0){
+    print(paste0("skipping pathways:", paste0(impossible_pathways, collapse=", ")))
+  }
   print("Finding all compounds...")
   pw_compound_table = data.table::rbindlist(pbapply::pblapply(1:length(map_info[[1]]$REL_PATHWAY), function(i){
     pw_name = map_info[[1]]$REL_PATHWAY[i]
     if(length(impossible_pathways) > 0){
       if(pw_name %in% impossible_pathways){
-        print(paste(pw_name, "removed due to not being possible in chicken"))
+        print(paste(pw_name, "removed due to not being possible in chosen organism (essential amino acids cannot be synthesized)"))
         return(data.table::data.table())
       }
     }
