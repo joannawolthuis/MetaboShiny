@@ -33,11 +33,14 @@ shiny::observe({
       if(success){
         mSet <<- mSet
         save_info$has_changed <- TRUE
-        shinyjs::show(selector = paste0("div.panel[value=collapse_", statsmanager$calculate, "_plots]"))
-        shinyjs::show(selector = paste0("div.panel[value=collapse_", statsmanager$calculate, "_tables]"))
-        shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),open = paste0("collapse_", 
-                                                                                            statsmanager$calculate, 
-                                                                                            c("_tables","_plots")))
+        shinyjs::show(selector = paste0("div.panel[value=collapse_", 
+                                        statsmanager$calculate, "_plots]"))
+        shinyjs::show(selector = paste0("div.panel[value=collapse_", 
+                                        statsmanager$calculate, "_tables]"))
+        shinyBS::updateCollapse(session, paste0("collapse_",input$statistics),
+                                open = paste0("collapse_", 
+                                              statsmanager$calculate, 
+                                              c("_tables","_plots")))
         if(lcl$beep){
           beepr::beep(sound = lcl$aes$which_beep)
           Sys.sleep(0.6)

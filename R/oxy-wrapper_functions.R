@@ -811,6 +811,7 @@ getAllHits <- function(mSet, expname, randomize = F){
                      res
                   },
                   featsel = {
+                    print("!")
                     decision = analysis$featsel[[1]]$finalDecision
                     res = data.frame(`m/z` = names(decision),
                                      value = sapply(names(decision), function(x) ifelse(as.character(decision[x]) == "Rejected", 1, 0)),
@@ -819,8 +820,23 @@ getAllHits <- function(mSet, expname, randomize = F){
                                                                                             Tentative = 1, 
                                                                                             Confirmed = 2))
                                      )
+                    print(head(res))
+                    res = res[res$statistic > 0,]
                     res = res[order(abs(res$statistic),decreasing = T),]
                     
+                    res
+                  },
+                  proda = {
+                    print(names(analysis))
+                    # --- only volc for now ---
+                    res = data.frame(`m/z` = analysis$proda$tt_res$name,
+                                     value = c(0),
+                                     statistic = analysis$proda$tt_res$adj_pval)
+                    
+                    res = res[order(res$statistic, decreasing = F),]
+                    
+                    res$significant = T
+                    # -------------------------
                     res
                   },
                    ml = {
@@ -1872,7 +1888,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
 metshiProcess <- function(mSet, session, init=F, cl=0){
   
   if(mSet$metshiParams$miss_perc < 100){
-    if(mSet$metshiParams$repl_merge){
+    if(mSet$metshiParams$miss_group_replicates){#mSet$metshiParams$repl_merge){ # disable for now
       samples_noreps = gsub("_REP.*$", "", rownames(mSet$dataSet$missing))
       tbl_data <- as.data.frame(mSet$dataSet$missing)
       tbl_data$sample <- samples_noreps
@@ -1881,13 +1897,16 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
                                                      any), 
                                               by=sample]
       tbl_data$sample=NULL
-      sums_mz = colSums(tbl_data)
-      missing.per.mz.perc = sums_mz/nrow(tbl_data)*100
+      good.inx <- keep_mz_missing(tbl_data, 
+                                 mSet$dataSet$cls, 
+                                 mSet$metshiParams$miss_minority_filter,
+                                 thresh = mSet$metshiParams$miss_perc)
     }else{
-      sums_mz = colSums(mSet$dataSet$missing)
-      missing.per.mz.perc = sums_mz/nrow(mSet$dataSet$missing)*100
+      good.inx <- keep_mz_missing(mSet$dataSet$missing, 
+                                 mSet$dataSet$cls, 
+                                 mSet$metshiParams$miss_minority_filter,
+                                 thresh = mSet$metshiParams$miss_perc)
     }
-    good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
     print(paste("Remaining m/z:", length(which(good.inx))))
     mSet$dataSet$orig.var.nms <- colnames(mSet$dataSet$orig)
     mSet$dataSet$orig <- mSet$dataSet$orig[,good.inx, drop = FALSE]
@@ -2415,8 +2434,8 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            mSet$analSet$featsel <- list(boruta_res)
          },
          proda = {
-           print("running proda")
-           inp_mat <- as.matrix(t(mSet$dataSet$orig))#[1:260,1:260]
+           print("running proda NEW VER")
+           inp_mat <- as.matrix(t(mSet$dataSet$orig))#[1:260,]
            vars_in_model = if(input$proda_add_batch){
              present_batch_vars = intersect(colnames(mSet$dataSet$covars),
                                             c("batch", "injection"))
@@ -2425,24 +2444,34 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
              mSet$settings$exp.var
            }
            
-           fit <- proDA::proDA(inp_mat,
+           attach(loadNamespace("proDA"), name = "proDA_all")
+           fit <- proDA(inp_mat,
                         design = as.formula(paste("~", 
                                                   paste(vars_in_model, 
                                                         collapse="+"))), 
                         data_is_log_transformed = F,
                         col_data = mSet$dataSet$covars,#[1:260,1:260],
-                        cl = session_cl, 
-                        use_slurm=F, 
+                        use_slurm = F,
+                        cl = NULL,#session_cl, 
                         verbose=T)
            
-           tt_res = test_diff(fit, paste0(mSet$settings$exp.var, 
+           tt_res = proDA::test_diff(fit, paste0(mSet$settings$exp.var, 
                                           levels(mSet$dataSet$cls)[2]),
                               n_max = Inf, 
                               sort_by = "pval",
                               pval_adjust_method = input$proda_multi_test)
            
+           imputed = proDA::predict(fit, 
+                                    newdata = fit$abundances,	#a matrix or a SummarizedExperiment which contains the new abundances for which values are predicted.
+                                    newdesign = as.formula(paste("~", 
+                                                                 paste(vars_in_model, 
+                                                                       collapse="+"))), # a formula or design matrix that specifies the new structure that will be fitted
+                                    type="response"           
+           )
+           
            mSet$analSet$proda <- list(fit = fit,
-                                      tt_res = tt_res)
+                                      tt_res = tt_res,
+                                      imputed = imputed)
          },
          ml = {
            {
@@ -2485,7 +2514,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                print("Attempting to submit jobs through slurm!")
                
                settings_loc <- tempfile(tmpdir = tmpdir)
-               first_job_parallel_count = if(ml_queue$jobs[[1]]$ml_label_shuffle){
+               first_job_parallel_count = if(F){#ml_queue$jobs[[1]]$ml_label_shuffle){
                  ml_queue$jobs[[1]]$ml_n_shufflings + 1
                }else{
                  1
@@ -2594,7 +2623,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                  stop("ml failed")
                }
              }else{
-               if(length(cl) == 1){
+               if(length(cl) == 1 | is.null(cl)){
                  small_mSet <- qs::qread(mSet_loc)
                }
                try({
@@ -3001,6 +3030,7 @@ doUpdate <- function(mSet, lcl, input, do){
         F
       }
     })
+    already.normalized = F# any(matching.samps) & oldSettings$ispaired == input$paired  #disabled: class-filtering
     
     if(!("renorm" %in% names(mSet$metshiParams))){
       mSet$metshiParams$renorm <- TRUE
@@ -3017,7 +3047,6 @@ doUpdate <- function(mSet, lcl, input, do){
     }
     
     # ============
-    already.normalized = any(matching.samps) & oldSettings$ispaired == input$paired
     
     if(already.normalized){
       tables = c("orig", "norm", "proc", "prebatch", "covars")
@@ -3037,24 +3066,28 @@ doUpdate <- function(mSet, lcl, input, do){
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- NULL
         mSet <- metshiProcess(mSet, cl = session_cl,init = F) #mSet1
       }else{
-        # do missing value check!!!
-        if(mSet$metshiParams$miss_perc < 100){
-          mz_sums = colSums(mSet$dataSet$missing)
-          samp_sums = rowSums(mSet$dataSet$missing)
-          missing.per.mz.perc = mz_sums/nrow(mSet$dataSet$missing)*100
-          good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
-          good.mz <- intersect(names(which(good.inx)), 
-                               colnames(mSet$dataSet$orig))
-          mSet <- subset_mSet_mz(mSet, keep.mzs = good.mz)  
-        }
-        if(mSet$metshiParams$miss_perc_samp < 100){
-          print("filtering by missing m/z per sample")
-          sums_samp = rowSums(mSet$dataSet$missing)
-          missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
-          good.inx <- missing.per.samp.perc < mSet$metshiParams$miss_perc_samp
-          good.samp <- rownames(mSet$dataSet$missing)[good.inx]
-          mSet <- subset_mSet(mSet, subset_var = "sample", subset_group = good.samp)  
-        }
+        if(mSet$metshiParams$miss_upon_subset){
+          print("Re-evaluating mising value filter...")
+          print(paste("previously: ", ncol(mSet$dataSet$norm)))
+          if(mSet$metshiParams$miss_perc < 100){
+            good.inx = keep_mz_missing(mSet$dataSet$missing, 
+                                       mSet$dataSet$cls, 
+                                       mSet$metshiParams$miss_minority_filter,
+                                       thresh = mSet$metshiParams$miss_perc)
+            good.mz <- intersect(names(which(good.inx)),
+                                 colnames(mSet$dataSet$orig))
+            mSet <- subset_mSet_mz(mSet, keep.mzs = good.mz)
+          }
+          if(mSet$metshiParams$miss_perc_samp < 100){
+            print("filtering by missing m/z per sample")
+            sums_samp = rowSums(mSet$dataSet$missing)
+            missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
+            good.inx <- missing.per.samp.perc < mSet$metshiParams$miss_perc_samp
+            good.samp <- rownames(mSet$dataSet$missing)[good.inx]
+            mSet <- subset_mSet(mSet, subset_var = "sample", subset_group = good.samp)
+          }  
+          print(paste("post-filter: ", ncol(mSet$dataSet$norm)))
+          }
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- mSet$dataSet$missing <- NULL
       }
     }

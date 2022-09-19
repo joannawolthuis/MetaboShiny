@@ -184,6 +184,9 @@ shiny::observeEvent(input$initialize, {
         rf_norm_method = if(input$rf_norm_method) "ranger" else "rf",
         miss_perc = input$miss_perc_2,
         miss_perc_samp = input$miss_perc_samp,
+        miss_minority_filter = input$miss_minority_filter,
+        miss_group_replicates = input$miss_group_replicates,
+        miss_upon_subset = input$miss_upon_subset,
         orig.count = length(grep("qc",
                                  tolower(rownames(mSet$dataSet$orig)),
                                  invert = T)),
@@ -198,7 +201,9 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
+      mSet_init = mSet
       mSet <- metshiProcess(mSet, session=NULL, init=T, cl=session_cl)
+      mSet$metshiParams$package_github_sha <- remotes:::local_sha("MetaboShiny")
       
       # save the used adducts to mSet
       mSet$ppm <- ppm
@@ -231,3 +236,4 @@ shiny::observeEvent(input$initialize, {
     })
   })
 })
+

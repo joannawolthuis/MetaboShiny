@@ -259,6 +259,14 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                "Leave them out" = "exclude",
                                                                                                                                                                                                "Leave them alone" = "none"),
                                                                                                                  selected = "rowmin"),
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "miss_minority_filter",
+                                                                                             value = FALSE,
+                                                                                             label = "Only check missing values on the minority class?",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
                                                                                            shiny::conditionalPanel("input.miss_type == 'rf'",
                                                                                                                    shinyWidgets::switchInput("rf_norm_method", label = "Method:", 
                                                                                                                                              value = TRUE, onLabel = "missRanger", 
@@ -278,11 +286,27 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                              offLabel = "no",
                                                                                              size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
                                                                                            ),
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "miss_upon_subset",
+                                                                                             value = F,
+                                                                                             label = "Refilter by missing values after subsetting?:",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
                                                                                            # - - - - - -
                                                                                            shinyWidgets::switchInput(
                                                                                              inputId = "repl_merge",
                                                                                              value = FALSE,
                                                                                              label = "Merge tech. replicates?",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "miss_group_replicates",
+                                                                                             value = FALSE,
+                                                                                             label = "Group missing values by replicates?",
                                                                                              onLabel = "yes",
                                                                                              offLabel = "no",
                                                                                              size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"

@@ -13,7 +13,7 @@ metshiCliffD <- function(mSet, input){
 
 metshiCorr <- function(mSet, input){
   lvls = levels(mSet$dataSet$cls)
-  pat = input$corr_seq_order
+  pat = input$corr_seq_order$text
   pat_order = match(lvls,pat)
   pattern = paste0(pat_order-1, collapse="-")
   mSet <- MetaboAnalystR::Match.Pattern(mSet, input$corr_corr, pattern)
@@ -128,6 +128,7 @@ metshiGetEnrichInputTable <- function(mSet, input){
   
   
   hasT = ncol(flattened[[1]]) >= 3
+  print("has T-score")
   
   anal = gsub(" \\(.*$|", "", input$mummi_anal)
   subset = gsub("\\(|\\)|.*\\(", "", input$mummi_anal)
@@ -184,8 +185,8 @@ doEnrich <- function(input, tempfile, ppm, lcl){
     shiny::showNotification("MetaboAnalyst R objects initialized ...")
   })
   
-  hasP <- all(tbl$`p.value` == 0)
-  hasT <- all(is.na(tbl$`t.score`))
+  hasP <- !all(tbl$`p.value` == 0)
+  hasT <- !all(is.na(tbl$`t.score`))
   
   # -----------------
   

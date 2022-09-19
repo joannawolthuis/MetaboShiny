@@ -464,6 +464,7 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
+    
     tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch", "prenorm")
     combi.tbl = data.table::data.table(tbl = tables)
     
@@ -534,7 +535,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         is_there = tbl %in% names(mSet$dataSet)
         
         if(is_there){
-          mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][sampOrder, ] #reorder
+          
+          mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][sampOrder, keep_mz] #reorder
           
           if(!(tbl %in% c("start", "missing", "prebatch"))){
             mSet$dataSet[[cls]] <-
@@ -726,7 +728,7 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
                                               dtNorm$injection.order),]
            dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
            
-           waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch, cl=cl)
+           waveCorr = WaveICA::WaveICA(data = dtNorm_stat_order, batch = dtNorm_merge_order$batch, cl=cl)
            waveCorr = waveCorr$data_wave
            old.order = rownames(mSet$dataSet[[source_table]])
            new.order = rownames(waveCorr)
@@ -979,4 +981,19 @@ merge_repl_mSet <- function(mSet,
     }
   }
   return(mSet)
+}
+
+keep_mz_missing <- function(peaktable, classes, minorityFilter=F, thresh=0.8){
+  if(minorityFilter){
+    class_distr = table(classes)
+    min_class = names(class_distr[class_distr == min(class_distr)])
+    min_class_samps = which(classes == min_class) 
+    missing_minority = peaktable[min_class_samps,]
+    sums_mz = colSums(missing_minority)
+    missing.per.mz.perc = sums_mz/nrow(missing_minority)*100
+  }else{
+    sums_mz = colSums(peaktable)
+    missing.per.mz.perc = sums_mz/nrow(peaktable)*100  
+  }
+  missing.per.mz.perc <= thresh
 }
