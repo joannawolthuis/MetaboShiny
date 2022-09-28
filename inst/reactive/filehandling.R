@@ -164,7 +164,6 @@ observe({
                                  ".metshi"))
       file.rename(fn, fn_bu)
       success = F
-      
       try({
         qs::qsave(mSet, file = fn)
         success = T

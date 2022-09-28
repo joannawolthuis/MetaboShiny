@@ -179,6 +179,8 @@ runML <- function(training,
   has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
   
   if(has_slurm & use_slurm){
+    time="00:30:00"
+    print(time)
     batch_job = rslurm::slurm_apply(ml_single_run,
                                     params = params, 
                                     nodes = iterations,
@@ -186,7 +188,7 @@ runML <- function(training,
                                     pkgs = c("MetaboShiny",
                                              "caret",
                                              "data.table"),
-                                    slurm_options = list(time = "02:00:00"))
+                                    slurm_options = list(time = time))
     completed = F
     
     print("Waiting on cluster to finish jobs...")
@@ -198,7 +200,7 @@ runML <- function(training,
     
     # my ver has a progress bar
     print("Cluster batch job complete! Collecting results...")
-    results <- get_slurm_out_jw(batch_job,outtype = "raw")
+    results <- get_slurm_out_jw(batch_job, outtype = "raw")
     #rslurm::cleanup_files(batch_job) #cleanup files
     
   }else{
@@ -234,7 +236,11 @@ ml_single_run <- function(trainOrder,
   testing = qs::qread(test_fn)
   
   training$label <- as.factor(training$label)
+  
   levels(training$label) = make.names(levels(training$label))
+  
+  training_label = training$label
+  print(table(training_label))
   
   if(length(testing) > 0){
     testing$label <- as.factor(testing$label)
@@ -268,8 +274,8 @@ ml_single_run <- function(trainOrder,
                                    )
   if(ml_method == "glm"){
     fit <- caret::train(
-      label ~ .,
-      data = training,
+      x = training[,-"label"],
+      y = as.factor(training$label),
       method = ml_method,
       ## Center and scale the predictors for the training
       ## set and all future samples.
@@ -281,12 +287,12 @@ ml_single_run <- function(trainOrder,
     )  
   }else{
     fit <- caret::train(
-      label ~ .,
-      data = training,
+      x = training[,-"label"],
+      y = as.factor(training$label),
       method = ml_method,
       ## Center and scale the predictors for the training
       ## set and all future samples.
-      preProc = ml_preproc,
+      preProcess = ml_preproc,
       maximize = if(maximize) def_scoring else !def_scoring,
       importance = if(ml_method == c("ranger")) 'permutation' else TRUE,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
@@ -309,15 +315,17 @@ ml_single_run <- function(trainOrder,
   caret.mdls <- caret::getModelInfo()
   has.importance = "varImp" %in% names(caret.mdls[[ml_method]])
   
+  print("adjusted method..")
+  
   l <- list(
     type = ml_method,
     best.model = fit$bestTune,
+    train.labels = training_label,
     train.performance = train.performance,
     importance = if(has.importance) caret::varImp(fit)$importance else data.table::data.table(unavailable = "method has no variable importance!"),
     labels = testing_label,
     in_test = rownames(testing),
     prediction = result.predicted.prob,
-    #model = fit,
     shuffled = shuffled)
   
   return(l)
@@ -334,6 +342,10 @@ ml_prep_data <- function(settings, mSet, input, cl){
   # pick source table
   pickedTbl <- settings$ml_used_table
   
+  if(grepl("proda", settings$ml_specific_mzs)){
+    pickedTbl <- "proda"
+  }
+  
   if(pickedTbl == "pca" & !("pca" %in% names(mSet$analSet))){
     stop("Please run PCA first!")
   }
@@ -344,7 +356,8 @@ ml_prep_data <- function(settings, mSet, input, cl){
   #print(settings$ml_batch_covars)
   
   # covars needed
-  keep.config = setdiff(unique(c(settings$ml_include_covars, settings$ml_batch_covars,
+  keep.config = setdiff(unique(c(settings$ml_include_covars, 
+                                 settings$ml_batch_covars,
                                  sapply(settings$ml_train_subset, function(x) x[[1]]), 
                                  sapply(settings$ml_test_subset, function(x) x[[1]]))),
                         c("label", "", " "))
@@ -466,15 +479,57 @@ ml_prep_data <- function(settings, mSet, input, cl){
   }
   
   #@ split
-  training_data = list(curr = curr[train_idx,,drop=F],
-                       config = config[train_idx,,drop=F],
-                       samples = sample_names[train_idx])
-  
-  testing_data = list(curr = curr[test_idx,,drop=F],
-                      config = as.data.frame(config[test_idx,,drop=F]),
-                      samples = sample_names[test_idx])
-  
-  rownames(testing_data$curr) <- rownames(testing_data$config) <- mSet$dataSet$covars$sample[test_idx]
+  if(grepl("proda", settings$ml_specific_mzs) & length(settings$ml_train_subset) > 0 & length(settings$ml_test_subset) > 0){
+    samps_train = mSet$dataSet$covars$sample[train_idx]
+    samps_test = mSet$dataSet$covars$sample[test_idx]
+    # ---------
+    matching.samps.train = sapply(mSet$storage, function(saved){
+      samplist = saved$samples
+      if(length(samps_train) == length(samplist)){
+        all(samps_train == samplist)  
+      }else{
+        F
+      }
+    })
+    mSet_train <- mSet$storage[[which(matching.samps.train)[1]]]
+    proda.mat.train = mSet_train$analSet$proda$imputed
+    proda.mat.train = as.data.frame(t(proda.mat.train))
+    # ---------
+    matching.samps.test = sapply(mSet$storage, function(saved){
+      samplist = saved$samples
+      if(length(samps_test) == length(samplist)){
+        all(samps_test == samplist)  
+      }else{
+        F
+      }
+    })
+    mSet_test <- mSet$storage[[which(matching.samps.test)[1]]]
+    proda.mat.test = mSet_test$analSet$proda$imputed
+    proda.mat.test = as.data.frame(t(proda.mat.test))
+    # --------
+    print("!!!")
+    keep.mzs = intersect(colnames(proda.mat.train), colnames(proda.mat.test))
+    training_data <- list(curr = proda.mat.train[,keep.mzs],
+                          config = config[match(mSet_train$samples, 
+                                                mSet$dataSet$covars$sample),],
+                          samples = samps_train)
+    
+    testing_data <- list(curr = proda.mat.test[,keep.mzs],
+                         config = config[match(mSet_test$samples, 
+                                               mSet$dataSet$covars$sample),],
+                         samples = samps_test)
+    
+  }else{
+    training_data = list(curr = curr[train_idx,,drop=F],
+                         config = config[train_idx,,drop=F],
+                         samples = sample_names[train_idx])
+    
+    testing_data = list(curr = curr[test_idx,,drop=F],
+                        config = as.data.frame(config[test_idx,,drop=F]),
+                        samples = sample_names[test_idx])
+    
+    rownames(testing_data$curr) <- rownames(testing_data$config) <- mSet$dataSet$covars$sample[test_idx]
+  }
   
   curr = NULL
   
@@ -504,6 +559,12 @@ ml_prep_data <- function(settings, mSet, input, cl){
     }
     spl.testing.idx = split(1:nrow(training_data$curr), split.fac)
     orig.samp.distr = table(training_data$config$label)
+    
+    sampling = settings$ml_sampling
+    
+    if(sampling == "upsample") sampling = "up"
+    if(sampling == "downsample") sampling = "down"
+    
     size.global = if(settings$ml_sampling != "down") biggest.group.overall else smallest.group.overall
     size.preset = settings$ml_groupsize
     
@@ -519,8 +580,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
       curr.subset = training_data$curr[idx,,drop=F]
       config.subset = training_data$config[idx,,drop=F]
       config.top.row = config.subset[1,,drop=F]
-      
-      sampling = settings$ml_sampling
       
       size.local = if(sampling != "down"){
         max(table(config.subset$label))
@@ -568,8 +627,6 @@ ml_prep_data <- function(settings, mSet, input, cl){
       }
       
       train.rownames = training_data$config$sample
-      
-      if(sampling == "upsample") sampling = "up"
       
       switch(sampling,
              up = {
@@ -679,13 +736,15 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
             print("Ordering by: ")
             print(settings$ml_mzs_ordering)
             
+            print("!")
             mzs = switch(settings$ml_mzs_ordering,
                          highfirst = mzs,
                          lowfirst = rev(mzs),
-                         randomize = sample(mzs))
+                         randomize = sample(colnames(mSet$dataSet$norm), length(mzs)))
             
-            print(head(mzs))
-            mzs = mzs[1:settings$ml_mzs_topn]
+            mzs = mzs[1:min(length(mzs), 
+                            settings$ml_mzs_topn)]
+            
             mzs = gsub("^X", "", mzs)
             mzs = gsub("\\.$", "-", mzs)
             
@@ -695,9 +754,13 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
             if(settings$ml_mzs_exclude){
               mzs_keep = setdiff(colnames(training_data$curr), mzs)
               training_data$curr <- training_data$curr[, mzs_keep]
+              print("removing:")
+              print(mzs[1:min(10, length(mzs))])
               settings$mz_removed <- mzs
             }else{
               training_data$curr <- training_data$curr[, mzs]
+              print("keeping:")
+              print(mzs[1:min(10, length(mzs))])
               settings$mz_used <- mzs
             }
           }
@@ -1043,19 +1106,24 @@ ml_slurm <- function(i,
       as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
     }
     #if(file.exists(logfile)) file.remove(logfile)
-    ml_session_cl <- parallel::makeCluster(maxcores, 
-                                           outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
-    # send specific functions/packages to other threads
-    parallel::clusterEvalQ(ml_session_cl, {
-      library(data.table)
-      library(iterators)
-      library(MetaboShiny)
-      library(MetaDBparse)
-    }) 
+    # ml_session_cl <- parallel::makeCluster(maxcores, 
+    #                                        outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+    # # send specific functions/packages to other threads
+    # parallel::clusterEvalQ(ml_session_cl, {
+    #   library(data.table)
+    #   library(iterators)
+    #   library(MetaboShiny)
+    #   library(MetaDBparse)
+    # }) 
+    
+    library(data.table)
+    library(iterators)
+    library(MetaboShiny)
+    library(MetaDBparse)
     
     res = ml_run(settings = settings, 
                  mSet = small_mSet,
-                 cl = ml_session_cl,
+                 cl = NULL,#ml_session_cl,
                  tmpdir = tmpdir,
                  use_slurm = F)
   })

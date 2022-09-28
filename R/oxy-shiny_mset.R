@@ -115,7 +115,7 @@ is.ordered.mSet <- function(mSet) {
   exp.type <-
     gsub("^1f.",  "1f", mSet$settings$exp.type)
   expVarsMatch <- switch(
-   exp.type,
+    exp.type,
     "1f" = {
       all(mSet$dataSet$cls == mSet$dataSet$covars[, mSet$settings$exp.fac, with =
                                                     F][[1]])
@@ -317,7 +317,7 @@ load.mSet <- function(mSet, name = mSet$dataSet$cls.name, proj.folder) {
 #' @rdname store.mSet
 #' @export
 store.mSet <- function(mSet, name = mSet$settings$cls.name, proj.folder){
-
+  
   mSet$storage[[name]] <- list(samples = rownames(mSet$dataSet$norm),
                                settings = mSet$settings,
                                analSet =  mSet$analSet)
@@ -331,7 +331,7 @@ store.mSet <- function(mSet, name = mSet$settings$cls.name, proj.folder){
   ## MORE MEMORY FRIENDLY ##
   qs::qsave(save.item, fn)
   #try({
-    #mSet$storage[[name]]$data <- mSet$dataSet
+  #mSet$storage[[name]]$data <- mSet$dataSet
   #})
   return(mSet)
 }
@@ -438,7 +438,7 @@ change.mSet <-
             stats_var[1]
         else
           stats_var
-
+        
         mSet$dataSet$facA <- mSet$dataSet$facA.orig <- as.factor(mSet$dataSet$covars[, ..change_var, with = F][[1]])
         mSet$dataSet$facB <- mSet$dataSet$facB.orig <-
           as.factor(mSet$dataSet$covars[, ..time_var, with = F][[1]])
@@ -464,9 +464,10 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
+    
     tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch", "prenorm")
     combi.tbl = data.table::data.table(tbl = tables)
-
+    
     for (i in 1:nrow(combi.tbl)){
       try({
         tbl = combi.tbl$tbl[i]
@@ -534,7 +535,8 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         is_there = tbl %in% names(mSet$dataSet)
         
         if(is_there){
-          mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][sampOrder, ] #reorder
+          
+          mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][sampOrder, keep_mz] #reorder
           
           if(!(tbl %in% c("start", "missing", "prebatch"))){
             mSet$dataSet[[cls]] <-
@@ -691,16 +693,16 @@ pair.mSet <- function(mSet) {
   mSet
 }
 
-batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
+batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
   switch(method, 
          pmp = {
            batch.idx <- as.numeric(as.factor(mSet$dataSet$covars$batch))
            seq.idx <- as.numeric(mSet$dataSet$covars$injection)
-           dtNorm <- as.data.frame(cbind(name = rownames(mSet$dataSet$proc), 
+           dtNorm <- as.data.frame(cbind(name = rownames(mSet$dataSet[[source_table]]), 
                                          injection.order = seq.idx,
                                          batch = batch.idx,
                                          class = sapply(mSet$dataSet$covars$sample, function(samp) if(grepl("QC", samp)) "QC" else "nonQC"),
-                                         mSet$dataSet$proc))
+                                         mSet$dataSet[[source_table]]))
            dtNorm_merge_order <- dtNorm[order(dtNorm$batch,
                                               dtNorm$injection.order),]
            dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
@@ -714,21 +716,21 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
            # TODO: flip, then renormalize
          },
          waveica = {
-           csv_edata <- combatCSV(mSet, tbl = "norm")
+           csv_edata <- combatCSV(mSet, tbl = source_table)
            batch.idx = as.numeric(as.factor(mSet$dataSet$covars$batch))
            seq.idx = as.numeric(mSet$dataSet$covars$injection)
-           dtNorm <- as.data.frame(cbind(name = rownames(mSet$dataSet$norm), 
+           dtNorm <- as.data.frame(cbind(name = rownames(mSet$dataSet[[source_table]]), 
                                          injection.order = seq.idx,
                                          batch = batch.idx,
-                                         group = rep(1, nrow(mSet$dataSet$norm)),
-                                         mSet$dataSet$norm))
+                                         group = rep(1, nrow(mSet$dataSet[[source_table]])),
+                                         mSet$dataSet[[source_table]]))
            dtNorm_merge_order <- dtNorm[order(dtNorm$batch,
                                               dtNorm$injection.order),]
            dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
            
-           waveCorr = WaveICA::WaveICA(dtNorm_stat_order, batch = dtNorm_merge_order$batch, cl=cl)
+           waveCorr = WaveICA::WaveICA(data = dtNorm_stat_order, batch = dtNorm_merge_order$batch, cl=cl)
            waveCorr = waveCorr$data_wave
-           old.order = rownames(mSet$dataSet$norm)
+           old.order = rownames(mSet$dataSet[[source_table]])
            new.order = rownames(waveCorr)
            reorder = match(old.order, new.order)
            reorderedCorr = as.data.frame(waveCorr[reorder,])
@@ -737,19 +739,18 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
                       check.names=F, row.names = rownames(reorderedCorr))
          }, 
          batchCorr = {
-           smps <- rownames(mSet$dataSet$norm)
+           smps <- rownames(mSet$dataSet[[source_table]])
            # get which rows are QC samples
            qc_rows <- which(grepl(pattern = "QC", x = smps))
            # get batch for each sample
            batch.idx = as.numeric(as.factor(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"batch"][[1]]))
-           if(length(batch.idx) == 0) return(mSet$dataSet$norm)
+           if(length(batch.idx) == 0) return(mSet$dataSet[[source_table]])
            # get injection order for samples
            seq.idx = as.numeric(mSet$dataSet$covars[match(smps, mSet$dataSet$covars$sample),"injection"][[1]])
-           # go through all the metabolite columns
-           corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet$norm), function(i){
+           corr_cols <- pbapply::pblapply(1:ncol(mSet$dataSet[[source_table]]), function(i){
              # fetch non-corrected values
-             vec = mSet$dataSet$norm[,i]
-             # correct values using QCs and injectiono rder
+             vec = mSet$dataSet[[source_table]][,i]
+             # correct values using QCs and injection order
              corr_vec = BatchCorrMetabolomics::doBC(Xvec = as.numeric(vec),
                                                     ref.idx = as.numeric(qc_rows),
                                                     batch.idx = batch.idx,
@@ -762,8 +763,8 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
            # cbind the corrected columns to re-make table
            batch_normalized <- as.data.frame(do.call(cbind, corr_cols))
            # fix rownames to old rownames
-           colnames(batch_normalized) <- colnames(mSet$dataSet$norm)
-           rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+           colnames(batch_normalized) <- colnames(mSet$dataSet[[source_table]])
+           rownames(batch_normalized) <- rownames(mSet$dataSet[[source_table]])
            as.data.frame(batch_normalized)
          },
          limma = {
@@ -777,7 +778,7 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
                                                          #design = mod.pheno,
                                                          batch = csv_pheno$batch1,
                                                          batch2 = csv_pheno$batch2))
-           rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+           rownames(batch_normalized) <- rownames(mSet$dataSet[[source_table]])
            as.data.frame(batch_normalized)
          },
          covbat = {
@@ -791,7 +792,7 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
            batch_normalized = t(batch_normalized$dat.covbat)
            
            # fix row names
-           rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+           rownames(batch_normalized) <- rownames(mSet$dataSet[[source_table]])
            batch_normalized
          },
          combat = {
@@ -805,7 +806,7 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0){
                                             batch = csv_pheno$batch1)
            )
            # fix row names
-           rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
+           rownames(batch_normalized) <- rownames(mSet$dataSet[[source_table]])
            batch_normalized
          })
 }
@@ -901,4 +902,98 @@ mSetForML <- function(mSet, ml_queue, input){
   }
   qs::qsave(small_mSet, mSet_loc)
   return(mSet_loc)
+}
+
+#' @title Merge replicates in mSet
+#' @description Merge replicates in user-defined way
+#' @param mSet mSet object
+#' @param repl_regex Regex defining replicates. i.e. '_REP' if a replicate name is sample_REP1
+#' @param repl_merge_fun Merge function for intensities per sample per m/z. Defaults to 'mean'
+#' @return mSet object
+#' @rdname merge_repl_mSet
+#' @export 
+#' @importFrom data.table data.table
+merge_repl_mSet <- function(mSet, 
+                            repl_regex = "_REP", 
+                            repl_merge_fun = mean) {
+  if (repl_regex != "" ) {
+    samples_noreps <- gsub(paste0(repl_regex,".*$"), "", 
+                           mSet$dataSet$covars$sample)
+    mSet$dataSet$covars$sample <- samples_noreps
+    mSet$dataSet$covars$injection <- NULL
+    mSet$dataSet$covars <- unique(mSet$dataSet$covars)
+    tables = c(#"start", 
+      "orig", "norm", "proc","preproc",
+      "missing", 
+      "prebatch", "prenorm")
+    clss = c(#"placeholder", 
+      "orig.cls", "cls", "proc.cls", 
+      "preproc.cls", 
+      "placeholder", 
+      "placeholder", "prenorm.cls")
+    combi.tbl = data.table::data.table(tbl = tables,
+                                       cls = clss)
+    
+    for (i in 1:nrow(combi.tbl)) {
+      try({
+        tbl = combi.tbl$tbl[i]
+        cls = combi.tbl$cls[i]
+        
+        is_there = tbl %in% names(mSet$dataSet)
+        
+        if(is_there){
+          
+          tbl_data <- as.data.frame(mSet$dataSet[[tbl]])
+          tbl_data$sample <- samples_noreps
+          tbl_data = data.table::as.data.table(tbl_data)
+          data.table::setkey(tbl_data, sample)
+          usefun = get(mSet$metshiParams$repl_merge_fun)
+          if(tbl == "missing"){
+            tbl_data <- tbl_data[, lapply(.SD, median), 
+                                 by = sample,
+                                 .SDcols = setdiff(colnames(tbl_data),
+                                                   "sample")]
+          }else{
+            tbl_data <- tbl_data[, lapply(.SD, usefun), 
+                                 by = sample,
+                                 .SDcols = setdiff(colnames(tbl_data),
+                                                   "sample")]  
+          }
+          
+          sampOrder = match(tbl_data$sample,
+                            mSet$dataSet$covars$sample)
+          
+          samps_noreps = tbl_data$sample
+          tbl_data = as.data.frame(tbl_data[,-"sample"])
+          rownames(tbl_data) <- samps_noreps
+          mSet$dataSet[[tbl]] <- tbl_data[sampOrder, ] #reorder
+          
+          if(!(tbl %in% c("start", "missing", "prebatch"))){
+            mSet$dataSet[[cls]] <-
+              as.factor(mSet$dataSet$covars[, mSet$metshiParams$default_condition, 
+                                            with = F][[1]])
+            if (cls == "cls") {
+              mSet$dataSet$cls.num <- length(levels(mSet$dataSet[[cls]]))
+            }  
+          }  
+        }
+      }, silent = F)
+    }
+  }
+  return(mSet)
+}
+
+keep_mz_missing <- function(peaktable, classes, minorityFilter=F, thresh=0.8){
+  if(minorityFilter){
+    class_distr = table(classes)
+    min_class = names(class_distr[class_distr == min(class_distr)])
+    min_class_samps = which(classes == min_class) 
+    missing_minority = peaktable[min_class_samps,]
+    sums_mz = colSums(missing_minority)
+    missing.per.mz.perc = sums_mz/nrow(missing_minority)*100
+  }else{
+    sums_mz = colSums(peaktable)
+    missing.per.mz.perc = sums_mz/nrow(peaktable)*100  
+  }
+  missing.per.mz.perc <= thresh
 }

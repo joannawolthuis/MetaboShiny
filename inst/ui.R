@@ -259,6 +259,14 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                "Leave them out" = "exclude",
                                                                                                                                                                                                "Leave them alone" = "none"),
                                                                                                                  selected = "rowmin"),
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "miss_minority_filter",
+                                                                                             value = FALSE,
+                                                                                             label = "Only check missing values on the minority class?",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
                                                                                            shiny::conditionalPanel("input.miss_type == 'rf'",
                                                                                                                    shinyWidgets::switchInput("rf_norm_method", label = "Method:", 
                                                                                                                                              value = TRUE, onLabel = "missRanger", 
@@ -278,6 +286,41 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                              offLabel = "no",
                                                                                              size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
                                                                                            ),
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "miss_upon_subset",
+                                                                                             value = F,
+                                                                                             label = "Refilter by missing values after subsetting?:",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
+                                                                                           # - - - - - -
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "repl_merge",
+                                                                                             value = FALSE,
+                                                                                             label = "Merge tech. replicates?",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
+                                                                                           shinyWidgets::switchInput(
+                                                                                             inputId = "miss_group_replicates",
+                                                                                             value = FALSE,
+                                                                                             label = "Group missing values by replicates?",
+                                                                                             onLabel = "yes",
+                                                                                             offLabel = "no",
+                                                                                             size = "small"# "<div class=\"fa-flip-vertical\"><i class=\"fas fa-chart-bar fa-rotate-90\"></i></div>"
+                                                                                           ),
+                                                                                           shiny::conditionalPanel("input.repl_merge == true",
+                                                                                                                    shiny::selectInput("repl_merge_fun", 
+                                                                                                                                       "How to merge m/z intensity over replicates?",
+                                                                                                                                       choices = c("mean",
+                                                                                                                                                   "sum",
+                                                                                                                                                   "min",
+                                                                                                                                                   "max",
+                                                                                                                                                   "median")) 
+                                                                                                                  )
+                                                                                           ,
                                                                                            # - - - - - -
                                                                                            shinyWidgets::switchInput(
                                                                                              inputId = "pca_corr",
@@ -761,6 +804,45 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                 ),
                                                                                                                                                                                                                 shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_tt_tables",
                                                                                                                                                                                                                                          shiny::div(DT::dataTableOutput('tt_tab',width="100%"),style='font-size:80%')
+                                                                                                                                                                                                                                         
+                                                                                                                                                                                                                ))
+                                                                                                                                                                            )
+                                                                                                                                                                            
+                                                                                                                                                            )),
+                                                                                                                                            shiny::tabPanel("proDA", value="proda",
+                                                                                                                                                            shiny::helpText("T-test equivalent for data with missing values intact (uses non-imputed data)."),
+                                                                                                                                                            shiny::fluidRow(align="center",
+                                                                                                                                                                            shiny::fluidRow(align="center",
+                                                                                                                                                                                            shinyBS::bsCollapse(multiple=T,id="collapse_proda",
+                                                                                                                                                                                                                shinyBS::bsCollapsePanel(title = h2("settings"),value="collapse_proda_settings",
+                                                                                                                                                                                                                                         shinyWidgets::switchInput("proda_add_batch", 
+                                                                                                                                                                                                                                                                   "Add batch in model?",
+                                                                                                                                                                                                                                                                   value = TRUE,
+                                                                                                                                                                                                                                                                   onLabel="yes",
+                                                                                                                                                                                                                                                                   offLabel="no"),
+                                                                                                                                                                                                                                         shiny::selectInput("proda_multi_test", "Multiple testing correction method:",
+                                                                                                                                                                                                                                                            choices = list("Holm"="holm", 
+                                                                                                                                                                                                                                                                           "Hochmerg"="hochberg", 
+                                                                                                                                                                                                                                                                           "Hommel"="hommel", 
+                                                                                                                                                                                                                                                                           "Bonferroni"="bonferroni", 
+                                                                                                                                                                                                                                                                           "Benjamini & Hochberg"="fdr", 
+                                                                                                                                                                                                                                                                           "Benjamini & Yekutieli"="BY",
+                                                                                                                                                                                                                                                                           "none"),
+                                                                                                                                                                                                                                                            selected = "fdr"),
+                                                                                                                                                                                                                                         shinyWidgets::actionBttn(
+                                                                                                                                                                                                                                           inputId = "do_proda",
+                                                                                                                                                                                                                                           label = "click to start proDA t-test", 
+                                                                                                                                                                                                                                           style = "bordered",
+                                                                                                                                                                                                                                           icon = icon("terminal"),
+                                                                                                                                                                                                                                           size = "sm"
+                                                                                                                                                                                                                                         )
+                                                                                                                                                                                                                ),
+                                                                                                                                                                                                                shinyBS::bsCollapsePanel(title = h2("plots"),value="collapse_proda_plots",
+                                                                                                                                                                                                                                         shinyjqui::jqui_resizable(shiny::uiOutput("proda_plot_wrap")),
+                                                                                                                                                                                                                                         shiny::sliderInput('proda_topn',label = "Show top:",min = 5,max=5000,value = 100)
+                                                                                                                                                                                                                ),
+                                                                                                                                                                                                                shinyBS::bsCollapsePanel(title = h2("tables"),value="collapse_proda_tables",
+                                                                                                                                                                                                                                         shiny::div(DT::dataTableOutput('proda_tab',width="100%"),style='font-size:80%')
                                                                                                                                                                                                                                          
                                                                                                                                                                                                                 ))
                                                                                                                                                                             )
