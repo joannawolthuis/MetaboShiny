@@ -307,28 +307,27 @@ replRF <- function(mSet, parallelMode, ntree, cl, rf.method){
   doParallel::registerDoParallel(cl)
   
   imp <- switch(rf.method,
-         ranger = {
-           print(w.missing[1:10,1:10])
-           w.missing <<- w.missing
-           w.missing.df <- as.data.frame(w.missing)
-           colnames(w.missing.df) <- paste0("mz", 1:ncol(w.missing.df))
-           imp = missRanger.joanna(data = w.missing.df ,formula =  . ~ ., verbose = 0, num.threads = length(cl))
-           colnames(imp) <- colnames(w.missing)
-         },
-         rf = {
-           auto.mtry <- floor(sqrt(ncol(w.missing)))
-         
-         mtry <- ifelse(auto.mtry > 100, 
-                        100, 
-                        auto.mtry)
-         
-         # impute missing values with random forest
-         imp <- missForest::missForest(w.missing,
-                                       parallelize = parallelMode, # parallelize over variables, 'forests' is other option
-                                       verbose = F,
-                                       ntree = ntree,
-                                       mtry = mtry)
-         imp$ximp})
+                ranger = {
+                  print(w.missing[1:10,1:10])
+                  w.missing.df <- as.data.frame(w.missing)
+                  colnames(w.missing.df) <- paste0("mz", 1:ncol(w.missing.df))
+                  imp = missRanger.joanna(data = w.missing.df ,formula =  . ~ ., verbose = 0, num.threads = length(cl))
+                  colnames(imp) <- colnames(w.missing)
+                },
+                rf = {
+                  auto.mtry <- floor(sqrt(ncol(w.missing)))
+                  
+                  mtry <- ifelse(auto.mtry > 100, 
+                                 100, 
+                                 auto.mtry)
+                  
+                  # impute missing values with random forest
+                  imp <- missForest::missForest(w.missing,
+                                                parallelize = parallelMode, # parallelize over variables, 'forests' is other option
+                                                verbose = F,
+                                                ntree = ntree,
+                                                mtry = mtry)
+                  imp$ximp})
   return(imp)
 }
 
@@ -476,12 +475,12 @@ metshiTable <- function(content, options=NULL, rownames= T, selection = 'single'
 #' @importFrom stringr str_match
 #' @importFrom data.table as.data.table
 getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
-
+  
   experiments <- stringr::str_match(expnames, 
                                     pattern = "(all m\\/z)|\\(.*\\)")[,1]
   
   experiments <- unique(gsub(experiments, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
-
+  
   exp_table = data.frame(name = expnames, threshold = c(if(length(thresholds)>0) thresholds else 0))
   
   table_list <- lapply(experiments, function(experiment){
@@ -556,7 +555,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        },
                        corr = {
                          values = analysis$corr$cor.mat[order(abs(analysis$corr$cor.mat[,1]),
-                                                                         decreasing = F),]
+                                                              decreasing = F),]
                          res = list(data.frame(`m/z` = rownames(values),
                                                value = values[,2])
                          )
@@ -592,7 +591,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        },
                        MB = {
                          values = analysis$MB$stats[order(analysis$MB$stats[,1],
-                                                            decreasing = F),]
+                                                          decreasing = F),]
                          res = list(data.frame(`m/z` = rownames(values),
                                                value = values[,2])
                          )
@@ -601,10 +600,10 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        },
                        tt = {
                          values = analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                          decreasing = F),]
+                                                            decreasing = F),]
                          res = list(data.frame(`m/z` = rownames(values),
                                                value = values[,2])
-                                    )
+                         )
                          names(res) = base_name
                          res
                        },
@@ -619,7 +618,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        },
                        combi = {
                          values = analysis$combi$distances[order(abs(analysis$combi$distances),
-                                                           decreasing = T)]
+                                                                 decreasing = T)]
                          
                          # special opt for volcano... TODO: somehow make this work for the others
                          res = list(data.frame("m/z"=names(values),
@@ -660,21 +659,21 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                        },
                        return(NULL))
         
-
+        
         if(is.null(tbls)) return(NULL)
         
         # user specified top hits only
         tbls_top <- lapply(tbls, function(tbl){
           filt_tbl = switch(filter_mode,
-                 top = if(nrow(tbl) < top){
-                   tbl[,1]
-                 }else{
-                   tbl[1:top, 1]
-                 },
-                 threshold = tbl[switch(sign,
-                                        ">" = {tbl$value > thresh},
-                                        "=" = {tbl$value == thresh},
-                                        "<" = {tbl$value < thresh}),1])
+                            top = if(nrow(tbl) < top){
+                              tbl[,1]
+                            }else{
+                              tbl[1:top, 1]
+                            },
+                            threshold = tbl[switch(sign,
+                                                   ">" = {tbl$value > thresh},
+                                                   "=" = {tbl$value == thresh},
+                                                   "<" = {tbl$value < thresh}),1])
           
         })
         keep_tbls = unlist(lapply(tbls_top, function(t) length(t)>0))
@@ -708,7 +707,7 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
 getAllHits <- function(mSet, expname, randomize = F){
   
   experiment <- stringr::str_match(expname, 
-                                    pattern = "(all m\\/z)|\\(.*\\)")[,1]
+                                   pattern = "(all m\\/z)|\\(.*\\)")[,1]
   
   experiment <- unique(gsub(experiment, pattern = "\\(\\s*(.+)\\s*\\)", replacement="\\1"))
   
@@ -729,7 +728,7 @@ getAllHits <- function(mSet, expname, randomize = F){
     name_orig = grep(expname,
                      pattern = paste0("\\(",rgx_exp, "\\)"), value = T)
     # go through the to include analyses
-      
+    
     filter = exp_table[exp_table$name == name_orig, "threshold"]
     sign = stringr::str_extract(filter,pattern = ">|<|=")
     thresh = as.numeric(gsub(sign, "", filter))
@@ -744,30 +743,30 @@ getAllHits <- function(mSet, expname, randomize = F){
     
     # fetch involved mz values
     tbl <- switch(search_name,
-                   venn = {
-                     venn.mzs = analysis$venn$mzs
-                     not.in.venn = setdiff(colnames(mSet$dataSet$norm), venn.mzs)
-                     res = data.frame(`m/z` = c(venn.mzs, not.in.venn),
-                                      value = c(rep(1, length(venn.mzs)),
-                                                rep(0, length(not.in.venn)))
-                                      ,statistic=c(rep(1, length(venn.mzs)),
-                                         rep(0, length(not.in.venn))
-                                      ))
-                     res = res[order(abs(res$statistic),decreasing = T),]
-                     
-                     # -------------------------
-                     res
-                   },
-                   tt = {
-                     res = data.frame(`m/z` = names(analysis$tt$p.value),
-                                      value = analysis$tt$p.value,
-                                      statistic = analysis$tt$t.score
-                     )
-                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
-                     res = res[order(abs(res$statistic),decreasing = T),]
-                     
-                     res
-                   },
+                  venn = {
+                    venn.mzs = analysis$venn$mzs
+                    not.in.venn = setdiff(colnames(mSet$dataSet$norm), venn.mzs)
+                    res = data.frame(`m/z` = c(venn.mzs, not.in.venn),
+                                     value = c(rep(1, length(venn.mzs)),
+                                               rep(0, length(not.in.venn)))
+                                     ,statistic=c(rep(1, length(venn.mzs)),
+                                                  rep(0, length(not.in.venn))
+                                     ))
+                    res = res[order(abs(res$statistic),decreasing = T),]
+                    
+                    # -------------------------
+                    res
+                  },
+                  tt = {
+                    res = data.frame(`m/z` = names(analysis$tt$p.value),
+                                     value = analysis$tt$p.value,
+                                     statistic = analysis$tt$t.score
+                    )
+                    res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
+                    res = res[order(abs(res$statistic),decreasing = T),]
+                    
+                    res
+                  },
                   multirank = {
                     res_tbl = analysis$multirank$result_table
                     res_tbl = unique(res_tbl[group == "mean"])
@@ -780,15 +779,15 @@ getAllHits <- function(mSet, expname, randomize = F){
                     
                     res
                   },
-                   fc = {
-                     res = data.frame(`m/z` = names(analysis$fc$fc.all),
-                                      value = analysis$fc$fc.all,
-                                      statistic = analysis$fc$fc.log)
-                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$fc$sig.mat))
-                     res = res[order(abs(res$statistic),decreasing = T),]
-                     
-                     res
-                   },
+                  fc = {
+                    res = data.frame(`m/z` = names(analysis$fc$fc.all),
+                                     value = analysis$fc$fc.all,
+                                     statistic = analysis$fc$fc.log)
+                    res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$fc$sig.mat))
+                    res = res[order(abs(res$statistic),decreasing = T),]
+                    
+                    res
+                  },
                   cliffd = {
                     res = data.frame(`m/z` = names(analysis$cliffd$cliffd),
                                      value = analysis$cliffd$cliffd)
@@ -798,20 +797,21 @@ getAllHits <- function(mSet, expname, randomize = F){
                     
                     res
                   },
-                   combi = {
-                     
-                     # --- only volc for now ---
-                     res = data.frame(`m/z` = names(analysis$combi$distances),
-                                      value = c(0),
-                                      statistic = analysis$combi$distances)
-                     
-                     res = res[order(abs(res$statistic), decreasing = T),]
-                     
-                     res$significant = T
-                     # -------------------------
-                     res
+                  combi = {
+                    
+                    # --- only volc for now ---
+                    res = data.frame(`m/z` = names(analysis$combi$distances),
+                                     value = c(0),
+                                     statistic = analysis$combi$distances)
+                    
+                    res = res[order(abs(res$statistic), decreasing = T),]
+                    
+                    res$significant = T
+                    # -------------------------
+                    res
                   },
                   featsel = {
+                    print("!")
                     decision = analysis$featsel[[1]]$finalDecision
                     res = data.frame(`m/z` = names(decision),
                                      value = sapply(names(decision), function(x) ifelse(as.character(decision[x]) == "Rejected", 1, 0)),
@@ -819,42 +819,57 @@ getAllHits <- function(mSet, expname, randomize = F){
                                                                                             Rejected = 0, 
                                                                                             Tentative = 1, 
                                                                                             Confirmed = 2))
-                                     )
+                    )
+                    print(head(res))
+                    res = res[res$statistic > 0,]
                     res = res[order(abs(res$statistic),decreasing = T),]
                     
                     res
                   },
-                   ml = {
-                     ml_name = gsub(paste0(base_name, " - "), "", name)
-                     mdls = analysis$ml[[base_name]][[ml_name]]$res
-                     importance = data.table::rbindlist(lapply(mdls, function(mdl){
-                       if(!mdl$shuffled){
-                         data.table::as.data.table(mdl$importance, keep.rownames=T)
-                       }else{
-                         data.table::data.table()
-                       }
-                     }))
-                     res = data.frame(`m.z` = gsub("\\.$", "-", gsub("^X", "", 
-                                                                     importance$rn)),
-                                      value =  ifelse(importance[[2]] != 0, 0, 1),
-                                      statistic = as.numeric(importance[[2]]))
-                     # aggregate duplicates
-                     if(any(duplicated(res$m.z))){
-                       res = data.table::as.data.table(res)
-                       res_aggr = aggregate(res[,2:3], by = list(res$m.z), FUN = mean)
-                       colnames(res_aggr)[1] <- "m.z"
-                       res = res_aggr
-                     }
-                     
-                     res = res[order(abs(res$statistic),decreasing = T),]
-                     
-                     #####################
-                     
-                     res$rn <- NULL
-                     res
-                   },
-                   {metshiAlert("Not currently supported...")
-                     return(NULL)})
+                  proda = {
+                    print(names(analysis))
+                    # --- only volc for now ---
+                    res = data.frame(`m/z` = analysis$proda$tt_res$name,
+                                     value = c(0),
+                                     statistic = analysis$proda$tt_res$adj_pval)
+                    
+                    res = res[order(res$statistic, decreasing = F),]
+                    
+                    res$significant = T
+                    # -------------------------
+                    res
+                  },
+                  ml = {
+                    ml_name = gsub(paste0(base_name, " - "), "", name)
+                    mdls = analysis$ml[[base_name]][[ml_name]]$res
+                    importance = data.table::rbindlist(lapply(mdls, function(mdl){
+                      if(!mdl$shuffled){
+                        data.table::as.data.table(mdl$importance, keep.rownames=T)
+                      }else{
+                        data.table::data.table()
+                      }
+                    }))
+                    res = data.frame(`m.z` = gsub("\\.$", "-", gsub("^X", "", 
+                                                                    importance$rn)),
+                                     value =  ifelse(importance[[2]] != 0, 0, 1),
+                                     statistic = as.numeric(importance[[2]]))
+                    # aggregate duplicates
+                    if(any(duplicated(res$m.z))){
+                      res = data.table::as.data.table(res)
+                      res_aggr = aggregate(res[,2:3], by = list(res$m.z), FUN = mean)
+                      colnames(res_aggr)[1] <- "m.z"
+                      res = res_aggr
+                    }
+                    
+                    res = res[order(abs(res$statistic),decreasing = T),]
+                    
+                    #####################
+                    
+                    res$rn <- NULL
+                    res
+                  },
+                  {metshiAlert("Not currently supported...")
+                    return(NULL)})
     
     if(nrow(tbl) > 0){
       if(randomize){
@@ -869,7 +884,7 @@ getAllHits <- function(mSet, expname, randomize = F){
 }
 
 getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
-                  toWrap <- switch(do,
+  toWrap <- switch(do,
                    general = {
                      # make sidebar
                      # make pca, plsda, ml(make plotmanager do that)
@@ -887,7 +902,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                             samp3=sampNormPlots$tr, samp4=sampNormPlots$br)
                        
                      }},
-                    venn = {
+                   venn = {
                      # get user input for how many top values to use for venn
                      top = input$venn_tophits
                      if(nrow(venn_yes$now) > 7 | nrow(venn_yes$now) <= 1){
@@ -1199,9 +1214,9 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                    ml = {
                      if("ml" %in% names(mSet$analSet) & 
                         !(input$ml_plot_posclass %in% c("placeholder", "")) & 
-                          input$ml_plot_x != "" &
-                          input$ml_plot_y != ""){
-
+                        input$ml_plot_x != "" &
+                        input$ml_plot_y != ""){
+                       
                        if(length(mSet$analSet$ml) > 0){
                          
                          data = mSet$analSet$ml[[mSet$analSet$ml$last$method]][[mSet$analSet$ml$last$name]]
@@ -1334,7 +1349,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          ) else NULL
                          list(ml_mistake = mistake_plot)
                        }
-                      }else list()
+                     }else list()
                    },
                    multigroup = {
                      p = ggplotSummary(mSet, my_selection$mz, 
@@ -1365,6 +1380,14 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                   20,topn=input$tt_topn)
                      
                      list(tt_plot = p)
+                   },
+                   proda = {
+                     # render manhattan-like plot for UI
+                     p = ggPlotProDA(mSet,
+                                     cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                     20,topn=input$proda_topn)
+                     
+                     list(proda_plot = p)
                    },
                    fc = {
                      # render manhattan-like plot for UI
@@ -1493,8 +1516,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                                             FALSE,FALSE,FALSE,FALSE,FALSE,
                                                                             FALSE,FALSE,FALSE,FALSE)]}) +
                          ggplot2::xlab("top m/z")
-                       }
-                  
+                     }
+                     
                      matr_for_network <- matr
                      matr_for_network[abs(matr_for_network) <= rthresh | matp >= input$network_sign] <- 0
                      
@@ -1581,8 +1604,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            data = data.frame(text = "Huge heatmap!\nDeactivating interactivity to avoid crashing.\nPlease apply a filter.")
                            hmap_int <- ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
                              ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-                          hmap_int
-                          }else{
+                           hmap_int
+                         }else{
                            hmap_int <- suppressWarnings({
                              if(input$heatlimits){
                                heatmaply::heatmaply(mat,
@@ -1626,7 +1649,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                            # save the order of mzs for later clicking functionality
                            lcl$vectors$heatmap <- hmap_int$x$layout[[if(mSet$settings$exp.type %in% c("2f", "t", "t1f")) "yaxis2" else "yaxis3"]]$ticktext 
                            
-                           }
+                         }
                          # return
                          hmap_int
                        }else{
@@ -1710,7 +1733,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                          
                        }else{
                          NULL
-                      }
+                       }
                      }
                      list(combi_plot = p)
                    },
@@ -1766,7 +1789,7 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
       myplot <- myplot + guides(fill = guide_legend(ncol = 1),
                                 shape = guide_legend(ncol = 1),
                                 color = guide_legend(ncol = 1))
-   
+      
       myplot <- myplot + 
         gbl$functions$plot.themes[[lcl$aes$theme]](base_size = lcl$aes$font$plot.font.size) + 
         ggplot2::theme(legend.position = if(input$legend) "right" else "none",
@@ -1845,13 +1868,13 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
             #                              y = y,#+ .04*min(y),
             #                              label = text),point.padding = 1,
             #                          size=4) 
-          ggplot2::geom_text(data = data,
-                             aes(x = x, #+ 0.04 * max(x),
-                                 y = y,#+ 0.04 * max(x),
-                                 label = text),
-                             position = 	
-                               position_jitter(),
-                             size=4)
+            ggplot2::geom_text(data = data,
+                               aes(x = x, #+ 0.04 * max(x),
+                                   y = y,#+ 0.04 * max(x),
+                                   label = text),
+                               position = 	
+                                 position_jitter(),
+                               size=4)
         }
       }
     }
@@ -1863,13 +1886,51 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
 }
 
 metshiProcess <- function(mSet, session, init=F, cl=0){
+  
   if(mSet$metshiParams$miss_perc < 100){
-    sums_mz = colSums(mSet$dataSet$missing)
-    missing.per.mz.perc = sums_mz/nrow(mSet$dataSet$missing)*100
-    good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
+    if(mSet$metshiParams$miss_group_replicates){#mSet$metshiParams$repl_merge){ # disable for now
+      samples_noreps = gsub("_REP.*$", "", rownames(mSet$dataSet$missing))
+      tbl_data <- as.data.frame(mSet$dataSet$missing)
+      tbl_data$sample <- samples_noreps
+      tbl_data <- data.table::setDT(tbl_data)[, 
+                                              lapply(.SD, 
+                                                     any), 
+                                              by=sample]
+      tbl_data$sample=NULL
+      good.inx <- keep_mz_missing(tbl_data, 
+                                  mSet$dataSet$cls, 
+                                  mSet$metshiParams$miss_minority_filter,
+                                  thresh = mSet$metshiParams$miss_perc)
+    }else{
+      good.inx <- keep_mz_missing(mSet$dataSet$missing, 
+                                  mSet$dataSet$cls, 
+                                  mSet$metshiParams$miss_minority_filter,
+                                  thresh = mSet$metshiParams$miss_perc)
+    }
+    print(paste("Remaining m/z:", length(which(good.inx))))
     mSet$dataSet$orig.var.nms <- colnames(mSet$dataSet$orig)
+    mSet$dataSet$orig <- mSet$dataSet$orig[,good.inx, drop = FALSE]
   }
   
+  ############## BATCH CORR METHODS THAT DO NOT REQUIRE NORMALIZATION ##########
+  # if(length(mSet$metshiParams$batch_var) > 0){
+  #   if("batch" %in% mSet$metshiParams$batch_var){
+  #     if(mSet$metshiParams$batch_method_a %in% c("batchcorr", "waveica")){
+  #       mSet$dataSet$orig[is.na(mSet$dataSet$orig)] <- 0
+  #       
+  #       corrected = batchCorr_mSet(mSet,
+  #                                  mSet$metshiParams$batch_method_a, 
+  #                                  batch_var=c("batch", "injection"), 
+  #                                  source_table = "orig")
+  #       
+  #       left_batch_vars = setdiff(mSet$metshiParams$batch_var, 
+  #                                 c("batch", "injection"))
+  #       
+  #     }  
+  #   }
+  # }
+  ##############################################################################
+  # TODO: adjust this to technical replicates
   if(mSet$metshiParams$miss_perc_samp < 100){
     sums_samp = rowSums(mSet$dataSet$missing)
     missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
@@ -1880,7 +1941,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     mSet$dataSet$orig.cls <- mSet$dataSet$orig.cls[good.inx]
     mSet$dataSet$orig.smp.nms <- mSet$dataSet$covars$sample
   }
-
+  
   qs::qsave(mSet$dataSet$orig, "data_orig.qs")
   
   if(!init) mSet$dataSet$missing <- NULL
@@ -1906,7 +1967,6 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   # sanity check data
   mSet <- MetaboAnalystR::SanityCheckData(mSet)
   
-
   # missing value imputation
   if(req(mSet$metshiParams$miss_type) != "none"){
     if(req(mSet$metshiParams$miss_type) == "rowmin"){ # use sample minimum
@@ -1941,7 +2001,6 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
       mSet$dataSet$covars$sample
     )
     mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
-    
     norm.vec <<- mSet$dataSet$covars[[mSet$metshiParams$samp_var]]
     norm.vec <<- scale(x = norm.vec, center = 1)[,1] # normalize scaling factor
   }else{
@@ -1949,7 +2008,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   }
   
   mSet <- MetaboAnalystR::PreparePrenormData(mSet)
-
+  
   if(mSet$metshiParams$norm_type == "QcNorm"){
     data <- qs::qread("prenorm.qs")  
     rematch = match(
@@ -1980,7 +2039,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     })
     qc_norm_table = do.call("rbind", normalized_blocks)
     mSet$dataSet$norm <- qc_norm_table
-  }else{
+  }else if(mSet$metshiParams$norm_type != "NULL"){
     data <- qs::qread("prenorm.qs")  
     mSet$dataSet$prenorm <- data
     # normalize dataset with user settings(result: mSet$dataSet$norm)
@@ -1989,12 +2048,12 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
                                           transNorm = mSet$metshiParams$trans_type,
                                           scaleNorm = mSet$metshiParams$scale_type,
                                           ref = mSet$metshiParams$ref_var) 
-
+    
+  }else{
+    mSet$dataSet$norm <- mSet$dataSet$orig
   }
   
-  mSet$dataSet$prenorm <- NULL
   
-
   # get sample names
   smps <- rownames(mSet$dataSet$norm)
   # get which rows are QC samples
@@ -2071,7 +2130,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
           batch_method_a <- "waveica"
         }
         
-        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars, cl=cl)
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_a, batch_var = left_batch_vars, cl=cl, "norm")
         
         left_batch_vars <- grep(left_batch_vars,
                                 pattern = "batch|injection|sample",
@@ -2083,7 +2142,7 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
       if(length(left_batch_vars) == 0){
         NULL # if none left, continue after this
       } else{
-        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars, cl=cl) 
+        mSet$dataSet$norm <- batchCorr_mSet(mSet, batch_method_b, batch_var = left_batch_vars, cl=cl, "norm") 
       }}
   }
   
@@ -2097,8 +2156,16 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     mSet$dataSet$norm <- as.data.frame(trunc)
   }
   
-
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
+  
+  if(mSet$metshiParams$repl_merge & init){
+    print("Combining technical replicates...")
+    mSet <- merge_repl_mSet(mSet, 
+                            repl_regex = "_REP", 
+                            repl_merge_fun = mSet$metshiParams$repl_merge_fun)
+  }else{
+    print("Not combining technical replicates...")
+  }
   
   # make sure covars order is consistent with mset$..$norm order
   rematch = match(
@@ -2108,13 +2175,17 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
   
+  if(has.qc){
+    mSet$dataSet$covars$is_qc = grepl("QC|qc", mSet$dataSet$covars$sample)
+  }
   mSet$report <- list(mzStarred = data.table::data.table(mz = colnames(mSet$dataSet$norm),
                                                          star = c(FALSE)))  
   data.table::setkey(mSet$report$mzStarred, mz)
   
-  if(has.qc & !init){
-    mSet <- hideQC(mSet)
-  }
+  #if(has.qc & !init){
+  #  mSet <- subset_mSet(mSet, "sample", no_qc_samps)
+  #  mSet <- hideQC(mSet)
+  #}
   
   rematch = match(
     rownames(mSet$dataSet$norm),
@@ -2187,7 +2258,6 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
     }
   }
   else if (type == "compound") {
-    plot.data <<- plot.data
     if (same.layer != T) {
       nc.cols = ncol(cbind(cols.ts))
       if (nc.cols > 2) {
@@ -2211,8 +2281,6 @@ render.kegg.node.jw <- function (plot.data, cols.ts, img, same.layer = TRUE, typ
       
       cidx = rep(1:w, each = h)
       ridx = rep(1:h, w)
-      
-      plot.data <<- plot.data
       
       pidx = lapply(1:nn, function(i) {
         ii = which((cidx - plot.data$x[i])^2 + (ridx - 
@@ -2309,12 +2377,12 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            mSet <- metshiUMAP(mSet, input)
          },
          meba = {
-             mSet <- MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
+           mSet <- MetaboAnalystR::performMB(mSet, 10) # perform MEBA analysis
          },
          asca = {
            # perform asca analysis
-             mSet <- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
-             mSet <- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
+           mSet <- MetaboAnalystR::Perform.ASCA(mSet, 1, 1, 2, 2)
+           mSet <- MetaboAnalystR::CalculateImpVarCutoff(mSet, 0.05, 0.9)
            
          },
          network = {
@@ -2322,40 +2390,40 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            to_output = list(network_now =  input$network_table)
          },
          enrich = {
-
-             tbl <- metshiGetEnrichInputTable(mSet, input)
-             
-             tmpfile <- tempfile()
-             
-             print("Preview of input table:")
-             print(head(tbl))
-             
-             data.table::fwrite(if(any(!is.na(tbl$t.score))) tbl else tbl[,1:3], file=tmpfile)
-             
-             ppm <- mSet$ppm
-             
-             enr_mSet <- doEnrich(input, tmpfile, ppm, lcl)
-             
-             orig_input <- as.data.frame(enr_mSet$dataSet$mummi.orig)
-             if(any(!is.na(orig_input$t.score)) & input$mummi_enr_method){
-               orig_input$significant <- orig_input[['p.value']] <= as.numeric(input$mummi_pval)
-             }else{
-               orig_input$significant <- T
-             }
-             # ---------e
-             
-             mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
-                                         mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
-                                         mumResTable = enr_mSet$dataSet$mumResTable,
-                                         mummi.input = enr_mSet$dataSet$mummi.proc,
-                                         path.nms = enr_mSet$path.nms,
-                                         path.hits = enr_mSet$path.hits,
-                                         path.all = enr_mSet$pathways,
-                                         path.lib = enr_mSet$lib.organism,
-                                         cpd.value = enr_mSet$cpd_exp_dict,
-                                         orig.input = orig_input,
-                                         enr.method = if(input$mummi_enr_method) "mum" else "gsea")
-             enr_mSet <- NULL
+           
+           tbl <- metshiGetEnrichInputTable(mSet, input)
+           
+           tmpfile <- tempfile()
+           
+           print("Preview of input table:")
+           print(head(tbl))
+           
+           data.table::fwrite(if(any(!is.na(tbl$t.score))) tbl else tbl[,1:3], file=tmpfile)
+           
+           ppm <- mSet$ppm
+           
+           enr_mSet <- doEnrich(input, tmpfile, ppm, lcl)
+           
+           orig_input <- as.data.frame(enr_mSet$dataSet$mummi.orig)
+           if(any(!is.na(orig_input$t.score)) & input$mummi_enr_method){
+             orig_input$significant <- orig_input[['p.value']] <= as.numeric(input$mummi_pval)
+           }else{
+             orig_input$significant <- T
+           }
+           # ---------e
+           
+           mSet$analSet$enrich <- list(mummi.resmat = enr_mSet$mummi.resmat,
+                                       mummi.gsea.resmat = enr_mSet$mummi.gsea.resmat,
+                                       mumResTable = enr_mSet$dataSet$mumResTable,
+                                       mummi.input = enr_mSet$dataSet$mummi.proc,
+                                       path.nms = enr_mSet$path.nms,
+                                       path.hits = enr_mSet$path.hits,
+                                       path.all = enr_mSet$pathways,
+                                       path.lib = enr_mSet$lib.organism,
+                                       cpd.value = enr_mSet$cpd_exp_dict,
+                                       orig.input = orig_input,
+                                       enr.method = if(input$mummi_enr_method) "mum" else "gsea")
+           enr_mSet <- NULL
          },
          featsel = {
            print("Feature selection start...")
@@ -2364,6 +2432,46 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            boruta_res = Boruta::Boruta(x = curr[,2:ncol(curr)],
                                        y = as.factor(curr[[1]]))
            mSet$analSet$featsel <- list(boruta_res)
+         },
+         proda = {
+           print("running proda NEW VER")
+           inp_mat <- as.matrix(t(mSet$dataSet$orig))#[1:260,]
+           vars_in_model = if(input$proda_add_batch){
+             present_batch_vars = intersect(colnames(mSet$dataSet$covars),
+                                            c("batch", "injection"))
+             c(mSet$settings$exp.var, present_batch_vars)
+           }else{
+             mSet$settings$exp.var
+           }
+           
+           attach(loadNamespace("proDA"), name = "proDA_all")
+           fit <- proDA(inp_mat,
+                        design = as.formula(paste("~", 
+                                                  paste(vars_in_model, 
+                                                        collapse="+"))), 
+                        data_is_log_transformed = F,
+                        col_data = mSet$dataSet$covars,#[1:260,1:260],
+                        use_slurm = F,
+                        cl = NULL,#session_cl, 
+                        verbose=T)
+           
+           tt_res = proDA::test_diff(fit, paste0(mSet$settings$exp.var, 
+                                                 levels(mSet$dataSet$cls)[2]),
+                                     n_max = Inf, 
+                                     sort_by = "pval",
+                                     pval_adjust_method = input$proda_multi_test)
+           
+           imputed = proDA::predict(fit, 
+                                    newdata = fit$abundances,	#a matrix or a SummarizedExperiment which contains the new abundances for which values are predicted.
+                                    newdesign = as.formula(paste("~", 
+                                                                 paste(vars_in_model, 
+                                                                       collapse="+"))), # a formula or design matrix that specifies the new structure that will be fitted
+                                    type="response"           
+           )
+           
+           mSet$analSet$proda <- list(fit = fit,
+                                      tt_res = tt_res,
+                                      imputed = imputed)
          },
          ml = {
            {
@@ -2406,7 +2514,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                print("Attempting to submit jobs through slurm!")
                
                settings_loc <- tempfile(tmpdir = tmpdir)
-               first_job_parallel_count = if(ml_queue$jobs[[1]]$ml_label_shuffle){
+               first_job_parallel_count = if(F){#ml_queue$jobs[[1]]$ml_label_shuffle){
                  ml_queue$jobs[[1]]$ml_n_shufflings + 1
                }else{
                  1
@@ -2443,57 +2551,57 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                  
                  {
                    
-                 setwd(tmpdir)
-                 print("Working in:")
-                 print(tmpdir)
-                 
-                 batch_job <- slurm_apply_metshi(ml_slurm, 
-                                                 pars_filt,#[5000,], 
-                                                 cpus_per_node = if(nodecount == 500) 1 else 2,
-                                                 jobname = jobname,
-                                                 nodes = ceiling(nrow(pars_filt)/10),#nodecount,
-                                                 global_objects = "gbl",
-                                                 slurm_options = list(time = job_time,
-                                                                      mem = mem_gb),
-                                                 max_simul=nodecount)
-                 
-                 completed = F
-                 
-                 print("Waiting on cluster to finish jobs...")
-                 
-                 jobs_ntot = length(ml_queue$jobs)
-                 
-                 pb = pbapply::startpb(max = jobs_ntot)
-                 max_job_done = 1
-                 while(!completed){
-                   Sys.sleep(5)
-                   try({
-                     squeue_out <- suppressWarnings(system(paste("squeue -n", 
-                                                                 batch_job$jobname), 
-                                                           intern = TRUE))
-                     queue <- read.table(text = squeue_out, header = TRUE)
-                     queue <- queue[!grepl("\\[", queue$JOBID),]
-                     curr_running = max(as.numeric(gsub("^.*_", "", queue$JOBID)),na.rm = T)
-                     if(curr_running > max_job_done){
-                       max_job_done = curr_running
-                     }
-                     # get an example log..
-                     out_files <- file.path(tmpdir, paste0("_rslurm_",
-                                                           batch_job$jobname), 
-                                            paste0("slurm_", 
-                                                   
-                                                   0:(batch_job$nodes - 
-                                                        1), ".out"))
-                     if(length(out_files) > 0){
-                       log <- paste0(readLines(out_files[1]), collapse = "\n")
-                       cat("\n")
-                       cat(log)
-                       cat("\n")               
-                     }
-                     pbapply::setpb(pb, value = max_job_done)  
-                   })
-                   completed = slurm_job_complete(batch_job)
-                 }
+                   setwd(tmpdir)
+                   print("Working in:")
+                   print(tmpdir)
+                   
+                   batch_job <- slurm_apply_metshi(ml_slurm, 
+                                                   pars_filt,#[5000,], 
+                                                   cpus_per_node = if(nodecount == 500) 1 else 2,
+                                                   jobname = jobname,
+                                                   nodes = ceiling(nrow(pars_filt)/10),#nodecount,
+                                                   global_objects = "gbl",
+                                                   slurm_options = list(time = job_time,
+                                                                        mem = mem_gb),
+                                                   max_simul=nodecount)
+                   
+                   completed = F
+                   
+                   print("Waiting on cluster to finish jobs...")
+                   
+                   jobs_ntot = length(ml_queue$jobs)
+                   
+                   pb = pbapply::startpb(max = jobs_ntot)
+                   max_job_done = 1
+                   while(!completed){
+                     Sys.sleep(5)
+                     try({
+                       squeue_out <- suppressWarnings(system(paste("squeue -n", 
+                                                                   batch_job$jobname), 
+                                                             intern = TRUE))
+                       queue <- read.table(text = squeue_out, header = TRUE)
+                       queue <- queue[!grepl("\\[", queue$JOBID),]
+                       curr_running = max(as.numeric(gsub("^.*_", "", queue$JOBID)),na.rm = T)
+                       if(curr_running > max_job_done){
+                         max_job_done = curr_running
+                       }
+                       # get an example log..
+                       out_files <- file.path(tmpdir, paste0("_rslurm_",
+                                                             batch_job$jobname), 
+                                              paste0("slurm_", 
+                                                     
+                                                     0:(batch_job$nodes - 
+                                                          1), ".out"))
+                       if(length(out_files) > 0){
+                         log <- paste0(readLines(out_files[1]), collapse = "\n")
+                         cat("\n")
+                         cat(log)
+                         cat("\n")               
+                       }
+                       pbapply::setpb(pb, value = max_job_done)  
+                     })
+                     completed = slurm_job_complete(batch_job)
+                   }
                  }
                  
                  #rslurm::print_job_status(batch_job)
@@ -2515,7 +2623,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                  stop("ml failed")
                }
              }else{
-               if(length(cl) == 1){
+               if(length(cl) == 1 | is.null(cl)){
                  small_mSet <- qs::qread(mSet_loc)
                }
                try({
@@ -2586,32 +2694,32 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            output$heatmap_now <- shiny::renderText(input$heattable)
          },
          tt = {
-             mSet <- Ttests.Anal.JW(mSet,
-                                    nonpar = input$tt_nonpar,
-                                    threshp = input$tt_p_thresh,
-                                    paired = mSet$dataSet$ispaired,
-                                    equal.var = input$tt_eqvar,
-                                    multicorr_method = input$tt_multi_test)
+           mSet <- Ttests.Anal.JW(mSet,
+                                  nonpar = input$tt_nonpar,
+                                  threshp = input$tt_p_thresh,
+                                  paired = mSet$dataSet$ispaired,
+                                  equal.var = input$tt_eqvar,
+                                  multicorr_method = input$tt_multi_test)
            
          },
          fc = {
-             mSet$dataSet$combined.method = T
-             if(mSet$dataSet$ispaired){
-               mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
-                                                      as.numeric(input$fc_thresh),
-                                                      1)  
-             }else{
-               mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
-                                                        as.numeric(input$fc_thresh), # TODO: make this threshold user defined
-                                                        1) 
-             }
-             if(!is.null(mSet$analSet$fc$sig.mat)){
-               rownames(mSet$analSet$fc$sig.mat) <- gsub(rownames(mSet$analSet$fc$sig.mat), 
-                                                         pattern = "^X",
-                                                         replacement = "")
-             }else{
-               mSet$analSet$fc$sig.mat <- data.frame()
-             }
+           mSet$dataSet$combined.method = T
+           if(mSet$dataSet$ispaired){
+             mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
+                                                    as.numeric(input$fc_thresh),
+                                                    1)  
+           }else{
+             mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
+                                                      as.numeric(input$fc_thresh), # TODO: make this threshold user defined
+                                                      1) 
+           }
+           if(!is.null(mSet$analSet$fc$sig.mat)){
+             rownames(mSet$analSet$fc$sig.mat) <- gsub(rownames(mSet$analSet$fc$sig.mat), 
+                                                       pattern = "^X",
+                                                       replacement = "")
+           }else{
+             mSet$analSet$fc$sig.mat <- data.frame()
+           }
          },
          cliffd = {
            mSet <- MetaboShiny::metshiCliffD(mSet)
@@ -2621,11 +2729,11 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            redo = aovtype %not in% names(mSet$analSet)
            if(redo){ # if done, don't redo
              
-               mSet <- switch(mSet$settings$exp.type,
-                              "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.1,post.hoc = "fdr",nonpar = F),
-                              "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "", 1, 1),
-                              "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time0", 1, 1),
-                              "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time", 1, 1))
+             mSet <- switch(mSet$settings$exp.type,
+                            "1fm"=MetaboAnalystR::ANOVA.Anal(mSet, thresh=0.1,post.hoc = "fdr",nonpar = F),
+                            "2f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "", 1, 1),
+                            "t"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time0", 1, 1),
+                            "t1f"=MetaboAnalystR::ANOVA2.Anal(mSet, 0.1, "fdr", "time", 1, 1))
              
            }
          },
@@ -2733,26 +2841,26 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            
          },
          volcano = {
-             mSet <- MetaboAnalystR::Volcano.Anal(mSetObj = mSet,
-                                                  paired = mSet$dataSet$paired, 
-                                                  fcthresh = 1.1, cmpType = 0,
-                                                  percent.thresh = 0.75,
-                                                  nonpar = F, threshp = 0.1,
-                                                  equal.var = TRUE,
-                                                  pval.type = "fdr") # TODO: make thresholds user-defined
+           mSet <- MetaboAnalystR::Volcano.Anal(mSetObj = mSet,
+                                                paired = mSet$dataSet$paired, 
+                                                fcthresh = 1.1, cmpType = 0,
+                                                percent.thresh = 0.75,
+                                                nonpar = F, threshp = 0.1,
+                                                equal.var = TRUE,
+                                                pval.type = "fdr") # TODO: make thresholds user-defined
            
          },
          tsne = {
-             inTbl = switch(input$tsne_source, 
-                            original = mSet$dataSet$prog,
-                            "pre-batch correction" = mSet$dataSet$prebatch,
-                            normalized = mSet$dataSet$norm)
-             coords = tsne::tsne(inTbl, k = 3,
-                                 initial_dims = input$tsne_dims,
-                                 perplexity = input$tsne_perplex,
-                                 max_iter = input$tsne_maxiter)
-             colnames(coords) <- paste("t-SNE dimension", 1:3)
-             mSet$analSet$tsne <- list(x = coords)
+           inTbl = switch(input$tsne_source, 
+                          original = mSet$dataSet$prog,
+                          "pre-batch correction" = mSet$dataSet$prebatch,
+                          normalized = mSet$dataSet$norm)
+           coords = tsne::tsne(inTbl, k = 3,
+                               initial_dims = input$tsne_dims,
+                               perplexity = input$tsne_perplex,
+                               max_iter = input$tsne_maxiter)
+           colnames(coords) <- paste("t-SNE dimension", 1:3)
+           mSet$analSet$tsne <- list(x = coords)
            
          },
          plsda = {
@@ -2763,9 +2871,9 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
            switch(input$plsda_type,
                   normal={
                     require(caret)
-                      mSet <- MetaboAnalystR::PLSR.Anal(mSet) # perform pls regression
-                      mSet <- MetaboAnalystR::PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
-                      mSet <- MetaboAnalystR::PLSDA.Permut(mSet,num = 300, type = "accu") # permute
+                    mSet <- MetaboAnalystR::PLSR.Anal(mSet) # perform pls regression
+                    mSet <- MetaboAnalystR::PLSDA.CV(mSet, methodName=if(nrow(mSet$dataSet$norm) < 50) "L" else "T",compNum = 3) # cross validate
+                    mSet <- MetaboAnalystR::PLSDA.Permut(mSet,num = 300, type = "accu") # permute
                     
                   },
                   sparse ={
@@ -2773,25 +2881,25 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                   })
          },
          power = {
-             pwr.analyses = lapply(input$power_comps, function(combi){
-               mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
-               mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
-                                                                  fdr.lvl = input$power_fdr, 
-                                                                  smplSize = input$power_nsamp)  
-               mSet.temp$analSet$power
-             })   
+           pwr.analyses = lapply(input$power_comps, function(combi){
+             mSet.temp <- MetaboAnalystR::InitPowerAnal(mSet, combi)
+             mSet.temp <- MetaboAnalystR::PerformPowerProfiling(mSet.temp, 
+                                                                fdr.lvl = input$power_fdr, 
+                                                                smplSize = input$power_nsamp)  
+             mSet.temp$analSet$power
+           })   
            names(pwr.analyses) <- input$power_comps
            mSet$analSet$power <- pwr.analyses 
          },
          wordcloud = {
            if(input$wordcloud_manual){
-               abstracts = MetaboShiny::getAbstracts(searchTerms = input$wordcloud_searchTerm,
-                                                     mindate = input$wordcloud_dateRange[1],
-                                                     maxdate = input$wordcloud_dateRange[2],
-                                                     retmax = input$wordcloud_absFreq)
-               lcl$tables$abstracts <- abstracts
-               lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(abstracts$abstract)
-               lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig
+             abstracts = MetaboShiny::getAbstracts(searchTerms = input$wordcloud_searchTerm,
+                                                   mindate = input$wordcloud_dateRange[1],
+                                                   maxdate = input$wordcloud_dateRange[2],
+                                                   retmax = input$wordcloud_absFreq)
+             lcl$tables$abstracts <- abstracts
+             lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(abstracts$abstract)
+             lcl$tables$wordcloud_filt <- lcl$tables$wordcloud_orig
            }else{
              if(nrow(shown_matches$forward_full) > 0){
                lcl$tables$wordcloud_orig <- MetaboShiny::getWordFrequency(shown_matches$forward_full$description)
@@ -2922,6 +3030,7 @@ doUpdate <- function(mSet, lcl, input, do){
         F
       }
     })
+    already.normalized = F# any(matching.samps) & oldSettings$ispaired == input$paired  #disabled: class-filtering
     
     if(!("renorm" %in% names(mSet$metshiParams))){
       mSet$metshiParams$renorm <- TRUE
@@ -2938,7 +3047,6 @@ doUpdate <- function(mSet, lcl, input, do){
     }
     
     # ============
-    already.normalized = any(matching.samps) & oldSettings$ispaired == input$paired
     
     if(already.normalized){
       tables = c("orig", "norm", "proc", "prebatch", "covars")
@@ -2956,25 +3064,32 @@ doUpdate <- function(mSet, lcl, input, do){
       if(mSet$metshiParams$renorm){
         mSet$dataSet$orig <- mSet$dataSet$start
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- NULL
-        mSet <- metshiProcess(mSet, cl = session_cl) #mSet1
+        mSet <- metshiProcess(mSet, cl = session_cl,init = F) #mSet1
       }else{
-        # do missing value check!!!
-        if(mSet$metshiParams$miss_perc < 100){
-          mz_sums = colSums(mSet$dataSet$missing)
-          samp_sums = rowSums(mSet$dataSet$missing)
-          missing.per.mz.perc = mz_sums/nrow(mSet$dataSet$missing)*100
-          good.inx <- missing.per.mz.perc < mSet$metshiParams$miss_perc
-          good.mz <- intersect(names(which(good.inx)), 
-                               colnames(mSet$dataSet$orig))
-          mSet <- subset_mSet_mz(mSet, keep.mzs = good.mz)  
+        if(is.null(mSet$metshiParams$miss_upon_subset)){
+          mSet$metshiParams$miss_upon_subset <- F
         }
-        if(mSet$metshiParams$miss_perc_samp < 100){
-          print("filtering by missing m/z per sample")
-          sums_samp = rowSums(mSet$dataSet$missing)
-          missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
-          good.inx <- missing.per.samp.perc < mSet$metshiParams$miss_perc_samp
-          good.samp <- rownames(mSet$dataSet$missing)[good.inx]
-          mSet <- subset_mSet(mSet, subset_var = "sample", subset_group = good.samp)  
+        if(mSet$metshiParams$miss_upon_subset){
+          print("Re-evaluating mising value filter...")
+          print(paste("previously: ", ncol(mSet$dataSet$norm)))
+          if(mSet$metshiParams$miss_perc < 100){
+            good.inx = keep_mz_missing(mSet$dataSet$missing, 
+                                       mSet$dataSet$cls, 
+                                       mSet$metshiParams$miss_minority_filter,
+                                       thresh = mSet$metshiParams$miss_perc)
+            good.mz <- intersect(names(which(good.inx)),
+                                 colnames(mSet$dataSet$orig))
+            mSet <- subset_mSet_mz(mSet, keep.mzs = good.mz)
+          }
+          if(mSet$metshiParams$miss_perc_samp < 100){
+            print("filtering by missing m/z per sample")
+            sums_samp = rowSums(mSet$dataSet$missing)
+            missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
+            good.inx <- missing.per.samp.perc < mSet$metshiParams$miss_perc_samp
+            good.samp <- rownames(mSet$dataSet$missing)[good.inx]
+            mSet <- subset_mSet(mSet, subset_var = "sample", subset_group = good.samp)
+          }  
+          print(paste("post-filter: ", ncol(mSet$dataSet$norm)))
         }
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- mSet$dataSet$missing <- NULL
       }
