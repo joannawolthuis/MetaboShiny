@@ -720,13 +720,16 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     
     settings$in_train = training_data$samples
     
+    print("aaa")
     if(settings$ml_specific_mzs != "no"){
       if(settings$ml_used_table != "pca"){
         msg = "Using user-specified m/z set."
         if(settings$ml_specific_mzs != "none"){
           if(length(settings$ml_mzs) > 0){
+            
             training_data$curr <- training_data$curr[, ..settings$ml_mzs]  
-          }else{
+          
+            }else if(settings$ml_mzs_topn > 0){
             
             mzs = getAllHits(mSet = mSet,
                              expname = settings$ml_specific_mzs)

@@ -103,7 +103,6 @@ import.pat.csvs <- function(metapath,
                             roundMz = T,
                             batchcorr=F){
   ppm = as.numeric(ppm)
-
   metadata = NULL
   try({
     metadata <- data.table::fread(metapath,fill=TRUE)

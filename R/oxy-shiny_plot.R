@@ -926,7 +926,8 @@ ggPlotCombi <- function(mSet,
                         pointsize = 2,
                         only_color_specific = F,
                         topn = 20,
-                        add_mz_labels=F){
+                        add_mz_labels=F,
+                        labelsize=3){
   
   dt = data.table::as.data.table(mSet$analSet$combi$sig.mat, keep.rownames=T)
   anal1_trans = mSet$analSet$combi$trans$x
@@ -990,7 +991,7 @@ ggPlotCombi <- function(mSet,
       p <- p + ggrepel::geom_label_repel(data = label_dat, 
                                     mapping = ggplot2::aes(label = `m/z`, x = x, y = y),
                                     max.overlaps = Inf,
-                                    force = 20,size=4)
+                                    force = 20,size=labelsize)
     }
     p
   }

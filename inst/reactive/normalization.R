@@ -201,7 +201,7 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
-      mSet_init = mSet
+      #mSet_init <- mSet
       mSet <- metshiProcess(mSet, session=NULL, init=T, cl=session_cl)
       mSet$metshiParams$package_github_sha <- remotes:::local_sha("MetaboShiny")
       

@@ -1,4 +1,4 @@
-#routines = list(tasks = routine_tt_fc)
+routines = list(tasks = routine_tt_fc)
 
 routines <- shiny::reactiveValues(tasks = list())
 
@@ -45,12 +45,12 @@ routinemanager <- shiny::reactive({
                         }
                         #try({
                         input$ml_use_slurm=T
-                        input$ml_slurm_mem="5G"
+                        input$ml_slurm_mem="10G"
                         results <- runStats(mSet,
                                             input = input,
                                             lcl = lcl,
-                                            analysis = "ml",
-                                            #analysis = task$settings$analysis,
+                                            #analysis = "ml",
+                                            analysis = task$settings$analysis,
                                             multirank_yes = multirank_yes,
                                             ml_queue = ml_queue,
                                             cl=NULL)

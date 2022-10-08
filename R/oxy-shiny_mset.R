@@ -728,7 +728,9 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
                                               dtNorm$injection.order),]
            dtNorm_stat_order <- dtNorm_merge_order[,-c(1:4)]
            
-           waveCorr = WaveICA::WaveICA(data = dtNorm_stat_order, batch = dtNorm_merge_order$batch, cl=cl)
+           waveCorr = WaveICA::WaveICA(data = dtNorm_stat_order, 
+                                       batch = dtNorm_merge_order$batch, 
+                                       cl=cl)
            waveCorr = waveCorr$data_wave
            old.order = rownames(mSet$dataSet[[source_table]])
            new.order = rownames(waveCorr)
@@ -914,14 +916,16 @@ mSetForML <- function(mSet, ml_queue, input){
 #' @export 
 #' @importFrom data.table data.table
 merge_repl_mSet <- function(mSet, 
-                            repl_regex = "_REP", 
-                            repl_merge_fun = mean) {
+                            repl_regex = "_REP.*$", 
+                            repl_merge_fun = mean,
+                            cl=NULL) {
   if (repl_regex != "" ) {
-    samples_noreps <- gsub(paste0(repl_regex,".*$"), "", 
+    samples_noreps <- gsub(repl_regex, "", 
                            mSet$dataSet$covars$sample)
     mSet$dataSet$covars$sample <- samples_noreps
-    mSet$dataSet$covars$injection <- NULL
+    mSet$dataSet$covars$injection <- mSet$dataSet$covars$rawdir <- mSet$dataSet$covars$filename <- NULL
     mSet$dataSet$covars <- unique(mSet$dataSet$covars)
+    print(mSet$dataSet$covars[1:5,1:5])
     tables = c(#"start", 
       "orig", "norm", "proc","preproc",
       "missing", 
@@ -933,7 +937,6 @@ merge_repl_mSet <- function(mSet,
       "placeholder", "prenorm.cls")
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
-    
     for (i in 1:nrow(combi.tbl)) {
       try({
         tbl = combi.tbl$tbl[i]
@@ -942,22 +945,39 @@ merge_repl_mSet <- function(mSet,
         is_there = tbl %in% names(mSet$dataSet)
         
         if(is_there){
-          
+          print(paste0("Merging: ",tbl))
           tbl_data <- as.data.frame(mSet$dataSet[[tbl]])
-          tbl_data$sample <- samples_noreps
+          tbl_data$sample <- gsub(repl_regex, "", rownames(tbl_data))
           tbl_data = data.table::as.data.table(tbl_data)
           data.table::setkey(tbl_data, sample)
           usefun = get(mSet$metshiParams$repl_merge_fun)
+          
           if(tbl == "missing"){
             tbl_data <- tbl_data[, lapply(.SD, median), 
                                  by = sample,
                                  .SDcols = setdiff(colnames(tbl_data),
                                                    "sample")]
           }else{
-            tbl_data <- tbl_data[, lapply(.SD, usefun), 
-                                 by = sample,
-                                 .SDcols = setdiff(colnames(tbl_data),
-                                                   "sample")]  
+            # if(!is.null(session_cl)){
+            #   parallel::clusterExport(session_cl, list("tbl_data"))
+            #   parallel::clusterEvalQ(session_cl, {library(data.table)})
+            # }
+            # tbl_data <- data.table::rbindlist(pbapply::pblapply(unique(tbl_data$sample),
+            #                                                     cl = NULL,
+            #                                                     function(samp){
+            #                                                       rows = tbl_data[sample == samp]
+            #                                                       rows$sample <- NULL
+            #                                                       merged_row <- as.data.frame(t(data.frame(colMeans(rows))))
+            #                                                       #merged_row <- rows[, lapply(.SD, usefun)]
+            #                                                       merged_row$sample = samp
+            #                                                       rownames(merged_row) <- samp
+            #                                                       merged_row
+            #                                                     }))
+            # print(dim(tbl_data))
+            tbl_data <- tbl_data[, lapply(.SD, usefun),
+                                by = sample,
+                                .SDcols = setdiff(colnames(tbl_data),
+                                                  "sample")]
           }
           
           sampOrder = match(tbl_data$sample,
