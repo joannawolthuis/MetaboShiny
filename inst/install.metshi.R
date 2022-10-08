@@ -40,7 +40,18 @@ pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
                pathview
                )
 
+pacman::p_load(impute, 
+                 pcaMethods, 
+                 globaltest, 
+                 GlobalAncova, 
+                 preprocessCore, 
+                 SSPA, 
+                 siggenes, 
+                 MSnbase)
+
 BiocManager::install("RBGL")
+devtools::install_github("mvaniterson/SSPA")
+devtools::install_github("datapplab/pathview")
 devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")
 devtools::install_github("yixuan/showtext")
 devtools::install_github("gaospecial/ggVennDiagram")

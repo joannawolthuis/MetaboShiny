@@ -2050,6 +2050,10 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   }else{
     mSet$dataSet$norm <- mSet$dataSet$orig
   }
+<<<<<<< HEAD
+=======
+  
+>>>>>>> ed80721fbfed70a6818964359171ff76f02dde79
   
   # get sample names
   smps <- rownames(mSet$dataSet$norm)
@@ -2164,9 +2168,14 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   if(mSet$metshiParams$repl_merge & init){
     print("Combining technical replicates...")
     mSet <- merge_repl_mSet(mSet, 
+<<<<<<< HEAD
                             repl_regex = "_REP.*$", 
                             repl_merge_fun = mSet$metshiParams$repl_merge_fun,
                             cl = NULL)
+=======
+                            repl_regex = "_REP", 
+                            repl_merge_fun = mSet$metshiParams$repl_merge_fun)
+>>>>>>> ed80721fbfed70a6818964359171ff76f02dde79
   }else{
     print("Not combining technical replicates...")
   }

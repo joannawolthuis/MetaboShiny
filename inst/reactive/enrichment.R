@@ -25,6 +25,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     multi.state.table <- data.table::rbindlist(lapply(cpds, 
                                                       function(cpd_id){
       mz_rows = mzs_withvals[identifier == cpd_id]
+      print(mz_rows)
       if(nrow(mz_rows) > 0){
         mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
         
@@ -41,7 +42,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     colnames(multi.state.table) = c("id", paste0("add", 1:(ncol(multi.state.table)-1)))
     for(i in 1:nrow(multi.state.table)){
       row = multi.state.table[i, 2:ncol(multi.state.table)]
-      new.order = c(1, order(abs(row),decreasing=T, na.last = T)+1)
+      new.order = c(1, order(abs(row),decreasing=T, na.last = T) + 1)
       multi.state.table[i,] <- multi.state.table[i, ..new.order]  
     }
     
@@ -69,20 +70,44 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       tempdir()
     }
     
-    multi.state.table = data.table::rbindlist(lapply(1:nrow(multi.state.table), function(i){
-      row = multi.state.table[i,]
-      numvals = row[,2:ncol(row)]
-      numvals.nona = unlist(numvals[, sapply(1:ncol(numvals), function(i) !is.na(numvals[[i]]))])
-      numvals.filled = rep(numvals.nona, length.out = ncol(row)-1)
-      row[2:ncol(row)] <- numvals.filled[order(numvals.filled)]
-      row
-    }))
+    if(input$enrich_summ_adds){
+      myfun = switch(
+        input$enrich_summ_adds_method,
+        sum = sum,
+        mean = mean,
+        median = median,
+        absmax = function(x, ...) abs(max(x, ...))
+      )
+      multi.state.table <- data.table::rbindlist(lapply(1:nrow(multi.state.table), 
+                                                        function(i){
+                                                          row = multi.state.table[i,-1]
+                                                          summ.row = myfun(row, na.rm=T)
+                                                          data.frame(id = multi.state.table$id[[i]], 
+                                                                                add1 = summ.row)
+                                                        }))
+    }else{
+      multi.state.table = data.table::rbindlist(lapply(1:nrow(multi.state.table), function(i){
+        row = multi.state.table[i,]
+        numvals = row[,2:ncol(row)]
+        numvals.nona = unlist(numvals[, sapply(1:ncol(numvals), function(i) !is.na(numvals[[i]]))])
+        numvals.filled = rep(numvals.nona, length.out = ncol(row)-1)
+        row[2:ncol(row)] <- numvals.filled[order(numvals.filled)]
+        row
+      }))  
+    }
     
     multi.state.table <- as.data.frame(multi.state.table)
     rownames(multi.state.table) <- multi.state.table$id
     
     library(pathview)
-    pv.out <- pathview::pathview(cpd.data = multi.state.table[,-1], 
+    if(!file.exists(paste0(species, pw.code, ".qs"))){
+      pathview::download.kegg(species = species,
+                              pathway.id = pw.code)  
+    }
+    
+    
+    pv.out <- pathview::pathview(cpd.data = multi.state.table[,-1, drop=F],  
+                                 cpd.idtype = "kegg",
                                  #na.col = "black",
                                  pathway.id = pw.code, 
                                  species = species,
@@ -96,10 +121,16 @@ shiny::observeEvent(input$enrich_plot_pathway, {
                                  mid = list(gene = "gray", cpd = "gray"), 
                                  high = list(gene = "red", cpd = "red"),
                                  kegg.dir = tmpdir,
-                                 min.nnodes = 1)   
+                                 min.nnodes = 1,
+                                 res = 300 #ppi
+                                 )   
+    if(input$enrich_summ_adds){
+      fn.partial = paste0(species, pw.code, ".metaboshiny")
+    }else{
+      fn.add = ifelse(is.multi, "multi", "single")
+      fn.partial = paste0(species, pw.code, ".metaboshiny.", fn.add)
+    }
     
-    fn.add = ifelse(is.multi, "multi", "single")
-    fn.partial = paste0(species, pw.code, ".metaboshiny.", fn.add)
     if(!input$enrich_pathway_plot_mode){
       # convert to png
       pathway_png = magick::image_convert(image = magick::image_read_pdf(paste0(fn.partial, ".pdf"),), 
