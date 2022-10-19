@@ -22,7 +22,7 @@ shiny::observe({
       })
       
       if(success){
-        if(is.ordered.mSet(mSet)){
+        if(is.ordered.mSet(updated$mSet)){
           msg = "mSet class label order still correct! :)"
           try({
             shiny::showNotification(msg) 

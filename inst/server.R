@@ -403,6 +403,8 @@ beep = no')
         as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
       }else parallel::detectCores()
       
+      data.table::setDTthreads(maxcores)
+      
       shiny::updateSliderInput(session, "ncores",
                                value = min(maxcores-1, as.numeric(opts$cores)), 
                                min = 1, 
@@ -709,10 +711,11 @@ beep = no')
     if(net_cores > 0){
       shiny::showNotification("Starting new threads...")
       logfile <<- tempfile()
-      print(paste("Log file:", logfile))
+      #print(paste("Log file:", logfile))
       #if(file.exists(logfile)) file.remove(logfile)
       session_cl <<- parallel::makeCluster(net_cores,
-                                           outfile=logfile)#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
+                                           outfile="")
+      #,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
       # send specific functions/packages to other threads
       parallel::clusterEvalQ(session_cl, {
         library(data.table)

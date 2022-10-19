@@ -204,17 +204,17 @@ runML <- function(training,
     #rslurm::cleanup_files(batch_job) #cleanup files
     
   }else{
-    results <- lapply(trainOrders, 
-                      ml_single_run, 
-                      train_fn = train_fn, 
-                      test_fn = test_fn,
-                      ml_perf_metr = ml_perf_metr,
-                      ml_folds = ml_folds,
-                      ml_method = ml_method,
-                      ml_preproc = ml_preproc,
-                      maximize = maximize,
-                      folds = folds,
-                      tuneGrid = tuneGrid)
+    results <- pbapply::pblapply(trainOrders, 
+                                 ml_single_run, 
+                                 train_fn = train_fn, 
+                                 test_fn = test_fn,
+                                 ml_perf_metr = ml_perf_metr,
+                                 ml_folds = ml_folds,
+                                 ml_method = ml_method,
+                                 ml_preproc = ml_preproc,
+                                 maximize = maximize,
+                                 folds = folds,
+                                 tuneGrid = tuneGrid)
   }
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
@@ -720,7 +720,6 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     
     settings$in_train = training_data$samples
     
-    print("aaa")
     if(settings$ml_specific_mzs != "no"){
       if(settings$ml_used_table != "pca"){
         msg = "Using user-specified m/z set."
@@ -1062,8 +1061,10 @@ slurm_apply_metshi <- function (f, params, ..., jobname = NA, nodes = 2, cpus_pe
   nodes <- ceiling(nrow(params)/nchunk)
   template_r <- readLines(r_template)
   script_r <- whisker::whisker.render(template_r, list(pkgs = pkgs, 
-                                                       add_obj = !is.null(global_objects), nchunk = nchunk, 
-                                                       cpus_per_node = cpus_per_node, processes_per_node = processes_per_node, 
+                                                       add_obj = !is.null(global_objects), 
+                                                       nchunk = nchunk, 
+                                                       cpus_per_node = cpus_per_node, 
+                                                       processes_per_node = processes_per_node, 
                                                        preschedule_cores = preschedule_cores, libPaths = libPaths))
   writeLines(script_r, file.path(tmpdir, "slurm_run.R"))
   template_sh <- readLines(sh_template)
@@ -1102,31 +1103,17 @@ ml_slurm <- function(i,
                      tmpdir){
   small_mSet <- qs::qread(mloc)
   queue <- qs::qread(sloc)
-  settings = queue[[i]]
   res = list()
   try({
-    maxcores = if(Sys.getenv("SLURM_CPUS_ON_NODE") != ""){
-      as.numeric(Sys.getenv("SLURM_CPUS_ON_NODE"))
-    }
-    #if(file.exists(logfile)) file.remove(logfile)
-    # ml_session_cl <- parallel::makeCluster(maxcores, 
-    #                                        outfile="")#,setup_strategy = "sequential") # leave 1 core for general use and 1 core for shiny session
-    # # send specific functions/packages to other threads
-    # parallel::clusterEvalQ(ml_session_cl, {
-    #   library(data.table)
-    #   library(iterators)
-    #   library(MetaboShiny)
-    #   library(MetaDBparse)
-    # }) 
     
     library(data.table)
     library(iterators)
     library(MetaboShiny)
     library(MetaDBparse)
     
-    res = ml_run(settings = settings, 
+    res = ml_run(settings = queue[[i]], 
                  mSet = small_mSet,
-                 cl = NULL,#ml_session_cl,
+                 cl = NULL,
                  tmpdir = tmpdir,
                  use_slurm = F)
   })

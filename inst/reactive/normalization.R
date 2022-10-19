@@ -43,8 +43,10 @@ shiny::observeEvent(input$initialize, {
     try({
       # read in original CSV file
       metshiCSV <- data.table::fread(lcl$paths$csv_loc,
-                                     data.table = TRUE,
-                                     header = T)
+                                     header = T,
+                                     showProgress = T,
+                                     nThread = input$ncores)
+      data.table::setkey(metshiCSV, sample)
       
       if("label" %in% colnames(metshiCSV)) colnames(metshiCSV)[colnames(metshiCSV) == "label"] <- "orig_label"
       
@@ -102,10 +104,14 @@ shiny::observeEvent(input$initialize, {
       ppm <- data.table::fread(params)$ppm
       detPPM <- data.table::fread(params)$ppmpermz
       
+      #lastcol
+      var_names = colnames(metshiCSV)[exp.vars]
+      last_var = var_names[length(var_names)]
+      mzs = colnames(metshiCSV)[mz.vars]
+      
       # re-make csv with the corrected data
-      metshiCSV <- cbind(metshiCSV[,..exp.vars, with=FALSE], # if 'label' is in excel file remove it, it will clash with the metaboanalystR 'label'
-                         "label" = metshiCSV[, ..condition][[1]], # set label as the initial variable of interest
-                         metshiCSV[,..mz.vars, with=FALSE])
+      metshiCSV[,label := metshiCSV[, ..condition][[1]]]
+      data.table::setcolorder(metshiCSV, c(var_names, "label", mzs))
       
       
       # remove outliers by making a boxplot and going from there
@@ -120,28 +126,28 @@ shiny::observeEvent(input$initialize, {
                                     metshiCSV[,..exp.vars, with=FALSE])
       }
       
-      shiny::setProgress(session=session, value= .4)
-      
-      mz.meta <- getColDistribution(metshiCSV)
-      exp.vars = mz.meta$meta
-      mz.vars = mz.meta$mz
+      shiny::setProgress(session=session, value=.4)
       
       covar_table <- as.data.frame(metshiCSV[,..exp.vars, with=FALSE])
       
       metshiCSV <- MetaboShiny::asMetaboAnalyst(metshiCSV, 
                                                 exp.vars)
       
+     
+      old_dir=getwd()
+      setwd(lcl$paths$proj_dir)
+      
       # define location to write processed csv to
-      csv_loc_final <- tempfile()
+      csv_loc_final <- "for_metaboanalyst.csv"
       
       # write new csv to new location
       data.table::fwrite(metshiCSV, 
-                         file = csv_loc_final)
+                         file = csv_loc_final,
+                         showProgress = T,
+                         nThread = input$ncores)
       
       metshiCSV <- NULL
 
-      gc()
-      
       shiny::setProgress(session=session, value= .5)
       
       # = = = = = = = = = = = = = = =
@@ -201,7 +207,6 @@ shiny::observeEvent(input$initialize, {
       mSet$dataSet$missing <- is.na(mSet$dataSet$orig)
       mSet$dataSet$start <- mSet$dataSet$orig
       
-      #mSet_init <- mSet
       mSet <- metshiProcess(mSet, session=NULL, init=T, cl=session_cl)
       mSet$metshiParams$package_github_sha <- remotes:::local_sha("MetaboShiny")
       
@@ -218,7 +223,8 @@ shiny::observeEvent(input$initialize, {
                             ispaired = F,
                             filt.type = input$filt_type,
                             orig.count = nrow(mSet$dataSet$norm))
-
+      setwd(old_dir)
+      
       if(typeof(mSet) != "double"){
         success = T
         qs::qsave(mSet, file = file.path(lcl$paths$proj_dir, 
@@ -228,6 +234,7 @@ shiny::observeEvent(input$initialize, {
         mSet$dataSet$missing <- mSet$dataSet$start <- NULL
         mSet <<- mSet
         filemanager$do <- "save"
+        #mSetter$do <- "change"
         uimanager$refresh <- c("general","statspicker","ml")
         plotmanager$make <- "general"
       }else{
@@ -236,4 +243,3 @@ shiny::observeEvent(input$initialize, {
     })
   })
 })
-

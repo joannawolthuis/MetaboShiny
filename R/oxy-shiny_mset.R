@@ -1,8 +1,8 @@
-FilterVariableMetshi <- function (mSetObj = NA, filter, qcFilter, rsd, max.allow = 20000) 
+FilterVariableMetshi <- function (mSetObj = NA, filter, qcFilter, rsd, max.allow = 20000, tbl="orig") 
 {
   mSetObj <- MetaboAnalystR:::.get.mSet(mSetObj)
   mSetObj$dataSet$filt <- mSetObj$dataSet$prenorm <- NULL
-  int.mat <- as.matrix(mSetObj$dataSet$orig)
+  int.mat <- as.matrix(mSetObj$dataSet[[tbl]])
   cls <- sapply(mSetObj$dataSet$covars$sample, function(samp) if(grepl("QC", tolower(samp))) "qc" else "normal")
   msg <- ""
   if (qcFilter == "T") {
@@ -255,14 +255,15 @@ name.mSet <- function(mSet) {
 #' @rdname reset.mSet
 #' @export 
 reset.mSet <- function(mSet_new, fn) {
-  mSet <- tryCatch({
-    load(fn)
-    mSet
-  },
-  error = function(cond){
-    mSet <- qs::qread(fn)
-    mSet
-  })
+  # mSet <- tryCatch({
+  #   load(fn)
+  #   mSet
+  # },
+  # error = function(cond){
+  #   mSet <- qs::qread(fn)
+  #   mSet
+  # })
+  mSet <- qs::qread(fn)
   mSet_new$dataSet <- mSet$dataSet
   mSet_new$analSet <- mSet$analSet
   mSet_new$settings <- mSet$settings
@@ -464,7 +465,6 @@ change.mSet <-
 # subset by mz
 subset_mSet_mz <- function(mSet, keep.mzs) {
   if (length(keep.mzs) > 0) {
-    
     tables = c("start", "orig", "norm", "proc","preproc","missing", "prebatch", "prenorm")
     combi.tbl = data.table::data.table(tbl = tables)
     
@@ -521,24 +521,19 @@ subset_mSet <- function(mSet, subset_var, subset_group) {
         cls = combi.tbl$cls[i]
         keep = which(rownames(mSet$dataSet[[tbl]]) %in% keep.samples)
         
-        # if(!(tbl %in% c("start", "missing", "prebatch"))){
-        #  NULL 
-        # }
-        
         mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][keep, ]
-        # sampOrder = match(rownames(mSet$dataSet[[tbl]]),
-        #                   mSet$dataSet$covars$sample)
-        # reorder table
+        
         sampOrder = match(
           mSet$dataSet$covars$sample,
           rownames(mSet$dataSet[[tbl]]))
+        
         is_there = tbl %in% names(mSet$dataSet)
         
         if(is_there){
           
           mSet$dataSet[[tbl]] <- mSet$dataSet[[tbl]][sampOrder, keep_mz] #reorder
-          
-          if(!(tbl %in% c("start", "missing", "prebatch"))){
+
+          if(tbl %in% c("norm","orig","proc","preproc")){
             mSet$dataSet[[cls]] <-
               as.factor(mSet$dataSet$covars[, mSet$settings$exp.var, 
                                             with = F][[1]])
@@ -680,17 +675,17 @@ pair.mSet <- function(mSet) {
   }
   
   if (length(keep.samp) > 2) {
-    mSet <- subset_mSet(mSet,
-                        subset_var = "sample",
-                        subset_group = keep.samp)
-    mSet$settings$ispaired <- TRUE
-    mSet$dataSet$ispaired = T
-    
+    #mSet <- subset_mSet(mSet,
+    #                    subset_var = "sample",
+    #                    subset_group = keep.samp)
+    #mSet$settings$ispaired <- TRUE
+    #mSet$dataSet$ispaired = T
+    print("Done!")
   } else{
     metshiAlert("Not enough samples for paired analysis!")
     return(NULL)
   }
-  mSet
+  keep.samp
 }
 
 batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
@@ -938,7 +933,7 @@ merge_repl_mSet <- function(mSet,
     combi.tbl = data.table::data.table(tbl = tables,
                                        cls = clss)
     for (i in 1:nrow(combi.tbl)) {
-      try({
+      #try({
         tbl = combi.tbl$tbl[i]
         cls = combi.tbl$cls[i]
         
@@ -953,10 +948,20 @@ merge_repl_mSet <- function(mSet,
           usefun = get(mSet$metshiParams$repl_merge_fun)
           
           if(tbl == "missing"){
-            tbl_data <- tbl_data[, lapply(.SD, median), 
+            pb = pbapply::startpb(min = 0, max = uniqueN(tbl_data$sample))
+            tbl_data <- tbl_data[, {pbapply::setpb(pb, .GRP);
+                                    last_sd <<- .SD
+                                    if(nrow(.SD) > 2){
+                                      lapply(.SD, median)  
+                                    }else{
+                                      res = .SD[1, drop=F]
+                                      res[!is.na(res)] <- F
+                                      res
+                                    }}, 
                                  by = sample,
                                  .SDcols = setdiff(colnames(tbl_data),
                                                    "sample")]
+            
           }else{
             # if(!is.null(session_cl)){
             #   parallel::clusterExport(session_cl, list("tbl_data"))
@@ -974,12 +979,16 @@ merge_repl_mSet <- function(mSet,
             #                                                       merged_row
             #                                                     }))
             # print(dim(tbl_data))
-            tbl_data <- tbl_data[, lapply(.SD, usefun),
+            pb = pbapply::startpb(min = 0, max = uniqueN(tbl_data$sample))
+            tbl_data <- tbl_data[, {
+              pbapply::setpb(pb, .GRP);
+              lapply(.SD, mean)
+              },
                                 by = sample,
                                 .SDcols = setdiff(colnames(tbl_data),
                                                   "sample")]
           }
-          
+          cat("\n")
           sampOrder = match(tbl_data$sample,
                             mSet$dataSet$covars$sample)
           
@@ -997,22 +1006,26 @@ merge_repl_mSet <- function(mSet,
             }  
           }  
         }
-      }, silent = F)
+      
+        #}, silent = F)
     }
   }
   return(mSet)
 }
 
 keep_mz_missing <- function(peaktable, classes, minorityFilter=F, thresh=0.8){
+  print(dim(peaktable))
   if(minorityFilter){
     class_distr = table(classes)
     min_class = names(class_distr[class_distr == min(class_distr)])
     min_class_samps = which(classes == min_class) 
     missing_minority = peaktable[min_class_samps,]
-    sums_mz = colSums(missing_minority)
+    sums_mz = colSums(missing_minority,na.rm = T)
     missing.per.mz.perc = sums_mz/nrow(missing_minority)*100
+    print(min(missing.per.mz.perc))
+    print(max(missing.per.mz.perc))
   }else{
-    sums_mz = colSums(peaktable)
+    sums_mz = colSums(peaktable, na.rm = T)
     missing.per.mz.perc = sums_mz/nrow(peaktable)*100  
   }
   missing.per.mz.perc <= thresh
