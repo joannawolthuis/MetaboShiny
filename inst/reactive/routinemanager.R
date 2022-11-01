@@ -1,10 +1,10 @@
 #routines = list(tasks = routine_tt_fc)
-
 routines <- shiny::reactiveValues(tasks = list())
 
 routinemanager <- shiny::reactive({
   if(length(routines$tasks) > 0 & input$start_routine){
     shiny::withProgress(max = length(routines$tasks), {
+      
       mSet_before = mSet
       pb = pbapply::startpb(max = length(routines$tasks))
       last_task = list()
@@ -25,6 +25,7 @@ routinemanager <- shiny::reactive({
                           input$subset_group <- task$settings$subset_group
                           input$subset_var <- task$settings$subset_var
                         }else if(task$type == "load"){
+                          
                           input$storage_choice <- task$settings$storage_choice
                         }else{
                           input$stats_var <- task$settings$stats_var
@@ -44,17 +45,17 @@ routinemanager <- shiny::reactive({
                           multirank_yes = task$multirank_yes
                         }
                         #try({
-                        input$ml_use_slurm=F
-                        input$ml_slurm_mem="10G"
+                        input$ml_use_slurm=T
+                        input$ml_slurm_mem="5G"
                         results <- runStats(mSet,
                                             input = input,
                                             lcl = lcl,
-                                            #analysis = "ml",
-                                            analysis = task$settings$analysis,
+                                            analysis = "ml",
+                                            #analysis = task$settings$analysis,
                                             multirank_yes = multirank_yes,
                                             ml_queue = ml_queue,
                                             cl=NULL)
-                         mSet <- 
+                          mSet <- 
                           results$mSet
                         lcl <- results$lcl  
                         #})
@@ -71,7 +72,7 @@ routinemanager <- shiny::reactive({
           mSet <<- mSet_last
         }
       } 
-       #})
+        #})
     })
   }
 })

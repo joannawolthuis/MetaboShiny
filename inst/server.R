@@ -8,6 +8,7 @@ function(input, output, session) {
   library(MetaboShiny)
   #library(MetaDBparse)
   library(plyr)
+  library(bslib)
   library(dplyr)
   
   options(shiny.maxRequestSize=50000*1024^2)
@@ -188,17 +189,20 @@ beep = no')
         writeLines(contents, lcl$paths$opt.loc)
       }
       
+      print(lcl$paths$opt.loc)
       opts <- MetaboShiny::getOptions(lcl$paths$opt.loc)
       
       # ==================
-      
-      if(opts$work_dir == ""){
+      if(length(opts$work_dir) == 0){
+        userfolder = file.path(home, "/MetaboShiny/saves")
+      }else if(opts$work_dir == ""){
         userfolder = file.path(home, "/MetaboShiny/saves")
       }else{
         userfolder = opts$work_dir
       }
-      
-      if(opts$db_dir == ""){
+      if(length(opts$db_dir) == 0){
+        dbdir = file.path(home, "/MetaboShiny/saves")
+      }else if(opts$db_dir == ""){
         dbdir = file.path(home, "/MetaboShiny/saves")
       }else{
         dbdir = opts$db_dir
@@ -1023,6 +1027,13 @@ beep = no')
                            class="imagetop")
     }
   })
+  
+  light <- bslib::bs_theme(version = 4)
+  dark <- bslib::bs_theme(bg = "black", fg = "white", version = 4)
+  
+  observe(session$setCurrentTheme(
+    if (isTRUE(input$night_mode)) dark else light
+  ))
   
   onStop(function() {
     print("Closing MetaboShiny...")

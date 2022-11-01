@@ -186,19 +186,19 @@ shiny::observeEvent(input$create_csv,{
                                   inputId = "proj_name",
                                   selected = proj_name)
       
-      lcl$proj_name <<- proj_name
-      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, proj_name)
+      lcl$proj_name <- proj_name
+      lcl$paths$proj_dir <- file.path(lcl$paths$work_dir, proj_name)
       
       if(dir.exists(lcl$paths$proj_dir)) unlink(lcl$paths$proj_dir)
       dir.create(lcl$paths$proj_dir,showWarnings = F)
       
-      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(proj_name, ".csv"))
-      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(proj_name, ".db"))
+      lcl$paths$csv_loc <- file.path(lcl$paths$proj_dir, paste0(proj_name, ".csv"))
+      lcl$paths$patdb <- file.path(lcl$paths$proj_dir, paste0(proj_name, ".db"))
       
       # change project name in user options file
       MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
       # print the changed name in the UI
-      output$proj_name <<- shiny::renderText(proj_name)
+      output$proj_name <- shiny::renderText(proj_name)
       
       hasPos = "pos" %in% input$ms_modes
       hasNeg = "neg" %in% input$ms_modes

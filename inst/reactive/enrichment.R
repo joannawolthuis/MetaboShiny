@@ -15,6 +15,17 @@ shiny::observeEvent(input$enrich_plot_pathway, {
                                       input$enrich_pathway_projection,
                                       randomize = F)
     
+    analysis = gsub(" \\(.*$", "", input$enrich_pathway_projection)
+    if(analysis %in% c("tt","fc","combi")){
+      updir = switch(analysis,
+                     tt = levels(mSet$dataSet$cls)[1],
+                     fc = levels(mSet$dataSet$cls)[2],
+                     combi = levels(mSet$dataSet$cls)[2]
+                     )
+    }else{
+      updir = NA
+    }
+    
     mzs_withvals = merge(enrich$current[,c("rn", "identifier")], 
                          vals_for_projection, by.x="rn", by.y="m.z")
     
@@ -81,6 +92,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       multi.state.table <- data.table::rbindlist(lapply(1:nrow(multi.state.table), 
                                                         function(i){
                                                           row = multi.state.table[i,-1]
+                                                          row = row[!is.na(row)]
                                                           summ.row = myfun(row, na.rm=T)
                                                           data.frame(id = multi.state.table$id[[i]], 
                                                                                 add1 = summ.row)
@@ -101,14 +113,47 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     
     library(pathview)
     if(!file.exists(paste0(species, pw.code, ".qs"))){
-      pathview::download.kegg(species = species,
-                              pathway.id = pw.code)  
+      #pathview::download.kegg(species = species,
+      #                        pathway.id = pw.code)  
+      download.kegg.jw(species = species,
+                       pathway.id = pw.code)
     }
     
+    # === UP/DOWN overview ===
+    sig = enrich$current$significant == "yes"
+    mapper = unique(enrich$current[sig, c("compoundname",
+                                          "identifier")])
+    names_mapper = merge(multi.state.table,
+                         mapper,
+                         by.x = "id", 
+                         by.y = "identifier")
+    names_mapper$val_summary <- sapply(1:nrow(names_mapper), function(i){
+        vals = names_mapper[i, grepl("add", colnames(names_mapper))]
+        vals = vals[!is.na(vals)]
+        myfun(vals)
+    })
+    
+    if(!is.na(updir)){
+      upname = if(!is.na(updir)) paste("up in", mSet$settings$exp.var, "=", updir)
+      downname = if(!is.na(updir)) paste("down in", mSet$settings$exp.var, "=", updir)
+    }else{
+      upname = "up"
+      downname = "down"
+    }
+    
+    names_mapper$direction <- ifelse(names_mapper$val_summary > 0, upname, downname)
+    names_mapper <- names_mapper[,c("compoundname", "direction")]
+    enrich$curr_direction <- names_mapper
+    output$enrich_curr_direction_tbl <- DT::renderDataTable(metshiTable(names_mapper))
+    output$enrich_curr_direction_txt <- shiny::renderText(paste0(Hmisc::capitalize(upname),":", 
+                                                                 paste0(names_mapper[names_mapper$direction == upname,]$compoundname, collapse=", "),
+                                                                 "\n\n",
+                                                                 Hmisc::capitalize(downname), ":", 
+                                                                 paste0(names_mapper[names_mapper$direction == downname,]$compoundname, collapse = ", ")))
+    # ========================
     
     pv.out <- pathview::pathview(cpd.data = multi.state.table[,-1, drop=F],  
                                  cpd.idtype = "kegg",
-                                 #na.col = "black",
                                  pathway.id = pw.code, 
                                  species = species,
                                  out.suffix = "metaboshiny", 
@@ -124,6 +169,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
                                  min.nnodes = 1,
                                  res = 300 #ppi
                                  )   
+    
     if(input$enrich_summ_adds){
       fn.partial = paste0(species, pw.code, ".metaboshiny")
     }else{

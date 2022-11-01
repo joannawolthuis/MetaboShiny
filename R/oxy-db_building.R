@@ -117,7 +117,7 @@ import.pat.csvs <- function(metapath,
     if(!("individual" %in% colnames(metadata))) metadata$individual <- metadata$sample
     meta_col_order = colnames(metadata)
     #meta_col_order = meta_col_order[meta_col_order != "sample"]
-  },silent = T)
+  },silent = F)
   
   if(is.null(metadata)){
     try({

@@ -228,11 +228,12 @@ reformat.metadata <- function(metadata){
   colnames(metadata) <- tolower(gsub(x=colnames(metadata), pattern = "\\.$|\\.\\.$|\\]", replacement = ""))
   colnames(metadata) <- gsub(x=colnames(metadata), pattern = "\\[|\\.|\\.\\.| ", replacement = "_")
   colnames(metadata) <- gsub(colnames(metadata), pattern = "characteristics_|factor_value_", replacement="")
-  metadata[metadata == "" | is.na(metadata)] <- c("unknown")
-  setnames(metadata, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
   cols = colnames(metadata)   # define which columns to work with
+  metadata[ , (cols) := lapply(.SD, function(x) {
+    if(!any(lubridate::is.Date(x))) sapply(x, function(y) if(y == "" | is.na(y)) "unknown" else y)
+  }), .SDcols = cols]
+  setnames(metadata, old = c("sample_name", "source_name"), new = c("sample", "individual"), skip_absent = T)
   metadata[ , (cols) := lapply(.SD, function(x) {gsub(",", ".", x)}), .SDcols = cols]
-  
   # - - - 
   return(metadata)
 }

@@ -10,6 +10,7 @@ pcaCorr <- function(curr, center, scale, start_end_pcs){
 getMLperformance = function(ml_res, pos.class, 
                             x.metric, y.metric,
                             silent = F,
+                            direction = NULL,
                             ignore.training = F){
   ignore.training = if(nrow(ml_res$train.performance) == 0) T else ignore.training
   if(!ignore.training){
@@ -21,11 +22,18 @@ getMLperformance = function(ml_res, pos.class,
     if(is.loocv){
       if(!silent) print("LOOCV mode.")
       coord.collection = {
-        prediction = ROCR::prediction(predictions = ml_res$train.performance[,pos.class],
-                                      labels = ml_res$train.performance$obs)
-        coords = ROCR::performance(prediction,
-                                   x.measure = x.metric,
-                                   measure = y.metric)
+        measurements = pROC::roc(ml_res$train.performance$obs, 
+                                 ml_res$train.performance[[pos.class]],
+                                 direction=direction)
+        stats = pROC::coords(measurements, "all", 
+                             ret = "all", 
+                             transpose = FALSE)
+        coords = list(x.name = x.metric, 
+                      y.name = y.metric, 
+                      alpha.name = "cutoff", 
+                      x.values = stats[[x.metric]], 
+                      y.values = stats[[y.metric]], 
+                      alpha.values = stats$threshold)
         list(coords)
       } 
       names(coord.collection) = "FoldLOOCV"
@@ -33,19 +41,34 @@ getMLperformance = function(ml_res, pos.class,
       spl.fold.performance = split(ml_res$train.performance,
                                    ml_res$train.performance$Resample)
       coord.collection = lapply(spl.fold.performance, function(l){
-        prediction = ROCR::prediction(predictions = l[,pos.class],
-                                      labels = l$obs)
-        coords = ROCR::performance(prediction,
-                                   x.measure = x.metric,
-                                   measure = y.metric)
+        
+        measurements = pROC::roc(l$obs, 
+                                 l[[pos.class]],
+                                 direction=direction)
+        stats = pROC::coords(measurements, "all", 
+                             ret = "all", 
+                             transpose = FALSE)
+        coords = list(x.name = x.metric, 
+                      y.name = y.metric, 
+                      alpha.name = "cutoff", 
+                      x.values = stats[[x.metric]], 
+                      y.values = stats[[y.metric]], 
+                      alpha.values = stats$threshold)
         coords
       })
       # also add a single CV curve
-      prediction = ROCR::prediction(predictions = ml_res$train.performance[,pos.class],
-                                   labels = ml_res$train.performance$obs)
-      coords = ROCR::performance(prediction,
-                                 x.measure = x.metric,
-                                 measure = y.metric)
+      measurements = pROC::roc(ml_res$train.performance$obs, 
+                               ml_res$train.performance[,pos.class],
+                               direction=direction)
+      stats = pROC::coords(measurements, "all", 
+                           ret = "all", 
+                           transpose = FALSE)
+      coords = list(x.name = x.metric, 
+                    y.name = y.metric, 
+                    alpha.name = "cutoff", 
+                    x.values = stats[[x.metric]], 
+                    y.values = stats[[y.metric]], 
+                    alpha.values = stats$threshold)
       coord.collection$TrainSingleCurve <- coords
     }  
   }else{
@@ -53,20 +76,32 @@ getMLperformance = function(ml_res, pos.class,
   }
   
   if(nrow(ml_res$prediction) > 0){
-    prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
-                                  ml_res$labels)
-    coords = ROCR::performance(prediction,
-                               x.measure = x.metric,
-                               measure = y.metric) 
+    measurements = pROC::roc(ml_res$labels, 
+                             ml_res$prediction[[pos.class]],
+                             direction=direction, quiet=T)
+    stats = pROC::coords(measurements, "all", 
+                         ret = "all", 
+                         transpose = FALSE)
+    coords = list(x.name = x.metric, 
+                  y.name = y.metric, 
+                  alpha.name = "cutoff", 
+                  x.values = stats[[x.metric]], 
+                  y.values = stats[[y.metric]], 
+                  alpha.values = stats$threshold)
+    # prediction = ROCR::prediction(ml_res$prediction[,pos.class], 
+    #                               ml_res$labels)
+    # coords = ROCR::performance(prediction,
+    #                            x.measure = x.metric,
+    #                            measure = y.metric) 
     coord.collection$Test = coords
   }
   
   coords.dt = data.table::rbindlist(lapply(1:length(coord.collection), function(i){
     coords = coord.collection[[i]]
     which.test = names(coord.collection)[[i]]
-    data.table::data.table(x = coords@x.values[[1]],
-                           y = coords@y.values[[1]],
-                           cutoff = coords@alpha.values[[1]],
+    data.table::data.table(x = coords$x.values,
+                           y = coords$y.values,
+                           cutoff = coords$alpha.values,
                            `Test set` = c(which.test))
   }))
   
@@ -82,8 +117,8 @@ getMLperformance = function(ml_res, pos.class,
   }
   
   list(coords = coords.dt,
-       names = list(x = coord.collection[[1]]@x.name,
-                    y = coord.collection[[1]]@y.name,
+       names = list(x = coord.collection[[1]]$x.name,
+                    y = coord.collection[[1]]$y.name,
                     alpha = "Cutoff"))
 }
 
@@ -271,7 +306,7 @@ ml_single_run <- function(trainOrder,
                                    returnResamp = "all",
                                    savePredictions = "final"
                                    #sampling = ml_sampling
-                                   )
+  )
   if(ml_method == "glm"){
     fit <- caret::train(
       x = training[,-"label"],
@@ -365,7 +400,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
   sample_names = mSet$dataSet$covars$sample
   
   keep.config = unlist(keep.config)
-
+  
   if(length(keep.config) > 0){
     config = mSet$dataSet$covars[, ..keep.config,drop=F]
   }else{
@@ -727,8 +762,8 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
           if(length(settings$ml_mzs) > 0){
             
             training_data$curr <- training_data$curr[, ..settings$ml_mzs]  
-          
-            }else if(settings$ml_mzs_topn > 0){
+            
+          }else if(settings$ml_mzs_topn > 0){
             
             mzs = getAllHits(mSet = mSet,
                              expname = settings$ml_specific_mzs)
@@ -742,29 +777,51 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
             mzs = switch(settings$ml_mzs_ordering,
                          highfirst = mzs,
                          lowfirst = rev(mzs),
-                         randomize = sample(colnames(mSet$dataSet$norm), length(mzs)))
+                         randomize = sample(mzs))
             
             mzs = mzs[1:min(length(mzs), 
                             settings$ml_mzs_topn)]
-            
+          
+            if(length(mzs) > ncol(training_data$curr)){
+              stop("too many m/z")
+            }  
             mzs = gsub("^X", "", mzs)
             mzs = gsub("\\.$", "-", mzs)
+          
+            training_data$curr = as.data.table(training_data$curr)
+            testing_data$curr = as.data.table(testing_data$curr)
             
-            training_data$curr = as.data.frame(training_data$curr)
-            testing_data$curr = as.data.frame(testing_data$curr)
-            
-            if(settings$ml_mzs_exclude){
-              mzs_keep = setdiff(colnames(training_data$curr), mzs)
-              training_data$curr <- training_data$curr[, mzs_keep]
-              print("removing:")
-              print(mzs[1:min(10, length(mzs))])
-              settings$mz_removed <- mzs
-            }else{
-              training_data$curr <- training_data$curr[, mzs]
-              print("keeping:")
-              print(mzs[1:min(10, length(mzs))])
-              settings$mz_used <- mzs
+            if("ml_mzs_exclude" %in% names(settings)){
+              # legacy mode
+              print("legacy")
+              if(settings$ml_mzs_exclude){
+               settings$ml_mzs_handling <- "remove" 
+              }else{
+                settings$ml_mzs_handling <- "keep"
+              }
             }
+            
+            switch(settings$ml_mzs_handling,
+                   remove = {
+                     mzs_keep = setdiff(colnames(training_data$curr), mzs)
+                     training_data$curr <- training_data$curr[, ..mzs_keep]
+                     print("removing:")
+                     print(mzs[1:min(10, length(mzs))])
+                     settings$mz_removed <- mzs
+                   },
+                   permute = {
+                     print("permuting:")
+                     print(mzs[1:min(10, length(mzs))])
+                     training_data$curr[, (mzs) := lapply(.SD, sample), .SDcols = mzs]
+                     settings$mz_permuted <- mzs
+                   },
+                   keep = {
+                     training_data$curr <- training_data$curr[, ..mzs]
+                     print("keeping:")
+                     print(mzs[1:min(10, length(mzs))])
+                     settings$mz_used <- mzs
+                   }
+            )
           }
         }else{
           curr <- data.table::data.table() # only use configs
@@ -823,7 +880,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
                                returnTrain = T) 
           }
         }
-        }
+      }
     }
     
     if(!is.null(folds)){

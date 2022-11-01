@@ -1905,41 +1905,60 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   # }
   ##############################################################################
   # TODO: adjust this to technical replicates
-  if(mSet$metshiParams$miss_perc_samp < 100){
-    sums_samp = rowSums(mSet$dataSet$missing)
-    missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
-    good.inx <- missing.per.samp.perc < mSet$metshiParams$miss_perc_samp
-    mSet$dataSet$orig <- mSet$dataSet$orig[good.inx, , drop = FALSE]
-    mSet$dataSet$covars <- mSet$dataSet$covars[good.inx, ]
-    mSet$dataSet$cls <- mSet$dataSet$cls[good.inx]
-    mSet$dataSet$orig.cls <- mSet$dataSet$orig.cls[good.inx]
-    mSet$dataSet$orig.smp.nms <- mSet$dataSet$covars$sample
+  if(!mSet$metshiParams$miss_upon_subset){
+    if(mSet$metshiParams$miss_perc < 100){
+      good.inx = keep_mz_missing(mSet$dataSet$missing, 
+                                 mSet$dataSet$cls, 
+                                 mSet$metshiParams$miss_minority_filter,
+                                 thresh = mSet$metshiParams$miss_perc)
+      good.mz <- intersect(names(which(good.inx)),
+                           colnames(mSet$dataSet$orig))
+      mSet$dataSet$orig <- mSet$dataSet$orig[, good.mz, drop = FALSE]
+      mSet$dataSet$missing <- mSet$dataSet$missing[, colnames(mSet$dataSet$orig), drop = FALSE]
+      
+    }
+    if(mSet$metshiParams$miss_perc_samp < 100){
+      sums_samp = rowSums(mSet$dataSet$missing)
+      missing.per.samp.perc = sums_samp/ncol(mSet$dataSet$missing)*100
+      good.inx <- missing.per.samp.perc < mSet$metshiParams$miss_perc_samp
+      mSet$dataSet$orig <- mSet$dataSet$orig[good.inx, , drop = FALSE]
+      mSet$dataSet$covars <- mSet$dataSet$covars[good.inx, ]
+      mSet$dataSet$cls <- mSet$dataSet$cls[good.inx]
+      mSet$dataSet$orig.cls <- mSet$dataSet$orig.cls[good.inx]
+      mSet$dataSet$orig.smp.nms <- mSet$dataSet$covars$sample
+    }  
   }
-
   qs::qsave(mSet$dataSet$orig, "data_orig.qs")
   
   if(!init) mSet$dataSet$missing <- NULL
-  
-  if(mSet$metshiParams$filt_type != "none" & (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)){
-    
-    # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
-    keep.mz <- colnames(FilterVariableMetshi(mSet,
-                                             filter = mSet$metshiParams$filt_type,
-                                             qcFilter = "F", #TODO: mSet$metshiParams$useQCs
-                                             rsd = 25,
-                                             max.allow = mSet$metshiParams$max.allow
-    )$dataSet$filt)  
-    if(mSet$metshiParams$norm_type == "ProbNorm"){
-      keep.mz = unique(c(keep.mz, mSet$metshiParams$ref_var))
-    }
-    mSet$dataSet$orig <- mSet$dataSet$orig[,keep.mz]
-    mSet$dataSet$filt <- NULL
-  }
   
   qs::qsave(mSet$dataSet$orig, "data_orig.qs")
   
   # sanity check data
   mSet <- MetaboAnalystR::SanityCheckData(mSet)
+  
+  mSet$dataSet$preproc <- qs::qread("preproc.qs")
+  
+  # filtering
+  if(mSet$metshiParams$filt_type != "none" & 
+     (ncol(mSet$dataSet$orig) > mSet$metshiParams$max.allow)
+     #& !mSet$metshiParams$filt_upon_subset
+     ){
+    # TODO; add option to only keep columns that are also in QC ('qcfilter'?)
+    keep.mz <- colnames(FilterVariableMetshi(mSet,
+                                             filter = mSet$metshiParams$filt_type,
+                                             qcFilter = "F", #TODO: mSet$metshiParams$useQCs
+                                             rsd = 25,
+                                             tbl="preproc",
+                                             max.allow = mSet$metshiParams$max.allow
+    )$dataSet$filt)  
+    if(mSet$metshiParams$norm_type == "ProbNorm"){
+      keep.mz = unique(c(keep.mz, mSet$metshiParams$ref_var))
+    }
+    mSet$dataSet$preproc <- mSet$dataSet$preproc[,keep.mz]
+    qs::qsave(mSet$dataSet$preproc, "preproc.qs")
+    mSet$dataSet$filt <- NULL
+  }
   
   # missing value imputation
   if(req(mSet$metshiParams$miss_type) != "none"){
@@ -2553,10 +2572,11 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                  
                  print("Waiting on cluster to finish jobs...")
                  
-                 jobs_ntot = length(ml_queue$jobs)
+                 jobs_ntot = if(nrow(pars_filt) < maxjobs) nrow(pars_filt) else ceiling(nrow(pars_filt)/10)
                  
                  pb = pbapply::startpb(max = jobs_ntot)
                  max_job_done = 1
+                 print(batch_job$jobname)
                  while(!completed){
                    Sys.sleep(5)
                    try({
@@ -3052,9 +3072,7 @@ doUpdate <- function(mSet, lcl, input, do){
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- NULL
         mSet <- metshiProcess(mSet, cl = session_cl,init = F) #mSet1
       }else{
-        if(is.null(mSet$metshiParams$miss_upon_subset)){
-          mSet$metshiParams$miss_upon_subset <- F
-        }
+        keep.mz = c()
         if(mSet$metshiParams$miss_upon_subset){
           print("Re-evaluating mising value filter...")
           print(paste("previously: ", ncol(mSet$dataSet$norm)))
@@ -3063,9 +3081,8 @@ doUpdate <- function(mSet, lcl, input, do){
                                        mSet$dataSet$cls, 
                                        mSet$metshiParams$miss_minority_filter,
                                        thresh = mSet$metshiParams$miss_perc)
-            good.mz <- intersect(names(which(good.inx)),
-                                 colnames(mSet$dataSet$orig))
-            mSet <- subset_mSet_mz(mSet, keep.mzs = good.mz)
+            keep.mz <- c(intersect(names(which(good.inx)),
+                                      colnames(mSet$dataSet$norm)))
           }
           if(mSet$metshiParams$miss_perc_samp < 100){
             print("filtering by missing m/z per sample")
@@ -3076,7 +3093,21 @@ doUpdate <- function(mSet, lcl, input, do){
             mSet <- subset_mSet(mSet, subset_var = "sample", subset_group = good.samp)
           }  
           print(paste("post-filter: ", ncol(mSet$dataSet$norm)))
-          }
+        }
+        if(F){#mSet$metshiParams$filt_upon_subset){
+          keep.mz.filt <- colnames(FilterVariableMetshi(mSet,
+                                                   filter = mSet$metshiParams$filt_type,
+                                                   qcFilter = "F", #TODO: mSet$metshiParams$useQCs
+                                                   rsd = 25,
+                                                   tbl = "preproc",
+                                                   max.allow = mSet$metshiParams$max.allow
+          )$dataSet$filt)
+          keep.mz <- intersect(keep.mz, keep.mz.filt) 
+        }
+        if(length(keep.mz) > 0){
+          print("filtering m/z..")
+          mSet <- subset_mSet_mz(mSet, keep.mz)
+        }
         mSet$dataSet$start <- mSet$dataSet$preproc <- mSet$dataSet$proc <- mSet$dataSet$prenorm <- mSet$dataSet$missing <- NULL
       }
     }
