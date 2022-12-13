@@ -11,6 +11,10 @@
   z-index: 9935;
 }
 
+.antirevert {
+  filter: hue-rotate(180deg);
+}
+
 .pretty {
     margin-right: 0em;
 }
@@ -106,6 +110,7 @@
 .modal {
   z-index: 9999;
 }
+
 
 .navbar-nav {
     margin: 7.5px -5px -10px;
@@ -421,6 +426,13 @@
   filter: drop-shadow(2px 1px 0 white) 
           drop-shadow(-1px -1px 0 gray);
           
+}
+
+
+.scallop-new {
+  --mask: radial-gradient(30px at top,#0000 97%,#000) 50% / 55.50px 100%;
+  -webkit-mask: var(--mask);
+          mask: var(--mask);
 }
 
 

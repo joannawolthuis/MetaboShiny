@@ -10,7 +10,7 @@ shiny::observe({
     # send necessary functions and libraries to parallel threads
     try({
       parallel::clusterExport(cl = session_cl, envir = .GlobalEnv, varlist = list(
-        "isotopes"
+        "isotopes", "adducts", "adduct_rules"
       ))  
       pkgs = c("data.table", "enviPat", 
                "KEGGREST", "XML", 

@@ -6,11 +6,12 @@ function(input, output, session) {
   library(plotly)
   library(ggplot2)
   library(MetaboShiny)
-  #library(MetaDBparse)
+  library(MetaDBparse)
   library(plyr)
   library(bslib)
   library(dplyr)
-  
+  #remotes::install_github("deepanshu88/shinyDarkmode")
+
   options(shiny.maxRequestSize=50000*1024^2)
   setTimeLimit(cpu = Inf)
   
@@ -31,6 +32,22 @@ function(input, output, session) {
       shiny::showNotification(msg)
     })
   }
+  
+  shinyDarkmode::darkmode_toggle(inputid = 'night_mode')
+  
+  shiny::observe({
+    if(input$night_mode){
+      shinyjs::addClass(selector = '.dbimg > .shiny-image-output > img',
+                        class = "antirevert")
+      #shinyjs::addClass(selector = '.shiny-bound-output',
+      #                  class = "antirevert")
+    }else{
+      shinyjs::removeClass(selector = '.dbimg > .shiny-image-output > img',
+                           class = "antirevert") 
+      #shinyjs::removeClass(selector = '.shiny-bound-output',
+      #                  class = "antirevert")
+    }
+  })
   
   assignInNamespace("AddErrMsg", AddErrMsg, ns="MetaboAnalystR", 
                     envir=as.environment("package:MetaboAnalystR"))
@@ -937,6 +954,27 @@ beep = no')
     shinyjs::js$closeWindow()
   },ignoreNULL = T)
   
+  #### ZOOMIN' ####
+  fun = " const amts = { 
+      'in'  :  10, 
+      'out' : -10, 
+    } 
+    const d = document.body.style 
+    d.zoom = d.zoom || '100%' // in case it's an empty string by default 
+    d.zoom = ('$type' === 'reset' ? 100 : parseInt(d.zoom) + amts['$type']) + '%'"
+  
+  observeEvent(input$zoom_in, {
+    type <- "in"
+    script <- gsubfn::fn$paste(fun)
+    shinyjs::runjs(script)
+  })
+  
+  observeEvent(input$zoom_out, {
+    type <- "out"
+    script <- gsubfn::fn$paste(fun)
+    shinyjs::runjs(script)
+  })
+  
   shinyjs::runjs("delay=1000;
                   setTimeoutConst = setTimeout(function(){
                                         $('#loading-page').fadeIn(1000);
@@ -1027,13 +1065,6 @@ beep = no')
                            class="imagetop")
     }
   })
-  
-  light <- bslib::bs_theme(version = 4)
-  dark <- bslib::bs_theme(bg = "black", fg = "white", version = 4)
-  
-  observe(session$setCurrentTheme(
-    if (isTRUE(input$night_mode)) dark else light
-  ))
   
   onStop(function() {
     print("Closing MetaboShiny...")

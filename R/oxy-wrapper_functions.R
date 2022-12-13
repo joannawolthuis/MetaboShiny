@@ -928,7 +928,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                      p = ggPlotMummi(mSet, 
                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                      plot_mode = if(input$enrich_plot_mode) "volclike" else "gsea",
-                                     show_nonsig = T)
+                                     show_nonsig = T,
+                                     fontsize = input$ggplot_font_size_spec)
                      list(enrich_plot = p)
                    },
                    summary = {
@@ -1884,7 +1885,6 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
 }
 
 metshiProcess <- function(mSet, session, init=F, cl=0){
-
   
   ############## BATCH CORR METHODS THAT DO NOT REQUIRE NORMALIZATION ##########
   # if(length(mSet$metshiParams$batch_var) > 0){
@@ -1936,8 +1936,12 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   
   # sanity check data
   mSet <- MetaboAnalystR::SanityCheckData(mSet)
-  
   mSet$dataSet$preproc <- qs::qread("preproc.qs")
+  rematch = match(
+    rownames(mSet$dataSet$preproc),
+    mSet$dataSet$covars$sample
+  )
+  mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
   
   # filtering
   if(mSet$metshiParams$filt_type != "none" & 
@@ -2041,6 +2045,8 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
                                           transNorm = mSet$metshiParams$trans_type,
                                           scaleNorm = mSet$metshiParams$scale_type,
                                           ref = mSet$metshiParams$ref_var) 
+    
+    mSet$dataSet$cls <- as.factor(mSet$dataSet$covars[,mSet$metshiParams$default_condition,with=F][[1]])
 
   }else{
     mSet$dataSet$norm <- mSet$dataSet$orig
@@ -2057,8 +2063,8 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   has.qc <- length(qc_rows) > 0
   
   rematch = match(
-    rownames(mSet$dataSet$norm),
-    mSet$dataSet$covars$sample
+    mSet$dataSet$covars$sample,
+    rownames(mSet$dataSet$norm)
   )
   
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
@@ -2170,7 +2176,6 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     print("Not combining technical replicates...")
   }
   
-
   # make sure covars order is consistent with mset$..$norm order
   rematch = match(
     rownames(mSet$dataSet$norm),
@@ -2178,7 +2183,8 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
   )
   
   mSet$dataSet$covars <- mSet$dataSet$covars[rematch,]
-  
+  mSet$dataSet$cls <- mSet$dataSet$orig.cls <- mSet$dataSet$proc.cls <- mSet$dataSet$preproc.cls <- mSet$dataSet$covars[, mSet$metshiParams$default_condition, with =
+                                                                                                                          F][[1]]
   if(has.qc){
     mSet$dataSet$covars$is_qc = grepl("QC|qc", mSet$dataSet$covars$sample)
   }

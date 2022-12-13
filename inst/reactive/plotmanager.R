@@ -181,12 +181,13 @@ shiny::observe({
                   filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
                   content = function(file){
                     if(plotName == "heatmap_plot"){
-                      saveFun = if(input$plotsvg) svg else png
                       saveFun(file=file)
                       suppressWarnings(myplot$heatmap_static())
                       dev.off()  
                     }else{
-                      ggplot2::ggsave(file, plot = suppressWarnings(myplot))
+                      ggplot2::ggsave(file, 
+                                      device = (if(input$plotsvg) svg else png)(),
+                                      plot = suppressWarnings(myplot))
                     }
                   }
                 )

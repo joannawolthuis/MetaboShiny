@@ -288,24 +288,34 @@ doEnrich <- function(input, tempfile, ppm, lcl){
   
   # ==== BUILD CUSTOM DB HERE ====
   
-  map_id = input$mummi_org
+  map_id = input$mummi_lib
 
-  lib_name <- paste0(map_id, "_kegg")
-  file_name <- paste0(lib_name, ".qs")
-  
-  if(!file.exists(file_name)){
-    mummichog.lib <- build.enrich.KEGG(map_id)
-    qs::qsave(mummichog.lib, file = file_name)
-  }  
-  
-  
-  lib_name <- paste0(map_id, "_kegg")
-  file_name <- paste0(lib_name, ".qs")
-  
-  if(!file.exists(file_name)){
-    mummichog.lib <- build.enrich.KEGG(map_id)
-    qs::qsave(mummichog.lib, file = file_name)
-  }  
+  if(!grepl("_mset", map_id)){
+    lib_name <- paste0(map_id, "_kegg")
+    file_name <- paste0(lib_name, ".qs")
+    
+    if(!file.exists(file_name)){
+      mummichog.lib <- build.enrich.KEGG(map_id)
+      qs::qsave(mummichog.lib, file = file_name)
+    }  
+    
+    lib_name <- paste0(map_id, "_kegg")
+    file_name <- paste0(lib_name, ".qs")
+    
+    if(!file.exists(file_name)){
+      mummichog.lib <- build.enrich.KEGG(map_id)
+      qs::qsave(mummichog.lib, file = file_name)
+    }   
+  }else{
+    file_name <- paste(map_id, ".qs", sep = "")
+    lib_name <- map_id
+    if(!file.exists(file_name)){
+      mum.url <- paste("https://www.metaboanalyst.ca/resources/libs/mummichog/", 
+                       file_name, sep = "")
+      download.file(mum.url, destfile = file_name, method = "libcurl", 
+                    mode = "wb")   
+    }
+  }
   
   mummichog.lib = qs::qread(file_name)
   

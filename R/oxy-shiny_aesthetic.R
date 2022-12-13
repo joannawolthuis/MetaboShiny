@@ -58,11 +58,11 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
   background-color: $RGB.bg !important;
   color: $RGB.col !important;
   }
-  .navbar:after{
-      height:30px;
-      width: 100%;
-      background: -webkit-gradient(radial, 50% 0, 10, 50% 0, 40, from($RGB.bg), color-stop(0.49, $RGB.bg), color-stop(0.51, #fff), to(white));
-    -webkit-background-size: 29px 100%;
+  .navbar {
+    height: 100px;
+    --mask: radial-gradient(96px at top,#000 80%,#0000) 50% / 56.4px 100%;
+    -webkit-mask: var(--mask);
+    mask: var(--mask);
   }
   .focus_b 
   {
@@ -105,7 +105,7 @@ nav.bar.css <- function(RGB.bg = "#ffc8c2",
 #' @rdname app.font.css
 #' @export 
 #' @importFrom stringr str_extract
-#' @importFrom gsubfn fn
+
 app.font.css <- function(font.h1 = "Press Start 2P",
                         font.h2 = "Raleway bold",
                         font.h3 = "Raleway",

@@ -1,7 +1,8 @@
-shiny::fluidPage(theme = "metaboshiny.css",
-                 class="hidden",id="metshi",
+shiny::fluidPage(class="hidden",id="metshi",
                  ECharts2Shiny::loadEChartsLibrary(),
                  shinyjs::useShinyjs(),
+                 shinyDarkmode::use_darkmode(),
+                 shiny::includeCSS("www/metaboshiny.css"),
                  tags$head(tags$script(src="cursor.js")),
                  shiny::div(style = 'position: absolute;
                                      left: 79%;
@@ -1309,8 +1310,8 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                           sidebarPanel = sidebarPanel(
                                                                                                                                                                             shiny::fluidRow(align="center",
                                                                                                                                                                                             h3("Enrichment parameters"),
-                                                                                                                                                                                            shiny::selectizeInput("mummi_org",
-                                                                                                                                                                                                                  label = "Pathway KEGG database:",
+                                                                                                                                                                                            shiny::selectizeInput("mummi_lib",
+                                                                                                                                                                                                                  label = "Pathway database:",
                                                                                                                                                                                                                   choices = list(
                                                                                                                                                                                                                     "Homo sapiens (human)"="hsa01100",
                                                                                                                                                                                                                     "Sus scrofa (swine)"="ssc01100",
@@ -1326,8 +1327,17 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                                                                     "Clostridium perfringens 13"="cpe01100",
                                                                                                                                                                                                                     "Ruminococcus albus 7"="ral01100",
                                                                                                                                                                                                                     "Bacteroides salanitronis DSM 18170"="bsa01100",
-                                                                                                                                                                                                                    "Lactobacillus salivarius UCC188"="lsl01100"
-                                                                                                                                                                                                                    
+                                                                                                                                                                                                                    "Lactobacillus salivarius UCC188"="lsl01100",
+                                                                                                                                                                                                                    "Lipids - Main Chemical Class"="main_lipid_class_mset",
+                                                                                                                                                                                                                    "Lipids - Sub Chemical Class"="sub_lipid_class_mset",
+                                                                                                                                                                                                                    "Non-Lipids - Main Chemical Class"="main_nolipid_class_mset",
+                                                                                                                                                                                                                    "Non-Lipids - Sub Chemical Class"="sub_nolipid_class_mset",
+                                                                                                                                                                                                                    "Disease-associated Metabolite Sets (Blood)"="blood_mset",
+                                                                                                                                                                                                                    "Disease-associated Metabolite Sets (CSF)"="csf_mset",
+                                                                                                                                                                                                                    "Disease-associated Metabolite Sets (Urine)"="urine_mset",
+                                                                                                                                                                                                                    "SNP-associated Metabolite Sets"="snp_mset",
+                                                                                                                                                                                                                    "Location-based Metabolite Sets"="location_mset",
+                                                                                                                                                                                                                    "Predicted Metabolite Sets"="predicted_mset"
                                                                                                                                                                                                                   ), selected = "hsa01120"),# REGEX: [:|"|,][A-z]+?_[A-z]+?[:|"|,] ON the metaboanalyst page showing the table with options
                                                                                                                                                                                             shinyWidgets::switchInput(
                                                                                                                                                                                               inputId = "mummi_enr_method",value = TRUE,
@@ -2018,7 +2028,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                  choicesOpt = list(
                                                                                                                                                                    subtext = c(" ")
                                                                                                                                                                  ))
-                                                                                                                                                               ,span(shinyWidgets::actionBttn(
+                                                                                                                                                               ,shiny::span(shinyWidgets::actionBttn(
                                                                                                                                                                  inputId = "load_storage",
                                                                                                                                                                  label = "load", 
                                                                                                                                                                  style = "bordered",
@@ -2376,6 +2386,7 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                                                                                                                                                shiny::tags$i("only ggplot mode"),
                                                                                                                                                                shinyWidgets::switchInput("plot_mzlabels", value = T, onLabel = "show", offLabel="hide", size = "small"),
                                                                                                                                                                shiny::numericInput("ggplot_font_size",label = "Plot font base size:",value = 15),
+                                                                                                                                                               shiny::numericInput("ggplot_font_size_spec",label = "Plot other font size:",value = 15),
                                                                                                                                                                plotly::plotlyOutput("ggplot_font_size_example"),
                                                                                                                                                                shiny::selectizeInput("ggplot_sum_style", multiple=T, label = "Style(s)", choices = list("Box" = "box",
                                                                                                                                                                                                                                                         "Violin" = "violin",
@@ -2693,17 +2704,22 @@ shiny::fluidPage(theme = "metaboshiny.css",
                                        shiny::div(class = "footer",
                                                   shiny::fluidRow(align="center",
                                                                   shiny::span(
-                                                                    prettyToggle(
-                                                                      inputId = "Id031",
-                                                                      label_on = "day", 
-                                                                      label_off = "night",
+                                                                    shiny::actionButton("zoom_in", label="",
+                                                                                        icon = shiny::icon("plus")),
+                                                                    shiny::actionButton("zoom_out",label="", 
+                                                                                        icon = shiny::icon("minus")),
+                                                                    shinyWidgets::prettyToggle(
+                                                                      inputId = "night_mode",
+                                                                      label_off = "day", 
+                                                                      label_on = "night",
                                                                       outline = TRUE,
                                                                       plain = TRUE,
                                                                       value=T,
-                                                                      status_on = "default",
-                                                                      status_off="default",
-                                                                      icon_on = icon("sun"), 
-                                                                      icon_off = icon("moon"), inline = T
+                                                                      status_off = "default",
+                                                                      status_on="default",
+                                                                      icon_off = icon("sun"), 
+                                                                      icon_on = icon("moon"), 
+                                                                      inline = T
                                                                     ),shiny::tags$i(icon("map-marker"), 
                                                                                 shiny::textOutput("proj_name",inline = T), 
                                                                                 style="vertical-align: middle;")),

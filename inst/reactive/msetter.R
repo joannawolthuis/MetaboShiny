@@ -7,9 +7,7 @@ shiny::observe({
   }else if(!is.null(mSetter$do)){
     
     if(!is.null(mSet)){
-      
       success = F
-      
       try({
         updated <- doUpdate(mSet, 
                             lcl, 

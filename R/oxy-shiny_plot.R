@@ -2521,7 +2521,8 @@ ggPlotPower <- function(mSet,
 #' @importFrom ggplot2 ylab xlab scale_colour_gradientn
 ggPlotMummi <- function(mSet, cf, 
                         plot_mode = "volclike", 
-                        show_nonsig=T){
+                        show_nonsig=T,
+                        fontsize=6){
   
   anal.type = if(!is.null(mSet$analSet$enrich$mummi.resmat)) "mummichog" else "gsea"
   
@@ -2607,7 +2608,7 @@ ggPlotMummi <- function(mSet, cf,
                                           mapping = ggplot2::aes(x = x, 
                                                                  y = y,
                                                                  label = path.nms),
-                                          size=4,
+                                          size=fontsize,
                                           max.overlaps = 15,
                                           force=10,
                                           min.segment.length = 0) +
