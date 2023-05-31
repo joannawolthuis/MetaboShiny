@@ -2485,25 +2485,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
          },
          ml = {
            {
-             print(length(ml_queue$jobs))
-             print(ncol(mSet$dataSet$norm))
-             
-             # ml_queue_keep = sapply(ml_queue$jobs, function(q){
-             #   if(q$ml_specific_mzs != "no"){
-             #     if(q$ml_mzs_topn > ncol(mSet$dataSet$norm)){
-             #       F
-             #     }else{
-             #       T
-             #     }
-             #   }else{
-             #     T
-             #   }
-             # })
-             # print()
-             # ml_queue$jobs = ml_queue$jobs[ml_queue_keep]
-             #print("Valid job distribution:")
-             #print(table(ml_queue_keep))
-             
+  
              mSet_loc <- mSetForML(mSet, 
                                    ml_queue, 
                                    input)

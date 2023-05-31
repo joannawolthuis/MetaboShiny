@@ -407,7 +407,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
     config = data.table::data.table()
   }
   
-  config$label = mSet$dataSet$cls
+  config$label = as.factor(mSet$dataSet$cls)
   
   # train/test split
   ## get indices

@@ -185,9 +185,14 @@ shiny::observe({
                       suppressWarnings(myplot$heatmap_static())
                       dev.off()  
                     }else{
-                      ggplot2::ggsave(file, 
+                      print(session$clientData[[paste0("output_", plotName, "_width")]])
+                      print(session$clientData[[paste0("output_", plotName, "_height")]])
+                      ggplot2::ggsave(file,
+                                      units = "px",
+                                      width = session$clientData[[paste0("output_", plotName, "_width")]],
+                                      height = session$clientData[[paste0("output_", plotName, "_height")]],
                                       device = (if(input$plotsvg) svg else png)(),
-                                      plot = suppressWarnings(myplot))
+                                      plot = myplot)
                     }
                   }
                 )

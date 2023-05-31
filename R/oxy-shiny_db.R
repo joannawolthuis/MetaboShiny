@@ -646,7 +646,8 @@ metshiRevSearch = function(mSet, structure, ext.dbname, db_dir){
 
 build.enrich.KEGG <- function(map_id, filter_out_module_regex = ""){
   print("Downloading pathway information...")
-  
+  # map_id = "hsa01100"
+  #res <- keggGet(c("hsa:10458", "ece:Z5100"), "aaseq") 
   map_info = KEGGREST::keggGet(map_id)
   use_ko = grepl("map", map_id)
   if(grepl("gga", map_id)){

@@ -14,7 +14,8 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     vals_for_projection <- getAllHits(mSet, 
                                       input$enrich_pathway_projection,
                                       randomize = F)
-    
+    vals_for_projection$significant <- NULL
+
     analysis = gsub(" \\(.*$", "", input$enrich_pathway_projection)
     if(analysis %in% c("tt","fc","combi")){
       updir = switch(analysis,
@@ -26,8 +27,12 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       updir = NA
     }
     
-    mzs_withvals = merge(enrich$current[,c("rn", "identifier")], 
+    mzs_withvals = merge(enrich$current[,c("rn", "identifier", "significant")], 
                          vals_for_projection, by.x="rn", by.y="m.z")
+    
+    if(input$enrich_map_nonsig){
+      mzs_withvals$significant <- c("yes")
+    }
     
     if(!("statistic" %in% names(mzs_withvals))){
       mzs_withvals$statistic = c(1)
@@ -38,7 +43,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
       mz_rows = mzs_withvals[identifier == cpd_id]
       print(mz_rows)
       if(nrow(mz_rows) > 0){
-        mz_rows$stastistic <- ifelse(mz_rows$significant, mz_rows$statistic, 0)
+        mz_rows$stastistic <- ifelse(mz_rows$significant == 'yes', mz_rows$statistic, 0)
         
         all.dat = data.table::data.table(id = cpd_id,
                                          mz = mz_rows$rn,
