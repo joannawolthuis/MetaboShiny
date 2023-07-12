@@ -178,7 +178,7 @@ observe({
         save_info$has_changed <- FALSE
       }
     } 
-  }
+   }
   gc()
   filemanager$do <- "nothing"
 })
