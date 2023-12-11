@@ -1207,24 +1207,24 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
   trainAUCs = sapply(split(train_runs, list(train_runs$run, 
                                             train_runs$`Test set`)), 
                      function(l){
-                       pracma::trapz(l$x, l$y)
+                       pracma::trapz(rev(l$x), rev(l$y))
                      })
   
   if("Test" %in% unique(perf.long$`Test set`)){
     test_runs = perf.long[`Test set` == "Test" & !(shuffled)]
     if(length(unique(test_runs$run)) > 1){
       AUCs = sapply(split(test_runs, test_runs$run), function(l){
-        pracma::trapz(l$x, l$y)
+        pracma::trapz(rev(l$x), rev(l$y))
       })
     }else{
-      AUCs = pracma::trapz(perf.long[`Test set` == "Test" & !(shuffled)]$x, 
-                           perf.long[`Test set` == "Test" & !(shuffled)]$y)  
+      AUCs = pracma::trapz(rev(perf.long[`Test set` == "Test" & !(shuffled)]$x), 
+                           rev(perf.long[`Test set` == "Test" & !(shuffled)]$y))  
     }
   }else{
     # only use training AUCs of nonshuffled
     AUCs = mean(sapply(unique(perf.long$`Test set`), function(t){
-      pracma::trapz(perf.long[`Test set` == t & !(shuffled)]$x, 
-                    perf.long[`Test set` == t & !(shuffled)]$y)}
+      pracma::trapz(rev(perf.long[`Test set` == t & !(shuffled)]$x), 
+                    rev(perf.long[`Test set` == t & !(shuffled)]$y))}
     ))
   }
   
@@ -1253,14 +1253,14 @@ ggPlotCurves = function(ml_performance, cf = rainbow){
       shuffleSplit = split(shuffle_data, shuffle_data$run)
       if("Test" %in% unique(perf.long$`Test set`)){
         shuffleAUCs = sapply(shuffleSplit, function(t){
-          pracma::trapz(t[`Test set` == "Test"]$x, 
-                        t[`Test set` == "Test"]$y)
+          pracma::trapz(rev(t[`Test set` == "Test"]$x), 
+                        rev(t[`Test set` == "Test"]$y))
         })  
       }else{
         shuffleSplit = split(shuffle_data, shuffle_data$`Test set`)
         shuffleAUCs = sapply(shuffleSplit, function(t){
-          pracma::trapz(t$x, 
-                        t$y)
+          pracma::trapz(rev(t$x), 
+                        rev(t$y))
         })    
       }
       

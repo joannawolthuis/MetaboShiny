@@ -39,13 +39,9 @@ function(input, output, session) {
     if(input$night_mode){
       shinyjs::addClass(selector = '.dbimg > .shiny-image-output > img',
                         class = "antirevert")
-      #shinyjs::addClass(selector = '.shiny-bound-output',
-      #                  class = "antirevert")
     }else{
       shinyjs::removeClass(selector = '.dbimg > .shiny-image-output > img',
                            class = "antirevert") 
-      #shinyjs::removeClass(selector = '.shiny-bound-output',
-      #                  class = "antirevert")
     }
   })
   

@@ -49,6 +49,8 @@ pacman::p_load(impute,
                  siggenes, 
                  MSnbase)
 
+install.packages("latticeExtra")
+
 BiocManager::install("RBGL")
 devtools::install_github("mvaniterson/SSPA")
 devtools::install_github("datapplab/pathview")

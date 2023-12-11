@@ -108,5 +108,6 @@ Imports:
   ggpp,
   pdftools,
   magick,
-  ggrepel
+  ggrepel,
+  latticeExtra
 RoxygenNote: 7.1.0
