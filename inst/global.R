@@ -342,7 +342,18 @@ paths = list(
                               })
                      })
     names(folders) = vols
-    folders[!sapply(folders, is.null)]
+
+    for(diskletter in LETTERS){
+      if (Sys.info()["sysname"] == "Windows") {
+        dn <- paste0(diskletter, ":/")
+        if(dir.exists(dn)){
+          print(paste0("Adding disk: ", dn, " to file picker."))
+          folders[dn] <- dn
+        }
+      }else{
+        print("to do")
+      }
+    }
     unlist(folders[!sapply(folders, is.null)])
   }
 ),

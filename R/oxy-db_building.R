@@ -5,7 +5,19 @@ getMissing <- function(peakpath,
   bigFile = utils:::format.object_size(file.info(peakpath)$size, "GB")
   reallyBig = if(bigFile == "0 Gb") F else T
   
-  nrow = length(vroom::vroom_lines(peakpath,skip_empty_rows = T)) - 1L
+  if(is.null(nrow)){
+    # lns <- vroom::vroom_lines(file = peakpath,
+    #                           progress = T)
+    # nrow = length(lns) - 1L
+    f <- file(peakpath, open="rb")
+    nlines <- 0L
+    while (length(chunk <- readBin(f, "raw", 65536)) > 0) {
+      nlines <- nlines + sum(chunk == as.raw(10L))
+    }
+    print(nlines)
+    close(f)
+    nrow <- nlines - 1
+  }
   
   print("Checking missing values...")
   
@@ -51,6 +63,7 @@ getMissing <- function(peakpath,
       totalMissing <- rep(0, length(mzs))
       names(totalMissing) = mzs
       samps_in_peaklist = c()
+      
       pbapply::pbsapply(2:nrow, function(i){
         line = readLines(con, n = 1) # empty
         splRow = stringr::str_split(line, pattern=",")[[1]]

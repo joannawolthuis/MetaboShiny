@@ -184,6 +184,7 @@ shiny::observeEvent(input$initialize, {
         batch_var = input$batch_var,
         batch_method_a = input$batch_method_a,
         batch_method_b = input$batch_method_b,
+        batch_covar = input$batch_covar,
         prematched = F,
         rf_norm_parallelize = input$rf_norm_parallel,
         rf_norm_ntree = input$rf_norm_ntree,

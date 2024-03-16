@@ -105,9 +105,9 @@ Imports:
   ggupset,
   missRanger,
   doSNOW,
-  ggpp,
   pdftools,
   magick,
   ggrepel,
-  latticeExtra
+  latticeExtra,
+  lubridate
 RoxygenNote: 7.1.0

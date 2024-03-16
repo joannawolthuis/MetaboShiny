@@ -45,7 +45,7 @@ shiny::observeEvent(input$ms_modes, {
                     # shiny::fileInput(paste0('outlist_',mode), 
                     #                  gsubfn::fn$paste('Select $char peaks'), 
                     #                  buttonLabel="Browse", accept = c(".csv",".tsv"))
-                    )
+      )
     })
     output$outlist_pickers <- shiny::renderUI(shiny::fluidRow(align="center",pickerUI)) 
   }
@@ -147,12 +147,12 @@ shiny::observeEvent(input$checkMissSamp, {
   
   if(files.present){
     if(hasPos){
-      nrows = length(vroom::vroom_lines(pospath, altrep = TRUE, progress = TRUE)) - 1L
-      missValues$per_samp = list(pos = getMissing(pospath, dim="per_sample", nrow=nrows))
+      #nrows = length(vroom::vroom_lines(pospath, altrep = TRUE, progress = TRUE)) - 1L
+      missValues$per_samp = list(pos = getMissing(pospath, dim="per_sample"))
     }
     if(hasNeg){
-      nrows = length(vroom::vroom_lines(negpath, altrep = TRUE, progress = TRUE)) - 1L
-      missValues$per_samp = list(neg = getMissing(negpath, dim="per_sample", nrow=nrows))
+      #nrows = length(vroom::vroom_lines(negpath, altrep = TRUE, progress = TRUE)) - 1L
+      missValues$per_samp = list(neg = getMissing(negpath, dim="per_sample"))
     }
   }else{
     MetaboShiny::metshiAlert("Please select files first!")
@@ -202,7 +202,7 @@ shiny::observeEvent(input$create_csv,{
       
       hasPos = "pos" %in% input$ms_modes
       hasNeg = "neg" %in% input$ms_modes
-  
+      
       # FOR EXAMPLE DATA: "(^\\d+?_)|POS_|NEG_"
       pospath = if(hasPos) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_pos)$datapath else c()
       negpath = if(hasNeg) shinyFiles::parseFilePaths(gbl$paths$volumes, input$outlist_neg)$datapath else c()
@@ -299,8 +299,9 @@ shiny::observeEvent(input$check_csv, {
                            choices = opts)
   shiny::updateSelectizeInput(session, "batch_var",
                               choices = batch,
-                              options = list(maxItems = 3L - (length(input$batch_var)))
-  )
+                              options = list(maxItems = 3L - (length(input$batch_var))))
+  shiny::updateSelectizeInput(session, "batch_covar",
+                              choices = batch)
 })
 
 output$wipe_regex_ui <- shiny::renderUI({

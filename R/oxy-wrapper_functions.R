@@ -2111,8 +2111,8 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
       
       # batch correct with limma and two batches
       batch_normalized = t(limma::removeBatchEffect(x = csv_edata,
-                                                    batch = csv_pheno$batch1
-                                                    ,batch2 = csv_pheno$batch2))
+                                                    batch = csv_pheno$batch1,
+                                                    batch2 = csv_pheno$batch2))
       rownames(batch_normalized) <- rownames(mSet$dataSet$norm)
       mSet$dataSet$norm <- as.data.frame(batch_normalized)
     }else{
@@ -2148,7 +2148,8 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
         mSet$dataSet$norm <- batchCorr_mSet(mSet, 
                                             batch_method_b, 
                                             batch_var = left_batch_vars, 
-                                            cl=cl, "norm") 
+                                            cl=cl, "norm",
+                                            batch_covar=mSet$metshiParams$batch_covar) 
       }}
   }
   
@@ -2615,6 +2616,9 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                  stop("ml failed")
                }
              }else{
+               
+               browser()
+               
                if(length(cl) == 1 | is.null(cl)){
                  small_mSet <- qs::qread(mSet_loc)
                }

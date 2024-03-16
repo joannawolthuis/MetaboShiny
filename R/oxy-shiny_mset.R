@@ -688,7 +688,7 @@ pair.mSet <- function(mSet) {
   keep.samp
 }
 
-batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
+batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm", batch_covar=c()){
   switch(method, 
          pmp = {
            batch.idx <- as.numeric(as.factor(mSet$dataSet$covars$batch))
@@ -704,7 +704,7 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
            dtNorm_numeric = apply(dtNorm_stat_order, 2, as.numeric)
            corrected_data <- pmp::QCRSC(df=t(dtNorm_numeric), 
                                         order=seq.idx, 
-                                        batch=batch.idx, 
+                                        batch=batch.idx,
                                         classes=dtNorm_merge_order$class, 
                                         spar=0, 
                                         minQC=4)
@@ -799,9 +799,20 @@ batchCorr_mSet <- function(mSet, method, batch_var, cl=0, source_table="norm"){
                                    batch1 = mSet$dataSet$covars[, batch_var, with=FALSE][[1]]
            )
            # batch correct with comBat
-           batch_normalized = t(sva::ComBat(dat = csv_edata,
-                                            batch = csv_pheno$batch1)
-           )
+           if(length(batch_covar) > 0){
+             print(paste0("Conserving covariate(s): ", paste0(batch_covar, collapse = ", ")))
+             mod = model.matrix(as.formula(paste("~ ", paste(batch_covar, collapse= " + "))), 
+                                data = as.data.frame(mSet$dataSet$covars))
+             batch_normalized = t(sva::ComBat(dat = csv_edata,
+                                              batch = csv_pheno$batch1,
+                                              mod = mod)
+             )  
+           }else{
+             batch_normalized = t(sva::ComBat(dat = csv_edata,
+                                              batch = csv_pheno$batch1)
+             )  
+           }
+           
            # fix row names
            rownames(batch_normalized) <- rownames(mSet$dataSet[[source_table]])
            batch_normalized

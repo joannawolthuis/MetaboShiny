@@ -13,6 +13,7 @@ getMLperformance = function(ml_res, pos.class,
                             direction = NULL,
                             ignore.training = F){
   ignore.training = if(nrow(ml_res$train.performance) == 0) T else ignore.training
+  
   if(!ignore.training){
     if(!("Resample" %in% colnames(ml_res$train.performance))){
       is.loocv = TRUE

@@ -10,8 +10,9 @@ function(input, output, session) {
   library(plyr)
   library(bslib)
   library(dplyr)
-  #remotes::install_github("deepanshu88/shinyDarkmode")
-
+  remotes::install_github("deepanshu88/shinyDarkmode")
+  Sys.setenv(VROOM_CONNECTION_SIZE = "500000000")
+  
   options(shiny.maxRequestSize=50000*1024^2)
   setTimeLimit(cpu = Inf)
   
@@ -249,6 +250,8 @@ beep = no')
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
         print("!")
+        print(file.path(lcl$paths$work_dir, "adducts.csv"))
+        View(adducts)
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
       }
       
@@ -263,7 +266,8 @@ beep = no')
                "filter_adducts"), function(id){
                  cats = setdiff(colnames(adducts), colnames(MetaDBparse::adducts))
                  pickerID = paste0(id, "_cat_picker")
-                 output[[paste0(id, "_cats")]] <- shiny::renderUI(if(length(cats) > 0){
+                 output[[paste0(id, "_cats")]] <- shiny::renderUI(
+                   if(length(cats) > 0){
                    shinyWidgets::checkboxGroupButtons(
                      inputId = pickerID,
                      label = "Adduct categories:",
@@ -279,6 +283,9 @@ beep = no')
                  # observers
                  shiny::observeEvent(input[[pickerID]],{
                    if(length(input[[pickerID]]) > 0){
+                     
+                     browser()
+                     
                      sel_adducts = lapply(input[[pickerID]], function(colu){
                        col = adducts[[colu]] == "v"
                        col[is.na(col)] <- FALSE
@@ -293,7 +300,10 @@ beep = no')
                        sel_adducts = sel_adduct_sums > 0
                      }
                      if(!grepl("filter", pickerID)){
-                       shinyWidgets::updatePickerInput(session, id, selected = adducts$Name[sel_adducts])
+                       shinyWidgets::updatePickerInput(session, 
+                                                       id, 
+                                                       choices = adducts$Name,
+                                                       selected = adducts$Name[sel_adducts])
                      }else{
                        # also do pie chart filter?
                        if(!is.null(pieinfo)){

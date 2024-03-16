@@ -37,19 +37,21 @@ pacman::p_load(pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
                DGCA,
                heatmap3,
                EBImage,
-               pathview
+               pathview,
+               impute, 
+               pcaMethods, 
+               globaltest, 
+               GlobalAncova, 
+               preprocessCore, 
+               SSPA, 
+               siggenes, 
+               MSnbase
                )
 
-pacman::p_load(impute, 
-                 pcaMethods, 
-                 globaltest, 
-                 GlobalAncova, 
-                 preprocessCore, 
-                 SSPA, 
-                 siggenes, 
-                 MSnbase)
+pacman::p_load(pathview, ggpp, pdftools, magick)
 
 install.packages("latticeExtra")
+install.packages("lubridate")
 
 BiocManager::install("RBGL")
 devtools::install_github("mvaniterson/SSPA")
@@ -58,9 +60,16 @@ devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")
 devtools::install_github("yixuan/showtext")
 devtools::install_github("gaospecial/ggVennDiagram")
 devtools::install_github("joannawolthuis/WaveICA")
+devtools::install_github("deepanshu88/shinyDarkmode")
 
 install.packages("rJava", type="source")
 
-devtools::install_github("UMCUGenetics/MetaDBparse")
-devtools::install_github("UMCUGenetics/MetaboShiny", "dev")
+devtools::install_github("joannawolthuis/MetaDBparse")
+devtools::install_github("joannawolthuis/MetaboShiny", "dev")
 
+# librsvg
+# netcdf
+# ffts3
+# udunits/libudunits
+# c++14 compiler
+# Magick++
