@@ -10,7 +10,7 @@ routinemanager <- shiny::reactive({
       last_task = list()
       
       for(i in 1:length(routines$tasks)){
-        mSet_last <<- mSet
+        #mSet_last <<- mSet
         success = F
         
         task = routines$tasks[[i]]
@@ -35,7 +35,7 @@ routinemanager <- shiny::reactive({
                                             input = input,
                                             lcl = lcl,
                                             do = task$type)
-                        mSet <- updated$mSet
+                        mSet <<- updated$mSet
                         lcl <- updated$lcl
                       },
                       analyse = {
@@ -52,7 +52,7 @@ routinemanager <- shiny::reactive({
                                             multirank_yes = multirank_yes,
                                             ml_queue = ml_queue,
                                             cl=NULL)
-                          mSet <- results$mSet
+                          mSet <<- results$mSet
                         lcl <- results$lcl  
                         #})
                       })
@@ -65,7 +65,7 @@ routinemanager <- shiny::reactive({
         }else{
           print("nay")
           stop("oh no")
-          mSet <<- mSet_last
+          #mSet <<- mSet_last
         }
       } 
         #})

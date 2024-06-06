@@ -2617,8 +2617,6 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                }
              }else{
                
-               browser()
-               
                if(length(cl) == 1 | is.null(cl)){
                  small_mSet <- qs::qread(mSet_loc)
                }

@@ -10,7 +10,6 @@ function(input, output, session) {
   library(plyr)
   library(bslib)
   library(dplyr)
-  remotes::install_github("deepanshu88/shinyDarkmode")
   Sys.setenv(VROOM_CONNECTION_SIZE = "500000000")
   
   options(shiny.maxRequestSize=50000*1024^2)

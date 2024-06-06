@@ -162,7 +162,8 @@ runML <- function(training,
                   shuffle_mode = "train",
                   silent = F,
                   tmpdir,
-                  use_slurm = F){
+                  use_slurm = F,
+                  ...){
   
   # get user training percentage
   need.rm = c("split")
@@ -250,7 +251,8 @@ runML <- function(training,
                                  ml_preproc = ml_preproc,
                                  maximize = maximize,
                                  folds = folds,
-                                 tuneGrid = tuneGrid)
+                                 tuneGrid = tuneGrid,
+                                 ...)
   }
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
@@ -266,7 +268,8 @@ ml_single_run <- function(trainOrder,
                           ml_method,
                           ml_preproc=NULL,
                           maximize,
-                          tuneGrid){
+                          tuneGrid,
+                          ...){
   
   training = qs::qread(train_fn)
   testing = qs::qread(test_fn)
@@ -332,7 +335,8 @@ ml_single_run <- function(trainOrder,
       maximize = if(maximize) def_scoring else !def_scoring,
       importance = if(ml_method == c("ranger")) 'permutation' else TRUE,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-      trControl = trainCtrl
+      trControl = trainCtrl,
+      ...
     )
   }
   
@@ -731,7 +735,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
   list(train = training_data, test = testing_data)
 }
 
-ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
+ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, ...){
   res = list()
   #({
   {
@@ -926,15 +930,17 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
     names(tune.opts) <- caret.methods
     
     meth.info <- caret.mdls[[settings$ml_method]]
+    
     params = meth.info$parameters
     
-    tuneGrid = if(length(params) == 0){
+    tuneGrid = if(nrow(params) == 0){
       data.frame()
     }else{
       expand.grid(
         {
           lst = lapply(1:nrow(params), function(i){
             info = params[i,]
+            #inp.val = settings[[paste0("ml_", info[[1]])]]
             inp.val = settings[[paste0("ml_", info$parameter)]]
             # - - check for ranges - -
             if(grepl(inp.val, pattern=":")){
@@ -989,7 +995,8 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F){
                    shuffle_mode = if(settings$ml_shuffle_mode) "train" else "test",
                    cl = cl,
                    tmpdir=tmpdir,
-                   use_slurm = use_slurm)
+                   use_slurm = use_slurm,
+                   ...)
     
     res = list(res = ml_res, params = settings)
   }
