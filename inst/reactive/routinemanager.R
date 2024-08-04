@@ -10,7 +10,7 @@ routinemanager <- shiny::reactive({
       last_task = list()
       
       for(i in 1:length(routines$tasks)){
-        #mSet_last <<- mSet
+        mSet_last <<- mSet
         success = F
         
         task = routines$tasks[[i]]

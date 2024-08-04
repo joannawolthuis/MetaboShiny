@@ -2360,7 +2360,8 @@ ml_loop_wrapper <- function(mSet_loc, gbl, jobs,
 assignInNamespace(x = "render.kegg.node", value = render.kegg.node.jw, ns = "pathview")
 
 # ---
-runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
+runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes, extra_arguments=list()){
+  
   switch(analysis,
          vennrich = {
            if("storage" %not in% names(mSet)){
@@ -2555,7 +2556,8 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                                                  global_objects = "gbl",
                                                  slurm_options = list(time = job_time,
                                                                       mem = mem_gb),
-                                                 max_simul=nodecount)
+                                                 max_simul=nodecount,
+                                                 extra_arguments)
                  
                  completed = F
                  
@@ -2634,7 +2636,7 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                
                ml_queue_res <- pbapply::pblapply(ml_queue$jobs, 
                                                  cl = if(length(ml_queue$jobs) > 1) cl else 0, 
-                                                 function(settings, mSet_loc){
+                                                 function(settings, mSet_loc, extra_arguments){
                                                    data = list()
                                                    try({
                                                      small_mSet=qs::qread(mSet_loc)
@@ -2643,11 +2645,12 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes){
                                                                    input = input,
                                                                    cl = 0,
                                                                    tmpdir = dirname(tempfile()), 
-                                                                   use_slurm=F)
+                                                                   use_slurm=F,
+                                                                   extra_arguments = extra_arguments)
                                                    })
                                                    data
                                                  },
-                                                 mSet_loc = mSet_loc)
+                                                 mSet_loc = mSet_loc, extra_arguments = extra_arguments)
              }
            }
            

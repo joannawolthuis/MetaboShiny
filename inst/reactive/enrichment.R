@@ -111,6 +111,7 @@ shiny::observeEvent(input$enrich_plot_pathway, {
         row[2:ncol(row)] <- numvals.filled[order(numvals.filled)]
         row
       }))  
+      myfun <- function(x) x
     }
     
     multi.state.table <- as.data.frame(multi.state.table)

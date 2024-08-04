@@ -163,7 +163,7 @@ runML <- function(training,
                   silent = F,
                   tmpdir,
                   use_slurm = F,
-                  ...){
+                  extra_arguments){
   
   # get user training percentage
   need.rm = c("split")
@@ -211,7 +211,8 @@ runML <- function(training,
     maximize = rep(maximize, iterations),
     trainOrder = I(trainOrders),
     tuneGrid = I(lapply(1:iterations, function(i) tuneGrid)),
-    folds = I(lapply(1:iterations, function(i) folds)))
+    folds = I(lapply(1:iterations, function(i) folds)),
+    extra_arguments = I(lapply(1:iterations, function(i) extra_arguments)))
   
   has_slurm = Sys.getenv("SLURM_CPUS_ON_NODE") != ""
   
@@ -241,6 +242,7 @@ runML <- function(training,
     #rslurm::cleanup_files(batch_job) #cleanup files
     
   }else{
+    
     results <- pbapply::pblapply(trainOrders, 
                                  ml_single_run, 
                                  train_fn = train_fn, 
@@ -252,7 +254,7 @@ runML <- function(training,
                                  maximize = maximize,
                                  folds = folds,
                                  tuneGrid = tuneGrid,
-                                 ...)
+                                 extra_arguments = extra_arguments)
   }
   # train and cross validate model
   # return list with mode, prediction on test data etc.s
@@ -269,7 +271,7 @@ ml_single_run <- function(trainOrder,
                           ml_preproc=NULL,
                           maximize,
                           tuneGrid,
-                          ...){
+                          extra_arguments){
   
   training = qs::qread(train_fn)
   testing = qs::qread(test_fn)
@@ -325,9 +327,41 @@ ml_single_run <- function(trainOrder,
       family = if(is_logit) "binomial" else NULL
     )  
   }else{
-    fit <- caret::train(
+
+    y <- as.factor(training$label)
+    
+    if("weigh.classes" %in% names(extra_arguments)){
+      if(length(levels(y)) > 2){
+        stop("Only avail. for 2-class problems!")
+      }
+      min.class <- names(which(table(y) == min(table(y)))) 
+      maj.class <- names(which(table(y) == max(table(y))))
+      wmin = length(y)/sum(y == min.class)
+      wmaj = 1
+      classwt = setNames(c(wmin, wmaj), c(min.class, maj.class))
+      extra_arguments$weigh.classes <- NULL
+      extra_arguments$class.weights <- classwt
+    }else if("weigh.cases" %in% names(extra_arguments)){
+      consider.vars <- extra_arguments$weigh.cases$consider.vars
+      vartbl <- training[, ..consider.vars, with = F]
+      casejudge <- vartbl[, do.call(paste0, .SD), .SDcols = consider.vars]
+      casewt <- rep(1, nrow(vartbl))
+      
+      for(variable in names(extra_arguments$weigh.cases$weights)){
+       if(variable %in% casejudge){
+         casewt[casejudge == variable] <- extra_arguments$weigh.cases$weights[[variable]]
+       } 
+      }
+      extra_arguments$weigh.cases <- NULL
+      extra_arguments$case.weights <- casewt
+      
+    }
+    
+    print(extra_arguments)
+    
+    params <- list(
       x = training[,-"label"],
-      y = as.factor(training$label),
+      y = y,
       method = ml_method,
       ## Center and scale the predictors for the training
       ## set and all future samples.
@@ -335,9 +369,23 @@ ml_single_run <- function(trainOrder,
       maximize = if(maximize) def_scoring else !def_scoring,
       importance = if(ml_method == c("ranger")) 'permutation' else TRUE,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
-      trControl = trainCtrl,
-      ...
-    )
+      trControl = trainCtrl)
+    
+    fit <- do.call(caret::train, c(params, extra_arguments))
+    
+    # fit <- caret::train(
+    #   x = training[,-"label"],
+    #   y = as.factor(training$label),
+    #   method = ml_method,
+    #   ## Center and scale the predictors for the training
+    #   ## set and all future samples.
+    #   preProcess = ml_preproc,
+    #   maximize = if(maximize) def_scoring else !def_scoring,
+    #   importance = if(ml_method == c("ranger")) 'permutation' else TRUE,
+    #   tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
+    #   trControl = trainCtrl,
+    #   extra_arguments
+    # )
   }
   
   if(length(testing) > 0){
@@ -735,7 +783,7 @@ ml_prep_data <- function(settings, mSet, input, cl){
   list(train = training_data, test = testing_data)
 }
 
-ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, ...){
+ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, extra_arguments){
   res = list()
   #({
   {
@@ -930,7 +978,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, ...){
     names(tune.opts) <- caret.methods
     
     meth.info <- caret.mdls[[settings$ml_method]]
-    
+
     params = meth.info$parameters
     
     tuneGrid = if(nrow(params) == 0){
@@ -996,7 +1044,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, ...){
                    cl = cl,
                    tmpdir=tmpdir,
                    use_slurm = use_slurm,
-                   ...)
+                   extra_arguments = extra_arguments)
     
     res = list(res = ml_res, params = settings)
   }
