@@ -248,9 +248,6 @@ beep = no')
       }
       
       if("adducts.csv" %in% basename(list.files(lcl$paths$work_dir))){
-        print("!")
-        print(file.path(lcl$paths$work_dir, "adducts.csv"))
-        View(adducts)
         adducts <<- data.table::fread(file.path(lcl$paths$work_dir, "adducts.csv"))
       }
       
