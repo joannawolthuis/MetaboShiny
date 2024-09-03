@@ -1,4 +1,3 @@
-#routines = list(tasks = routine_tt_fc)
 routines <- shiny::reactiveValues(tasks = list())
 
 routinemanager <- shiny::reactive({
@@ -61,10 +60,9 @@ routinemanager <- shiny::reactive({
         }
         
         if(success){
-          print("yay!")
+          print("Routine completed")
         }else{
-          print("nay")
-          stop("oh no")
+          stop("Failure in running routine")
           #mSet <<- mSet_last
         }
       } 

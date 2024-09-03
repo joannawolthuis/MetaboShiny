@@ -1,4 +1,5 @@
 shiny::observeEvent(input$enrich_plot_pathway, {
+  
   curr_pathway = rownames(enrich$overview)[input$enrich_tab_rows_selected]
   pws_all = gbl$vectors$kegg_pathways
   kegg_pathway_match = which(curr_pathway == mSet$analSet$enrich$path.all$name)
@@ -117,7 +118,6 @@ shiny::observeEvent(input$enrich_plot_pathway, {
     multi.state.table <- as.data.frame(multi.state.table)
     rownames(multi.state.table) <- multi.state.table$id
     
-    library(pathview)
     if(!file.exists(paste0(species, pw.code, ".qs"))){
       #pathview::download.kegg(species = species,
       #                        pathway.id = pw.code)  

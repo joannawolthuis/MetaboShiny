@@ -1,7 +1,7 @@
 # Install R version 4.0.3
 #from ubuntu:22.04
 #ENV R_BASE_VERSION=4.0.3
-FROM rocker/tidyverse:4.0.2
+FROM rocker/tidyverse:4.0.3
 
 # Install Ubuntu packages
 RUN apt-get update
@@ -106,7 +106,7 @@ RUN R -e 'install.packages("latticeExtra", type="source")'
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libglpk-dev
 
 RUN R -e 'devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")'
-RUN R -e 'devtools::install_github("yixuan/showtext")'
+#RUN R -e 'devtools::install_github("yixuan/showtext")'
 RUN R -e 'devtools::install_github("joannawolthuis/ggVennDiagram")'
 RUN R -e 'devtools::install_github("dengkuistat/WaveICA")'
 
@@ -119,9 +119,17 @@ RUN R -e 'devtools::install_github("lvaudor/glitter", "674418b")'
 RUN R -e 'devtools::install_github("joannawolthuis/MetaDBparse")'
 
 RUN R -e 'pacman::p_load(ggpp, pathview, ggplot2)'
-RUN R -e 'devtools::install_github("aphalo/ggpp")'
+#RUN R -e 'devtools::install_github("aphalo/ggpp")'
 
+RUN apt-get install -y libpoppler-cpp-dev
+ 
 RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
+
+RUN R -e 'remotes::install_github("deepanshu88/shinyDarkmode")'
+
+RUN R -e 'pacman::p_load(kohonen, ucminf, mclust, modeltools, scoringRules, ordinal, kernlab, diptest, prabclus, flexmix, crch, fpc)'
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tk
 
 # Make the ShinyApp available at port 8080
 EXPOSE 8080

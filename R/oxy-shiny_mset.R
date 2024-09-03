@@ -826,8 +826,6 @@ mSetForML <- function(mSet, ml_queue, input){
                                        "prebatch",
                                        "covars")]
   
-  browser()
-  
   #ml_queue$jobs <- ml_queue$jobs[!(names(ml_queue$jobs) %in% mSet$analSet$ml$rf)]
   uses.specific.mzs <- any(sapply(ml_queue$jobs, function(settings) settings$ml_specific_mzs != "no"))
   if(uses.specific.mzs){

@@ -61,22 +61,23 @@ getMissing <- function(peakpath,
       considerMe=which(!(tolower(cols) %in% skipCols))
       mzs = cols[3:length(cols)]
       totalMissing <- rep(0, length(mzs))
-      names(totalMissing) = mzs
-      samps_in_peaklist = c()
+      names(totalMissing) <- mzs
+      samps_in_peaklist <- c()
       
       pbapply::pbsapply(2:nrow, function(i){
         line = readLines(con, n = 1) # empty
         splRow = stringr::str_split(line, pattern=",")[[1]]
         sampName = splRow[1]
-        samps_in_peaklist=c(samps_in_peaklist, sampName)
+        samps_in_peaklist <<- c(samps_in_peaklist, sampName)
         splRow = splRow[3:length(splRow)]
         isMissing = splRow == "0" | splRow == 0 | splRow == "" | is.na(splRow)
         totalMissing[isMissing] <<- totalMissing[isMissing] + 1
         NULL
       })
+      print(samps_in_peaklist[1:10])
     }
   }
-  list(missPerc = totalMissing, isMz = considerMe, nrows=nrow)
+  list(missPerc = totalMissing, isMz = considerMe, nrows=nrow, samples = samps_in_peaklist)
 }
 
 #' @title Merge metadata and peak tables into SQLITE database.

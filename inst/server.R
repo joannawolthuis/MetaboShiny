@@ -283,8 +283,6 @@ beep = no')
                  shiny::observeEvent(input[[pickerID]],{
                    if(length(input[[pickerID]]) > 0){
                      
-                     #browser()
-                     
                      sel_adducts = lapply(input[[pickerID]], function(colu){
                        col = adducts[[colu]] == "v"
                        col[is.na(col)] <- FALSE

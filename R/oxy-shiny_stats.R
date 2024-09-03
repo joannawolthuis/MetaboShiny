@@ -290,7 +290,7 @@ doEnrich <- function(input, tempfile, ppm, lcl){
   
   map_id = input$mummi_lib
 
-  if(!grepl("_mset", map_id)){
+  if(!grepl("_mset|mfn", map_id)){
     lib_name <- paste0(map_id, "_kegg")
     file_name <- paste0(lib_name, ".qs")
     
