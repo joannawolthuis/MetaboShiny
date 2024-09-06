@@ -125,28 +125,47 @@ shiny::observe({
                       
                       output[[plotName]] <- shiny::renderImage({
                         
-                        ggsave(
-                          filename = pngfile,
-                          plot = myplot,
-                          device = "png",
-                          width = plotDims[[plotName]]$width,
-                          height = plotDims[[plotName]]$height,
-                          units = "px",
-                          dpi = 72
+                        # -- fix ticks? --
+                        
+                        myplot <- myplot + theme(
+                          axis.ticks = element_line(colour = "black", size = .5),
+                          axis.ticks.length = unit(0.075, "cm")
                         )
+                        
+                        # ----------------
+                        
+                        shiny_dpi <- 72
+                        width_px <- plotDims[[plotName]]$width
+                        height_px <- plotDims[[plotName]]$height
+                        width_mm <- (width_px * 25.4) / shiny_dpi
+                        height_mm <- (height_px * 25.4) / shiny_dpi
+                      
+                        showtext::showtext_opts(dpi = 300)
                         
                         ggsave(
                           filename = svgfile,
                           plot = myplot,
                           device = "svg",
-                          width = plotDims[[plotName]]$width,
-                          height = plotDims[[plotName]]$height,
-                          units = "px",
-                          dpi = 72
+                          width = width_mm,
+                          height = height_mm,
+                          units = "mm",
+                          dpi = 300
+                        )
+
+                        ggsave(
+                          filename = pngfile,
+                          plot = myplot,
+                          device = "png",
+                          width = width_mm,
+                          height = height_mm,
+                          units = "mm",
+                          dpi = 300
                         )
                         
                         list(
                           src = pngfile,
+                          width = width_px,
+                          height = height_px,
                           alt = c(gsub(":|,:", "_", mSet$settings$cls.name), plotName)
                         )
                         

@@ -2690,22 +2690,3 @@ ggPlotMultirank <- function(mSet, cf,
     ggplot2::scale_color_gradientn(colors = cf(nrow(for_plot))) 
   return(p)
 }
-
-adjust_ggplot <- function(plot, res = 72) {
-  scale_factor <- res / 72  # Calculate the scaling factor
-  plot +
-    theme(
-      text = element_text(size = rel(1 / scale_factor)),  # Scale text size
-      axis.text = element_text(size = rel(1 / scale_factor)),  # Scale axis text
-      axis.title = element_text(size = rel(1 / scale_factor)),  # Scale axis titles
-      legend.text = element_text(size = rel(1 / scale_factor)),  # Scale legend text
-      legend.title = element_text(size = rel(1 / scale_factor)),  # Scale legend title
-      axis.ticks = element_line(size = 0.5 / scale_factor),  # Scale axis ticks
-      axis.line = element_line(size = 0.5 / scale_factor),  # Scale axis lines
-      panel.grid.major = element_line(size = 0.5 / scale_factor),  # Scale major grid lines
-      panel.grid.minor = element_line(size = 0.25 / scale_factor)  # Scale minor grid lines
-    ) +
-    # Adjust scaling for points, lines, and other size-based aesthetics if needed
-    scale_size_continuous(range = c(0.5, 3) / scale_factor) +
-    scale_shape_manual(values = scales::rescale(seq(1, 25), to = c(0.5, 1.5) / scale_factor))
-}
