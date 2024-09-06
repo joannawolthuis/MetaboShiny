@@ -48,8 +48,7 @@ shiny::observe({
                 conditionalPanel(
                   condition = 'input.ggplotly == false',
                   list(fluidRow(align="right",
-                                downloadButton(outputId = paste0("download_", plotName),
-                                               label = icon("download"))),
+                                downloadButton(outputId = paste0("download_", plotName))),
                        plotOutput(plotName)#, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
                   )
                 ))
@@ -119,47 +118,39 @@ shiny::observe({
                         # Dynamically update dimensions for each plot based on plotName
                         plotDims[[plotName]]$width <- session$clientData[[paste0("output_", plotName, "_width")]]
                         plotDims[[plotName]]$height <- session$clientData[[paste0("output_", plotName, "_height")]]
-                        print(plotName)
-                        print(plotDims[[plotName]])
                       })
                       
+                      pngfile <- tempfile(fileext = '.png')
+                      svgfile <- gsub("png$", "svg", pngfile)
+                      
                       output[[plotName]] <- shiny::renderImage({
-                        # plotpath <- tempfile()
-                        pngfile <- tempfile(fileext='.png')
-                        svgfile <- gsub("png$", "svg", pngfile)
-                        # 
                         
-                        ggsave(filename = pngfile, 
-                               plot = myplot, 
-                               device = "png",
-                               width=plotDims[[plotName]]$width, 
-                               height=plotDims[[plotName]]$height,
-                               units="px",
-                               dpi = 72)
+                        ggsave(
+                          filename = pngfile,
+                          plot = myplot,
+                          device = "png",
+                          width = plotDims[[plotName]]$width,
+                          height = plotDims[[plotName]]$height,
+                          units = "px",
+                          dpi = 72
+                        )
                         
-                        ggsave(filename = svgfile, 
-                               plot = myplot, 
-                               device = "svg",
-                               width=plotDims[[plotName]]$width, 
-                               height=plotDims[[plotName]]$height,
-                               units="px",
-                               dpi = 72)
+                        ggsave(
+                          filename = svgfile,
+                          plot = myplot,
+                          device = "svg",
+                          width = plotDims[[plotName]]$width,
+                          height = plotDims[[plotName]]$height,
+                          units = "px",
+                          dpi = 72
+                        )
                         
-                        list(src = pngfile,
-                             alt = c(gsub(":|,:", "_", mSet$settings$cls.name), 
-                                     plotName))
-
-                      }, deleteFile=FALSE)
-                      # output[[plotName]] <- shiny::renderPlot({
-                      #   plotpath <- tempfile()
-                      #   
-                      #   ggsave(paste0(plotpath, ".png"), myplot, dpi = 72)
-                      #   ggsave(paste0(plotpath, ".svg"), myplot, dpi = 72)
-                      #   suppressWarnings(myplot)   
-                      #   
-                      #   #list(src = paste0(plotpath, ".png"), contentType = 'image/png')
-                      #   
-                      #   }, execOnResize = TRUE,res = 72)
+                        list(
+                          src = pngfile,
+                          alt = c(gsub(":|,:", "_", mSet$settings$cls.name), plotName)
+                        )
+                        
+                      }, deleteFile = FALSE)
                     }
                   }, silent = F)
                 }
@@ -171,6 +162,23 @@ shiny::observe({
                                   mSet$analSet$ml$last$method, 
                                   mSet$analSet$ml$last$name, sep = "_")
                 }
+                
+                output[[paste0("download_", plotName)]] <- downloadHandler(
+                  filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
+                  content = function(file){
+                    if(plotName == "heatmap_plot"){
+                      saveFun(file=file)
+                      suppressWarnings(myplot$heatmap_static())
+                      dev.off()  
+                    }else{
+                      if (input$plotsvg) {
+                        file.copy(svgfile, file)
+                      } else {
+                        file.copy(pngfile, file)
+                      }
+                    }
+                  }
+                )
                 
                 output[[paste0(plotName, "_interactive")]] <- 
                   
@@ -221,27 +229,6 @@ shiny::observe({
                       })
                     })
                   }
-                
-                output[[paste0("download_", plotName)]] <- downloadHandler(
-                  filename = function() paste0(plotFn, if(input$plotsvg) ".svg" else ".png"),
-                  content = function(file){
-                    if(plotName == "heatmap_plot"){
-                      saveFun(file=file)
-                      suppressWarnings(myplot$heatmap_static())
-                      dev.off()  
-                    }else{
-                      print(session$clientData[[paste0("output_", plotName, "_width")]])
-                      print(session$clientData[[paste0("output_", plotName, "_height")]])
-                      ggplot2::ggsave(file,
-                                      units = "px",
-                                      dpi = 72,
-                                      width = plotDims[[plotName]]$width, 
-                                      height = plotDims[[plotName]]$height,
-                                      device = (if(input$plotsvg) svg else png)(),
-                                      plot = myplot)
-                    }
-                  }
-                )
               }
             })
           }, toWrap, names(toWrap))
