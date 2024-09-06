@@ -112,9 +112,54 @@ shiny::observe({
                         }
                       }
                       
-                      output[[plotName]] <- shiny::renderPlot({
-                        suppressWarnings(myplot)
-                      })  
+                      # output[[plotName]] <- shiny::renderPlot({
+                      #   suppressWarnings(myplot)
+                      # })  
+                      observe({
+                        # Dynamically update dimensions for each plot based on plotName
+                        plotDims[[plotName]]$width <- session$clientData[[paste0("output_", plotName, "_width")]]
+                        plotDims[[plotName]]$height <- session$clientData[[paste0("output_", plotName, "_height")]]
+                        print(plotName)
+                        print(plotDims[[plotName]])
+                      })
+                      
+                      output[[plotName]] <- shiny::renderImage({
+                        # plotpath <- tempfile()
+                        pngfile <- tempfile(fileext='.png')
+                        svgfile <- gsub("png$", "svg", pngfile)
+                        # 
+                        
+                        ggsave(filename = pngfile, 
+                               plot = myplot, 
+                               device = "png",
+                               width=plotDims[[plotName]]$width, 
+                               height=plotDims[[plotName]]$height,
+                               units="px",
+                               dpi = 72)
+                        
+                        ggsave(filename = svgfile, 
+                               plot = myplot, 
+                               device = "svg",
+                               width=plotDims[[plotName]]$width, 
+                               height=plotDims[[plotName]]$height,
+                               units="px",
+                               dpi = 72)
+                        
+                        list(src = pngfile,
+                             alt = c(gsub(":|,:", "_", mSet$settings$cls.name), 
+                                     plotName))
+
+                      }, deleteFile=FALSE)
+                      # output[[plotName]] <- shiny::renderPlot({
+                      #   plotpath <- tempfile()
+                      #   
+                      #   ggsave(paste0(plotpath, ".png"), myplot, dpi = 72)
+                      #   ggsave(paste0(plotpath, ".svg"), myplot, dpi = 72)
+                      #   suppressWarnings(myplot)   
+                      #   
+                      #   #list(src = paste0(plotpath, ".png"), contentType = 'image/png')
+                      #   
+                      #   }, execOnResize = TRUE,res = 72)
                     }
                   }, silent = F)
                 }
@@ -189,8 +234,9 @@ shiny::observe({
                       print(session$clientData[[paste0("output_", plotName, "_height")]])
                       ggplot2::ggsave(file,
                                       units = "px",
-                                      width = session$clientData[[paste0("output_", plotName, "_width")]],
-                                      height = session$clientData[[paste0("output_", plotName, "_height")]],
+                                      dpi = 72,
+                                      width = plotDims[[plotName]]$width, 
+                                      height = plotDims[[plotName]]$height,
                                       device = (if(input$plotsvg) svg else png)(),
                                       plot = myplot)
                     }

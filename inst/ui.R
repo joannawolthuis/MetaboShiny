@@ -2354,7 +2354,7 @@ shiny::fluidPage(class="hidden",id="metshi",
                                                                                                                                                                  offLabel = "ggplot",
                                                                                                                                                                  offStatus = "warning", 
                                                                                                                                                                  onStatus = "info",
-                                                                                                                                                                 value = T
+                                                                                                                                                                 value = F
                                                                                                                                                                ),
                                                                                                                                                                helpText("Export plots as .png or .svg?"),
                                                                                                                                                                shinyWidgets::switchInput(
@@ -2365,6 +2365,8 @@ shiny::fluidPage(class="hidden",id="metshi",
                                                                                                                                                                  onStatus = "warning",
                                                                                                                                                                  value = T
                                                                                                                                                                ),
+                                                                                                                                                               #helpText("Plot resolution (ggplot):"),
+                                                                                                                                                               #shiny::numericInput("plot_resolution", "PPI", min = 5, max = 1200, value = 300),
                                                                                                                                                                shiny::h2("Legend"),br(),
                                                                                                                                                                shinyWidgets::switchInput(
                                                                                                                                                                  inputId = "legend",

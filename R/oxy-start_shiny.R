@@ -19,6 +19,8 @@ start_metshi <- function(port=8080, inBrowser=F,
   # NEWEST
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:dev /bin/bash
   # docker run -p 8080:8080 -v ~/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:dev Rscript -e "MetaboShiny::start_metshi()"
+  # most recent
+  # docker run -p 8080:8080 -v /mnt/d/Users/xxx/MetaboShiny/:/root/MetaboShiny/:cached --rm -it jcwolthuis/metaboshiny:dev Rscript -e "MetaboShiny::start_metshi()"
   packages = installed.packages()
   options(repos = getOption("repos")["CRAN"])
   

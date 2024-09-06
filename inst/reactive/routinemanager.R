@@ -60,9 +60,9 @@ routinemanager <- shiny::reactive({
         }
         
         if(success){
-          print("Routine completed")
+          print("Task completed")
         }else{
-          stop("Failure in running routine")
+          stop("Failure in running task")
           #mSet <<- mSet_last
         }
       } 

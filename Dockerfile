@@ -123,13 +123,13 @@ RUN R -e 'pacman::p_load(ggpp, pathview, ggplot2)'
 
 RUN apt-get install -y libpoppler-cpp-dev
  
-RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
-
 RUN R -e 'remotes::install_github("deepanshu88/shinyDarkmode")'
 
 RUN R -e 'pacman::p_load(kohonen, ucminf, mclust, modeltools, scoringRules, ordinal, kernlab, diptest, prabclus, flexmix, crch, fpc)'
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tk
+
+RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
 
 # Make the ShinyApp available at port 8080
 EXPOSE 8080

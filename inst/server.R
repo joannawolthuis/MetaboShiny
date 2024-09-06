@@ -72,6 +72,7 @@ function(input, output, session) {
   mSet <- NULL
   opts <- list()
   showtext::showtext_auto(enable = T)
+  #showtext::showtext_opts(dpi=72)
   
   lcl = list(
     proj_name = "",
@@ -107,6 +108,8 @@ function(input, output, session) {
   shiny::showModal(loadModal())
   
   # == REACTIVE VALUES ==
+  
+  plotDims <- shiny::reactiveValues()
   
   interface <- shiny::reactiveValues()
   interface$mode <- NULL
@@ -561,6 +564,7 @@ beep = no')
       if(!("gfont" %in% names(opts))){
         opts$gfont="15"
       }
+      
       
       lcl$aes$font <<- list(family = opts$font4,
                             ax.num.size = as.numeric(opts$size4),

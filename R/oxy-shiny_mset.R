@@ -845,7 +845,7 @@ mSetForML <- function(mSet, ml_queue, input){
   use_slurm = T
   
   net_cores = input$ncores# - 1
-  if(net_cores > 0 & ((!has_slurm | !use_slurm) | input$ml_resource_friendly)){
+  if(F){#net_cores > 0 & ((!has_slurm | !use_slurm) | input$ml_resource_friendly)){ # DISABLED FOR NOW
     try({
       parallel::stopCluster(session_cl)
       parallel::stopCluster(ml_session_cl)
@@ -883,6 +883,7 @@ mSetForML <- function(mSet, ml_queue, input){
                                      "ml_pca_corr",
                                      "ml_train_perc",
                                      "ml_keep_pcs",
+                                     "ml_specific_mzs",
                                      "ml_pca_corr"
     )
     rows.changes.dataset <- lapply(ml_queue$jobs, function(job){
