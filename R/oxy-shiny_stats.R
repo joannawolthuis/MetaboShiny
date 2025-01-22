@@ -116,10 +116,17 @@ metshiGetEnrichInputTable <- function(mSet, input){
       })))
       flattened[[1]][flattened[[1]]$m.z %in% corr_mz,]$value <- 0
     }
+    if(input$mummi_filter_mode == "top_and_threshold"){
+      passes_threshold <- switch(input$mummi_threshold_sign,
+                               ">" = {flattened[[1]]$statistic > as.numeric(input$mummi_threshold_value)},
+                               "<" = {flattened[[1]]$statistic < as.numeric(input$mummi_threshold_value)})
+      flattened[[1]]$value[!passes_threshold] <- 1 # Set 'p-value' to 1, thus eliminating from significance
+      print(paste("Removed", sum(!passes_threshold), "values due to not passing threshold."))
+    }
   }
   
-  hasP = T#grepl("tt|aov|asca|combi|venn",input$mummi_anal)
-
+  hasP = T
+  
   myFile <- tempfile(fileext = ".csv")
   tbl = data.table::data.table("m.z" = as.numeric(gsub(flattened[[1]]$m.z, pattern="(\\+|\\-|RT).*$", replacement="")),
                                mode = sapply(flattened[[1]]$m.z, function(mz){
@@ -290,7 +297,7 @@ doEnrich <- function(input, tempfile, ppm, lcl){
   
   map_id = input$mummi_lib
 
-  if(!grepl("_mset|mfn", map_id)){
+  if(!grepl("_mset|mfn|custom", map_id)){
     lib_name <- paste0(map_id, "_kegg")
     file_name <- paste0(lib_name, ".qs")
     

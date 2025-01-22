@@ -48,7 +48,8 @@ shiny::observe({
                 conditionalPanel(
                   condition = 'input.ggplotly == false',
                   list(fluidRow(align="right",
-                                downloadButton(outputId = paste0("download_", plotName))),
+                                downloadButton(outputId = paste0("download_", plotName), 
+                                               label = "")),
                        plotOutput(plotName)#, height = session$clientData[[empty]]/if(isSquare) 1.4 else 2)
                   )
                 ))

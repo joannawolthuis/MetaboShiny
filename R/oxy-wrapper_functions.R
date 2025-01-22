@@ -671,7 +671,18 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                  threshold = tbl[switch(sign,
                                         ">" = {tbl$value > thresh},
                                         "=" = {tbl$value == thresh},
-                                        "<" = {tbl$value < thresh}),1])
+                                        "<" = {tbl$value < thresh}),1],
+                 top_and_threshold = {
+                   tbl = if(nrow(tbl) < top){
+                     tbl[,1]
+                   }else{
+                     tbl[1:top, 1]
+                   }
+                   tbl = tbl[switch(sign,
+                                          ">" = {tbl$value > thresh},
+                                          "=" = {tbl$value == thresh},
+                                          "<" = {tbl$value < thresh}),1]
+                 })
           
         })
         keep_tbls = unlist(lapply(tbls_top, function(t) length(t)>0))
@@ -929,7 +940,8 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                      cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
                                      plot_mode = if(input$enrich_plot_mode) "volclike" else "gsea",
                                      show_nonsig = T,
-                                     fontsize = input$ggplot_font_size_spec)
+                                     fontsize = input$ggplot_font_size_spec,
+                                     mummi_abbrev <- input$mummi_abbrev)
                      list(enrich_plot = p)
                    },
                    summary = {

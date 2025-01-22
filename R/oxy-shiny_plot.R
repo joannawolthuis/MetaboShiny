@@ -2522,7 +2522,8 @@ ggPlotPower <- function(mSet,
 ggPlotMummi <- function(mSet, cf, 
                         plot_mode = "volclike", 
                         show_nonsig=T,
-                        fontsize=6){
+                        fontsize=6,
+                        mummi_abbrev = F){
   
   anal.type = if(!is.null(mSet$analSet$enrich$mummi.resmat)) "mummichog" else "gsea"
   
@@ -2581,6 +2582,66 @@ ggPlotMummi <- function(mSet, cf,
   }
   
   print(head(df))
+
+  pws <- df$path.nms
+  
+  abbreviations <- c(
+    "Metabolism" = "Metab.",
+    "metabolism" = "metab.",
+    "Vitamin" = "Vit.",
+    "vitamin" = "vit.",
+    # "phosphate" = "phos.",
+    # "Carnitine" = "carn.",
+    # "Pyruvate" = "Pyr.",
+    # "pyruvate" = "pyr.",
+    # "Fructose" = "Fruc.",
+    # "Mannose" = "Mann.",
+    # "fructose" = "fruc.",
+    # "mannose" = "mann.",
+    "catabolism"="catab.",
+    "saturated"="sat.",
+    "Saturated"="Sat.",
+    "unsaturated"="unsat.",
+    "pathway" = "path.",
+    "oxidation"="oxi.",
+    "Degradation" = "Degr.",
+    "degradation" = "degr.",
+    "Catabolism" = "Catab",
+    "catabolism" = "catab.",
+    "biosynthesis" = "biosyn.",
+    "Biosynthesis" = "Biosyn.",
+    "Alanine"="Ala",
+    "Arginine"="Arg",	
+    "Asparagine"="Asn",	
+    "Aspartate"="Asp",	
+    "Cysteine"="Cys",
+    "Glutamate"="Glu",
+    "Glutamine"="Gln",
+    "Glycine" ="Gly",
+    "Histidine"="His",
+    "Isoleucine"="Ile",
+    "Leucine"="Leu",
+    "Lysine"="Lys",
+    "Methionine"="Met",
+    "Phenylalanine"="Phe",
+    "Proline"="Pro",
+    "Serine"="Ser",
+    "Threonine"="Thr",
+    "Tryptophan"="Trp",
+    "Tyrosine"="Tyr",
+    "Valine"="Val"
+  )
+  
+  # Replace full names with abbreviations
+  for (full_name in names(abbreviations)) {
+    pws <- gsub(full_name, abbreviations[full_name], pws, ignore.case = FALSE)
+  }
+  
+  if(mummi_abbrev){
+    print("!")
+    df$path.nms <- pws
+  }
+  
   p <- switch(plot_mode, 
               gsea = ggplot2::ggplot(df) + ggplot2::geom_bar(ggplot2::aes(y = path.nms, 
                                                                           x = x, 

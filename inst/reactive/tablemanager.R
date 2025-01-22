@@ -424,6 +424,7 @@ shiny::observe({
         metshiAlert("Table rendering failed!")
       }else{
         mapply(function(mytable, tableName){
+          
           output[[tableName]] <- DT::renderDataTable({
             subbed = gsub("\\+", "", rownames(mytable))
             rns = rownames(mytable)
@@ -439,7 +440,7 @@ shiny::observe({
               }
             })
             metshiTable(content = mytable, rownames = rns)
-          }, server = FALSE)
+          }, server = FALSE, options = list(buttons = c('copy', 'excel')))
         }, toWrap, names(toWrap)) 
       } 
     }

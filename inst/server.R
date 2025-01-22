@@ -10,6 +10,8 @@ function(input, output, session) {
   library(plyr)
   library(bslib)
   library(dplyr)
+  library(pathview)
+  
   Sys.setenv(VROOM_CONNECTION_SIZE = "500000000")
   
   options(shiny.maxRequestSize=50000*1024^2)
