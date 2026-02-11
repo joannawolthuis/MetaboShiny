@@ -1209,7 +1209,6 @@ ui_tab_analyse <- function(gbl, adducts) {
                 )
               )
             )
-        )
     ))
   )
 }
