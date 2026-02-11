@@ -155,6 +155,11 @@ Rscript -e "MetaboShiny::start_metshi()"\n' \
 > /start.sh && chmod +x /start.sh
 
 RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
+RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
+
+RUN R -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/httr2/httr2_0.2.3.tar.gz", repo=NULL, type="source")'
+RUN R -e 'devtools::install_github("lvaudor/glitter", "674418b")'
+RUN R -e 'devtools::install_github("joannawolthuis/MetaDBparse")'
 
 #docker run -p 8080:8080 -p 8787:8787 -e PASSWORD=password -v H:\PhD\MetaboShiny/:/root/MetaboShiny/:cached --rm -it metaboshiny bash
 # Set the default command

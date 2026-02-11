@@ -108,12 +108,12 @@ devtools::install_github("joannawolthuis/ggVennDiagram")
 devtools::install_github("dengkuistat/WaveICA")
 
 # PINS exactly like your Dockerfile
-cat("== Pin rlang to 1.1.0 (as in Dockerfile) ==\n")
-if (requireNamespace("rlang", quietly = TRUE)) remove.packages("rlang")
-install.packages(
-  "https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.7.tar.gz",clean = T,
-  repos = NULL, type = "source"
-)
+# cat("== Pin rlang to 1.1.0 (as in Dockerfile) ==\n")
+# if (requireNamespace("rlang", quietly = TRUE)) remove.packages("rlang")
+# install.packages(
+#   "https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.8.tar.gz",clean = T,
+#   repos = NULL, type = "source"
+# )
 
 cat("== Pin httr2 to 0.2.3 (as in Dockerfile) ==\n")
 install.packages(
@@ -153,6 +153,7 @@ install.packages(
 install.packages("mvtnorm", INSTALL_opts="--no-multiarch")
 install.packages("mutoss",  INSTALL_opts="--no-multiarch")
 install.packages("metap",   INSTALL_opts="--no-multiarch")
+install.packages("Rserve",   INSTALL_opts="--no-multiarch")
 
 options(pkgType = "win.binary")
 options(repos = c(CRAN = "https://cloud.r-project.org"))
@@ -168,10 +169,6 @@ cat("== MetaboAnalystR LAST ==\n")
 # Your Dockerfile installs MetaboAnalystR earlier, but you asked to put it late.
 # Also: it needs rlang >= 1.1.1 now, so we temporarily bump rlang right before it.
 
-cat("Bumping rlang for MetaboAnalystR...\n")
-if (requireNamespace("rlang", quietly = TRUE)) remove.packages("rlang")
-install.packages("rlang", repos = cran)
-
 devtools::install_github("xia-lab/MetaboAnalystR", ref = "0d61192")
 
-cat("\n??? Done.\n")
+cat("\nDone.\n")
