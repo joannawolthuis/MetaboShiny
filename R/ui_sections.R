@@ -1214,7 +1214,7 @@ ui_tab_analyse <- function(gbl, adducts) {
 }
 
 ui_tab_settings <- function(gbl, adducts) {
-  shiny::tabPanel("settings",
+  shiny::tabPanel("settings", # test
     icon = shiny::icon("cog", class = "outlined"), value = "options",
     shiny::tabsetPanel(
       id = "tab_settings", selected = "Global",
