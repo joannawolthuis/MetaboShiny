@@ -90,16 +90,15 @@ start_metshi <- function(port=8080, inBrowser=F,
           'download.file.method' = 'curl',
           width = 1200, height=800)
   
-
   appdir = system.file(package = "MetaboShiny")
   
-  runmode <<- runmode
+  #runmode <<- runmode
   
   shiny::runApp(
     appDir = appdir,
     launch.browser = inBrowser,
     port = 8080, # DONT REMOVE OR DOCKER STOPS WORKING
     host = "0.0.0.0", # DONT REMOVE OR DOCKER STOPS WORKING
-    display.mode = if(debug) "showcase" else "normal")
+    display.mode = "normal")
 }
 

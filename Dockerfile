@@ -154,6 +154,8 @@ sleep 3\n\
 Rscript -e "MetaboShiny::start_metshi()"\n' \
 > /start.sh && chmod +x /start.sh
 
+RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
+
 #docker run -p 8080:8080 -p 8787:8787 -e PASSWORD=password -v H:\PhD\MetaboShiny/:/root/MetaboShiny/:cached --rm -it metaboshiny bash
 # Set the default command
 CMD ["/start.sh"]

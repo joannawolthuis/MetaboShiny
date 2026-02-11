@@ -111,7 +111,7 @@ devtools::install_github("dengkuistat/WaveICA")
 cat("== Pin rlang to 1.1.0 (as in Dockerfile) ==\n")
 if (requireNamespace("rlang", quietly = TRUE)) remove.packages("rlang")
 install.packages(
-  "https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.0.tar.gz",
+  "https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.7.tar.gz",clean = T,
   repos = NULL, type = "source"
 )
 
