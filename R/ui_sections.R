@@ -564,13 +564,14 @@ ui_tab_analyse <- function(gbl, adducts) {
               )
             ),
           ),
-          # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
-          sidebarPanel =
-            shinyjqui::jqui_resizable(
-              sidebarPanel(
-                align = "center", width = 3, id = "sidePanel",
-                shiny::fluidRow(
-                  align = "center",
+        ),
+        # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
+        sidebarPanel =
+          shinyjqui::jqui_resizable(
+            sidebarPanel(
+              align = "center", width = 3, id = "sidePanel",
+              shiny::fluidRow(
+                align = "center",
                   shiny::tabsetPanel(
                     id = "anal_sidebar", selected = "start",
                     shiny::tabPanel(

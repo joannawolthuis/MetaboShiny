@@ -131,7 +131,7 @@ remotes::install_github("deepanshu88/shinyDarkmode")
 pacman::p_load(kohonen, ucminf, mclust, modeltools, scoringRules, ordinal,
                kernlab, diptest, prabclus, flexmix, crch, fpc)
 
-devtools::install_github("joannawolthuis/MetaboShiny", ref = "dev", upgrade = "always")
+devtools::install_github("joannawolthuis/MetaboShiny", ref = "dev")
 
   # metadbparse fixes
 devtools::install_github("Bioconductor/KEGGREST", ref = "devel")
