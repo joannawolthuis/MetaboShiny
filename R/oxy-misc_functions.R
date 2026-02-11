@@ -131,16 +131,29 @@ joanna_debugger <- function(){
 #' @export 
 getOptions <- function(file.loc){
   opt_conn <- file(file.loc)
-  # ----------------
-  options_raw <- readLines(opt_conn)
-  close(opt_conn)
-  # --- list-ify ---
+  on.exit(try(close(opt_conn), silent = TRUE), add = TRUE)
+
+  options_raw <- readLines(opt_conn, warn = FALSE)
+
   options <- list()
-  for(line in options_raw){
-    split  <- (strsplit(line, ' = '))[[1]]
-    options[[split[[1]]]] = split[[2]]
+  for (line in options_raw) {
+    if (!nzchar(trimws(line))) {
+      next
+    }
+
+    eq_pos <- regexpr("=", line, fixed = TRUE)[[1]]
+    if (eq_pos < 1) {
+      next
+    }
+
+    key <- trimws(substr(line, 1, eq_pos - 1))
+    value <- trimws(substr(line, eq_pos + 1, nchar(line)))
+
+    if (nzchar(key)) {
+      options[[key]] <- value
+    }
   }
-  # --- return ---
+
   options
 }
 
@@ -156,19 +169,19 @@ getOptions <- function(file.loc){
 #' @rdname setOption
 #' @export 
 setOption <- function(file.loc, key, value){
-  opt_conn <- file(file.loc)
-  # -------------------------
   options <- getOptions(file.loc)
   # --- add new or change ---
   options[[key]] = value
-  # --- list-ify ---
-  new_options <- lapply(seq_along(options), FUN=function(i){
-    line <- paste(names(options)[i], options[i], sep=" = ")
-    line
-  })
-  writeLines(opt_conn, text = unlist(new_options))
-  
-  close(opt_conn)
+
+  new_options <- vapply(names(options), FUN = function(option_name) {
+    option_value <- options[[option_name]]
+    if (is.null(option_value) || length(option_value) == 0) {
+      option_value <- ""
+    }
+    paste0(option_name, " = ", option_value)
+  }, character(1))
+
+  writeLines(text = new_options, con = file.loc)
 }
 
 #' @title FUNCTION_TITLE

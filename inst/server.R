@@ -21,11 +21,21 @@ function(input, output, session) {
     print("Disabled in MetaboShiny!")
   }
 
-  rlang::env_unlock(env = asNamespace("RJSONIO"))
-  rlang::env_binding_unlock(env = asNamespace("RJSONIO"))
-  assign("toJSON", OFFtoJSON, envir = asNamespace("RJSONIO"))
-  rlang::env_binding_lock(env = asNamespace("RJSONIO"))
-  rlang::env_lock(asNamespace("RJSONIO"))
+  # `rlang::env_unlock()` is defunct (rlang >= 1.1.5). We only need to unlock the
+  # specific binding we overwrite.
+  try({
+    rjsonio_ns <- asNamespace("RJSONIO")
+    if (exists("toJSON", envir = rjsonio_ns, inherits = FALSE)) {
+      was_locked <- bindingIsLocked("toJSON", rjsonio_ns)
+      if (was_locked) {
+        unlockBinding("toJSON", rjsonio_ns)
+      }
+      assign("toJSON", OFFtoJSON, envir = rjsonio_ns)
+      if (was_locked) {
+        lockBinding("toJSON", rjsonio_ns)
+      }
+    }
+  })
 
   AddErrMsg <- function(msg) {
     print(msg)
@@ -34,26 +44,31 @@ function(input, output, session) {
     })
   }
 
-  ensure_dir <- MetaboShiny:::ensure_dir
-  show_tabs <- MetaboShiny:::show_tabs
-  hide_tabs <- MetaboShiny:::hide_tabs
-  read_table_if_in_dir <- MetaboShiny:::read_table_if_in_dir
-  render_combi_picker <- MetaboShiny:::render_combi_picker
-  format_options_lines <- MetaboShiny:::format_options_lines
-  default_options_template <- MetaboShiny:::default_options_template
-  set_option_default <- MetaboShiny:::set_option_default
-  update_theme_inputs <- MetaboShiny:::update_theme_inputs
-  set_option_value <- MetaboShiny:::set_option_value
-  render_text_outputs <- MetaboShiny:::render_text_outputs
-  update_ml_method <- MetaboShiny:::update_ml_method
-  stop_session_cluster <- MetaboShiny:::stop_session_cluster
-  start_session_cluster <- MetaboShiny:::start_session_cluster
-  render_image_outputs <- MetaboShiny:::render_image_outputs
-  update_theme_controls <- MetaboShiny:::update_theme_controls
-  show_stat_panels <- MetaboShiny:::show_stat_panels
-  set_stat_collapse <- MetaboShiny:::set_stat_collapse
-  make_sel_adducts <- MetaboShiny:::make_sel_adducts
-  update_adducts_from_filter <- MetaboShiny:::update_adducts_from_filter
+  localize_fn <- function(fn) {
+    environment(fn) <- environment()
+    fn
+  }
+
+  ensure_dir <- localize_fn(MetaboShiny:::ensure_dir)
+  show_tabs <- localize_fn(MetaboShiny:::show_tabs)
+  hide_tabs <- localize_fn(MetaboShiny:::hide_tabs)
+  read_table_if_in_dir <- localize_fn(MetaboShiny:::read_table_if_in_dir)
+  render_combi_picker <- localize_fn(MetaboShiny:::render_combi_picker)
+  format_options_lines <- localize_fn(MetaboShiny:::format_options_lines)
+  default_options_template <- localize_fn(MetaboShiny:::default_options_template)
+  set_option_default <- localize_fn(MetaboShiny:::set_option_default)
+  update_theme_inputs <- localize_fn(MetaboShiny:::update_theme_inputs)
+  set_option_value <- localize_fn(MetaboShiny:::set_option_value)
+  render_text_outputs <- localize_fn(MetaboShiny:::render_text_outputs)
+  update_ml_method <- localize_fn(MetaboShiny:::update_ml_method)
+  stop_session_cluster <- localize_fn(MetaboShiny:::stop_session_cluster)
+  start_session_cluster <- localize_fn(MetaboShiny:::start_session_cluster)
+  render_image_outputs <- localize_fn(MetaboShiny:::render_image_outputs)
+  update_theme_controls <- localize_fn(MetaboShiny:::update_theme_controls)
+  show_stat_panels <- localize_fn(MetaboShiny:::show_stat_panels)
+  set_stat_collapse <- localize_fn(MetaboShiny:::set_stat_collapse)
+  make_sel_adducts <- localize_fn(MetaboShiny:::make_sel_adducts)
+  update_adducts_from_filter <- localize_fn(MetaboShiny:::update_adducts_from_filter)
 
   shinyDarkmode::darkmode_toggle(inputid = "night_mode")
 
