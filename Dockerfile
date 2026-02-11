@@ -1,7 +1,8 @@
 # Install R version 4.0.3
 #from ubuntu:22.04
 #ENV R_BASE_VERSION=4.0.3
-FROM rocker/tidyverse:4.0.3
+#FROM rocker/rstudio:4.0.3
+FROM rocker/rstudio:4.1.0
 
 # Install Ubuntu packages
 RUN apt-get update
@@ -105,15 +106,15 @@ RUN R -e 'install.packages("latticeExtra", type="source")'
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libglpk-dev
 
+RUN R -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.7.tar.gz", repo=NULL, type="source")'
+
 RUN R -e 'devtools::install_github("xia-lab/MetaboAnalystR", "0d61192")'
 #RUN R -e 'devtools::install_github("yixuan/showtext")'
 RUN R -e 'devtools::install_github("joannawolthuis/ggVennDiagram")'
 RUN R -e 'devtools::install_github("dengkuistat/WaveICA")'
 
-RUN R -e 'remove.packages("rlang")'
-RUN R -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.0.tar.gz", repo=NULL, type="source")'
+RUN R -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/httr2/httr2_0.2.3.tar.gz", repo=NULL, type="source")'
 
-RUN R -e 'devtools::install_github("r-lib/httr2")'
 RUN R -e 'devtools::install_github("lvaudor/glitter", "674418b")'
 
 RUN R -e 'devtools::install_github("joannawolthuis/MetaDBparse")'
@@ -131,6 +132,28 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tk
 
 RUN R -e 'devtools::install_github("joannawolthuis/MetaboShiny", "dev", upgrade="always")'
 
+# metadbparse fixes
+RUN R -e 'devtools::install_github("Bioconductor/KEGGREST","devel")'
+RUN R -e 'remotes::install_github("WMBEdmands/CompMS2miner")'
+
+# misc
+RUN R -e 'install.packages("https://www.bioconductor.org/packages/3.12/bioc/src/contrib/limma_3.46.0.tar.gz",repos = NULL, type = "source")'
+RUN R -e'install.packages("https://www.bioconductor.org/packages/3.12/bioc/src/contrib/qvalue_2.22.0.tar.gz",repos = NULL, type = "source")'
+RUN R -e 'install.packages("https://bioconductor.org/packages/3.12/bioc/src/contrib/SSPA_2.30.0.tar.gz",repos = NULL, type = "source")'
+
 # Make the ShinyApp available at port 8080
 EXPOSE 8080
+EXPOSE 8787
 
+RUN useradd -m metaboshiny && echo "rstudio:rstudio" | chpasswd
+
+# run rstudio default
+RUN echo '#!/bin/bash\n\
+/usr/lib/rstudio-server/bin/rserver &\n\
+sleep 3\n\
+Rscript -e "MetaboShiny::start_metshi()"\n' \
+> /start.sh && chmod +x /start.sh
+
+#docker run -p 8080:8080 -p 8787:8787 -e PASSWORD=password -v H:\PhD\MetaboShiny/:/root/MetaboShiny/:cached --rm -it metaboshiny bash
+# Set the default command
+CMD ["/start.sh"]
