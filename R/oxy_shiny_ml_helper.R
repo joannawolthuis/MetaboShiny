@@ -990,7 +990,9 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, extra_argum
 
     params = if (is.null(meth.info)) NULL else meth.info$parameters
     
-    tuneGrid = if (is.null(params) || nrow(params) == 0) {
+    tuneGrid = if (is.null(params)) {
+      data.frame()
+    }else if(nrow(params) == 0){
       data.frame()
     }else{
       expand.grid(
