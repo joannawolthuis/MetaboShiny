@@ -37,6 +37,72 @@ function(input, output, session) {
     }
   })
 
+  # FIX FOR OPTIONS (robust parsing + allow empty values like `apikey =`)
+  # The app calls `MetaboShiny::getOptions()`/`MetaboShiny::setOption()` from the
+  # installed package; patch them in-place so `runApp()` works without reinstall.
+  try({
+    metshi_ns <- asNamespace("MetaboShiny")
+
+    replace_ns_fun <- function(ns, name, fun) {
+      if (!exists(name, envir = ns, inherits = FALSE)) {
+        return(invisible(NULL))
+      }
+      was_locked <- bindingIsLocked(name, ns)
+      if (was_locked) {
+        unlockBinding(name, ns)
+      }
+      assign(name, fun, envir = ns)
+      if (was_locked) {
+        lockBinding(name, ns)
+      }
+      invisible(NULL)
+    }
+
+    getOptions_safe <- function(file.loc) {
+      lines <- readLines(file.loc, warn = FALSE)
+      options <- list()
+
+      for (line in lines) {
+        if (!nzchar(trimws(line))) {
+          next
+        }
+
+        eq_pos <- regexpr("=", line, fixed = TRUE)[[1]]
+        if (eq_pos < 1) {
+          next
+        }
+
+        key <- trimws(substr(line, 1, eq_pos - 1))
+        value <- trimws(substr(line, eq_pos + 1, nchar(line)))
+
+        if (nzchar(key)) {
+          options[[key]] <- value
+        }
+      }
+
+      options
+    }
+
+    setOption_safe <- function(file.loc, key, value) {
+      options <- getOptions_safe(file.loc)
+      options[[key]] <- value
+
+      out_lines <- vapply(names(options), FUN.VALUE = character(1), FUN = function(option_name) {
+        option_value <- options[[option_name]]
+        if (is.null(option_value) || length(option_value) == 0) {
+          option_value <- ""
+        }
+        paste0(option_name, " = ", option_value)
+      })
+
+      writeLines(text = out_lines, con = file.loc)
+      invisible(NULL)
+    }
+
+    replace_ns_fun(metshi_ns, "getOptions", getOptions_safe)
+    replace_ns_fun(metshi_ns, "setOption", setOption_safe)
+  })
+
   AddErrMsg <- function(msg) {
     print(msg)
     try({
@@ -114,7 +180,33 @@ function(input, output, session) {
 
   mSet <- NULL
   opts <- list()
-  showtext::showtext_auto(enable = T)
+
+  enable_showtext <- function(enable = TRUE) {
+    if (!requireNamespace("showtext", quietly = TRUE)) {
+      return(invisible(FALSE))
+    }
+
+    ok <- TRUE
+    tryCatch(
+      {
+        showtext::showtext_auto(enable = enable)
+      },
+      error = function(e) {
+        ok <<- FALSE
+        try(
+          shiny::showNotification(
+            paste("showtext disabled:", conditionMessage(e)),
+            type = "warning"
+          ),
+          silent = TRUE
+        )
+      }
+    )
+
+    invisible(ok)
+  }
+
+  enable_showtext(enable = TRUE)
   # showtext::showtext_opts(dpi=72)
 
   lcl <- list(
@@ -181,7 +273,7 @@ function(input, output, session) {
   # create default text objects in UI
   render_text_outputs(gbl$constants$default.text)
 
-  showtext::showtext_auto() ## Automatically use showtext to render text for future devices
+  enable_showtext(enable = TRUE) ## Automatically use showtext to render text for future devices
 
   # this toggles when 'interface' values change (for example from 'bivar' to 'multivar' etc.)
   MetaboShiny:::init_interface_tabs_observer(environment())

@@ -208,6 +208,7 @@ runML <- function(training,
     ml_perf_metr = rep(ml_perf_metr, iterations),
     ml_folds = rep(ml_folds, iterations),
     ml_method = rep(ml_method, iterations),
+    is_logit = rep(is_logit, iterations),
     maximize = rep(maximize, iterations),
     trainOrder = I(trainOrders),
     tuneGrid = I(lapply(1:iterations, function(i) tuneGrid)),
@@ -250,6 +251,7 @@ runML <- function(training,
                                  ml_perf_metr = ml_perf_metr,
                                  ml_folds = ml_folds,
                                  ml_method = ml_method,
+                                 is_logit = is_logit,
                                  ml_preproc = ml_preproc,
                                  maximize = maximize,
                                  folds = folds,
@@ -268,6 +270,7 @@ ml_single_run <- function(trainOrder,
                           ml_perf_metr, 
                           ml_folds,
                           ml_method,
+                          is_logit = FALSE,
                           ml_preproc=NULL,
                           maximize,
                           tuneGrid,
@@ -320,11 +323,11 @@ ml_single_run <- function(trainOrder,
       method = ml_method,
       ## Center and scale the predictors for the training
       ## set and all future samples.
-      preProc = ml_preproc,
+      preProcess = ml_preproc,
       maximize = if(maximize) def_scoring else !def_scoring,
       tuneGrid = if(nrow(tuneGrid) > 0) tuneGrid else NULL,
       #trControl = trainCtrl,
-      family = if(is_logit) "binomial" else NULL
+      family = if(isTRUE(is_logit)) "binomial" else NULL
     )  
   }else{
 
@@ -978,11 +981,16 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, extra_argum
     tune.opts <- lapply(caret.methods, function(mdl) caret.mdls[[mdl]]$parameters)
     names(tune.opts) <- caret.methods
     
-    meth.info <- caret.mdls[[settings$ml_method]]
+    caret_method <- settings$ml_method
+    if (caret_method == "glm (logistic)") {
+      caret_method <- "glm"
+    }
 
-    params = meth.info$parameters
+    meth.info <- caret.mdls[[caret_method]]
+
+    params = if (is.null(meth.info)) NULL else meth.info$parameters
     
-    tuneGrid = if(nrow(params) == 0){
+    tuneGrid = if (is.null(params) || nrow(params) == 0) {
       data.frame()
     }else{
       expand.grid(
@@ -992,12 +1000,12 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, extra_argum
             #inp.val = settings[[paste0("ml_", info[[1]])]]
             inp.val = settings[[paste0("ml_", info$parameter)]]
             # - - check for ranges - -
-            if(grepl(inp.val, pattern=":")){
+            if(grepl(pattern = ":", x = inp.val, fixed = TRUE)){
               split = strsplit(inp.val,split = ":")[[1]]
               inp.val <- seq(as.numeric(split[1]),
                              as.numeric(split[2]),
                              as.numeric(split[3]))
-            }else if(grepl(inp.val, pattern = ",")){
+            }else if(grepl(pattern = ",", x = inp.val, fixed = TRUE)){
               split = strsplit(inp.val,split = ",")[[1]]
               inp.val <- split
             }

@@ -2668,13 +2668,18 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes, ext
            
            print("Done!")
            
-           #shiny::showNotification("Gathering results...")
-           
-           ml_queue_res = ml_queue_res[unlist(sapply(ml_queue_res, function(l) length(l) > 0))]
-           
-           if(!("ml" %in% names(mSet$analSet))){
-             mSet$analSet$ml <- list()
-           }
+            #shiny::showNotification("Gathering results...")
+            
+            ml_queue_res = ml_queue_res[unlist(sapply(ml_queue_res, function(l) length(l) > 0))]
+
+            if(length(ml_queue_res) == 0){
+              shiny::showNotification("No machine learning results were generated.", type = "warning")
+              return(NULL)
+            }
+            
+            if(!("ml" %in% names(mSet$analSet))){
+              mSet$analSet$ml <- list()
+            }
            
            for(res in ml_queue_res){
              mSet$analSet$ml[[res$params$ml_method]][[res$params$ml_name]] <- res
