@@ -983,6 +983,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, extra_argum
     
     caret_method <- settings$ml_method
     if (caret_method == "glm (logistic)") {
+      is_logit=T
       caret_method <- "glm"
     }
 
@@ -990,7 +991,7 @@ ml_run <- function(settings, mSet, input, cl, tmpdir, use_slurm = F, extra_argum
 
     params = if (is.null(meth.info)) NULL else meth.info$parameters
     
-    tuneGrid = if (is.null(params)) {
+    tuneGrid = if (is.null(params) | is_logit) {
       data.frame()
     }else if(nrow(params) == 0){
       data.frame()

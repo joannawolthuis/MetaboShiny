@@ -3,8 +3,11 @@ shiny::fluidPage(
   ECharts2Shiny::loadEChartsLibrary(),
   shinyjs::useShinyjs(),
   shinyDarkmode::use_darkmode(),
-  shiny::includeCSS("www/metaboshiny.css"),
-  tags$head(tags$script(src = "cursor.js")),
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "metaboshiny.css"),
+    tags$script(src = "cursor.js"),
+    tags$script(src = "plotly_resize.js")
+  ),
   shiny::div(
     style = "position: absolute;
     left: 79%;
@@ -62,6 +65,10 @@ shiny::fluidPage(
     )
   ),
   shiny::div(
+    style = "display:none;",
+    plotly::plotlyOutput("plotly_event_sink", height = "1px")
+  ),
+  shiny::div(
     shiny::navbarPage(
       windowTitle = "MetaboShiny",
       # use this for title
@@ -82,10 +89,12 @@ shiny::fluidPage(
       MetaboShiny:::ui_tab_help(gbl, adducts),
       # prompt user on opening the quit tab.
       # TODO: add 'save project?' dialog
-      shiny::div(class = "scallop-down"),
-      shiny::div(class = "cursorHolder"),
-      shiny::div(class = "line"),
-      footer = MetaboShiny:::ui_footer()
+      footer = shiny::tagList(
+        shiny::div(class = "scallop-down"),
+        shiny::div(class = "cursorHolder"),
+        shiny::div(class = "line"),
+        MetaboShiny:::ui_footer()
+      )
     ),
     style = "margin-bottom:100px;"
   )

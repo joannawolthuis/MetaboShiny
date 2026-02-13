@@ -13,7 +13,7 @@ lapply(scatters, function(anal){
   })
 })
 
-topn_sliders <- c("corr", "fc", "tt", "aov", "heatmap")
+topn_sliders <- c("corr", "fc", "tt", "aov", "heatmap", "logiscore")
 
 lapply(topn_sliders, function(anal){
   r <- shiny::reactive({

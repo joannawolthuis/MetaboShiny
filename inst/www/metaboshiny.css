@@ -629,6 +629,11 @@ a {
 
 .selectize-input { word-wrap : break-word;}
 
+/* Prevent htmlwidgets/plotly containers from staying hidden after render. */
+.plotly.html-widget {
+  visibility: visible !important;
+}
+
 .selectize-input { word-break: break-word;}
 
 .selectize-dropdown {word-wrap : break-word;}

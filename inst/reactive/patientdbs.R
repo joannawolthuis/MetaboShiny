@@ -94,14 +94,14 @@ output$missMzPlot <- shiny::renderPlot({
       ggplot2::geom_density(aes(x=`Missing percentage`, 
                                 fill=variable, 
                                 y=..scaled..), alpha=0.5) +
-      ggplot2::geom_vline(xintercept=input$perc_limit_mz, size=0.7, linetype="dotted") +
+      ggplot2::geom_vline(xintercept=input$perc_limit_mz, linewidth=0.7, linetype="dotted") +
       # ggplot2::geom_label(y=0.5,
       #                     x=input$perc_limit_mz,
       #                     label="Current threshold")+
       ggplot2::annotate(geom = "label", y=0.5, x = input$perc_limit_mz, label = "Current threshold") +
       gbl$functions$plot.themes[[lcl$aes$theme]](base_size = 15) + 
       ggplot2::theme(legend.position="none",
-                     axis.line = ggplot2::element_line(colour = 'black', size = .5),
+                     axis.line = ggplot2::element_line(colour = 'black', linewidth = .5),
                      plot.title = ggplot2::element_text(hjust = 0.5,
                                                         vjust = 0.1,
                                                         size=lcl$aes$font$title.size*1.2),

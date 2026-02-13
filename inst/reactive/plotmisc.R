@@ -50,37 +50,40 @@ lapply(c("add", "iso", "db"), function(which_pie){
       
       myCols <- gbl$functions$color.functions[[lcl$aes$spectrum]](n = nrow(pievec))
       
-      if(length(pievec)>0){
-        p = plotly::plot_ly(pievec, labels = ~Var.1, 
-                            values = ~value, size=~value*10, type = 'pie',
-                            textposition = 'inside',
-                            textinfo = 'label+percent',
-                            insidetextfont = list(colors = ggdark::invert_color(myCols)),
-                            hoverinfo = 'text',
-                            pull = pulls,
-                            text = ~paste0(Var.1, ": ", value, ' matches'),
-                            marker = list(colors = myCols,
-                                          line = list(color = "gray", 
-                                                      width = lines)),
-                            #The 'pull' attribute can also be used to create space between the sectors
-                            showlegend = FALSE) %>%
-          plotly::layout(autosize = T, margin = m,
-                         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
+        if(length(pievec)>0){
+          p = plotly::plot_ly(pievec, labels = ~Var.1, 
+                              values = ~value, size=~value*10, type = 'pie',
+                              textposition = 'inside',
+                              textinfo = 'label+percent',
+                              insidetextfont = list(colors = ggdark::invert_color(myCols)),
+                              hoverinfo = 'text',
+                              pull = pulls,
+                              text = ~paste0(Var.1, ": ", value, ' matches'),
+                              marker = list(colors = myCols,
+                                            line = list(color = "gray", 
+                                                        width = lines)),
+                              #The 'pull' attribute can also be used to create space between the sectors
+                              showlegend = FALSE) %>%
+            plotly::layout(autosize = T, margin = m,
+                           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+                           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))  
+        }
+        p <- plotly::event_register(p, "plotly_click")
+        return(p)          
+        }else{
+          data = data.frame(text = "Please run \n a search!")
+          p = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
+            ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
+          p <- plotly::ggplotly(p)
+          plotly::event_register(p, "plotly_click")
       }
-      return(p)          
       }else{
         data = data.frame(text = "Please run \n a search!")
         p = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
           ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-        plotly::ggplotly(p)
-    }
-    }else{
-      data = data.frame(text = "Please run \n a search!")
-      p = ggplot2::ggplot(data) + ggplot2::geom_text(ggplot2::aes(label = text), x = 0.5, y = 0.5, size = 10) +
-        ggplot2::theme(text = ggplot2::element_text(family = lcl$aes$font$family)) + ggplot2::theme_bw()
-      plotly::ggplotly(p)
-    }
+        p <- plotly::ggplotly(p)
+        plotly::event_register(p, "plotly_click")
+      }
   })
 })
 

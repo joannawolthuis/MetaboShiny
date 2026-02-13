@@ -353,21 +353,34 @@ shiny::observe({
                                list()
                              }
                            },
-                           tt = {
-                             # save results to table
-                             res <- mSet$analSet$tt$sig.mat
-                             if(is.null(res)){
-                               res <- data.table::data.table("No significant hits found")
-                               mSet$analSet$tt <- NULL
-                             }
-                             # set buttons to proper thingy
-                             list(tt_tab = res)
-                           },
-                           proda = {
-                             # save results to table
-                             res <- as.data.frame(mSet$analSet$proda$tt_res)
-                             rownames(res) <- res$name
-                             res$name <- NULL
+                            tt = {
+                              # save results to table
+                              res <- mSet$analSet$tt$sig.mat
+                              if(is.null(res)){
+                                res <- data.table::data.table("No significant hits found")
+                                mSet$analSet$tt <- NULL
+                              }
+                              # set buttons to proper thingy
+                              list(tt_tab = res)
+                            },
+                            logiscore = {
+                              res <- NULL
+                              if ("logiscore" %in% names(mSet$analSet)) {
+                                res <- mSet$analSet$logiscore$sig.mat
+                              }
+                              if (is.null(res)) {
+                                res <- data.table::data.table("No significant hits found")
+                                if ("logiscore" %in% names(mSet$analSet)) {
+                                  mSet$analSet$logiscore <- NULL
+                                }
+                              }
+                              list(logiscore_tab = res)
+                            },
+                            proda = {
+                              # save results to table
+                              res <- as.data.frame(mSet$analSet$proda$tt_res)
+                              rownames(res) <- res$name
+                              res$name <- NULL
                              colnames(res)[1:2] <- c("p-value", "adj. p-value")
                              if(is.null(res)){
                                res <- data.table::data.table("No significant hits found")
@@ -439,8 +452,10 @@ shiny::observe({
                 mytable = cbind(starCol, mytable)
               }
             })
-            metshiTable(content = mytable, rownames = rns)
-          }, server = FALSE, options = list(buttons = c('copy', 'excel')))
+            metshiTable(content = mytable,
+                        rownames = rns,
+                        options = list(buttons = c("copy", "excel")))
+          }, server = FALSE)
         }, toWrap, names(toWrap)) 
       } 
     }

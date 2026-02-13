@@ -54,6 +54,167 @@ metshiDiffCorr <- function(mSet, input){
   return(mSet)
 }
 
+
+#' @export
+logisticScores.Anal.JW <- function(mSetObj = NA,
+                                   threshp = 0.05,
+                                   all_results = FALSE,
+                                   multicorr_method = "fdr") {
+  mSetObj <- MetaboAnalystR:::.get.mSet(mSetObj)
+  
+  cls <- mSetObj$dataSet$cls
+  cls_unique <- unique(stats::na.omit(cls))
+  if (is.null(cls) || length(cls_unique) != 2) {
+    MetaboAnalystR:::AddMsg("Logistic scores require a binary class variable.")
+    return(0)
+  }
+
+  xmat <- mSetObj$dataSet$norm
+  if (is.null(xmat) || is.null(ncol(xmat)) || ncol(xmat) == 0) {
+    MetaboAnalystR:::AddMsg("No features available for logistic scores.")
+    return(0)
+  }
+
+  n_features <- ncol(xmat)
+
+  feature_names <- colnames(mSetObj$dataSet$norm)
+  if (is.null(feature_names) || length(feature_names) != n_features) {
+    # Prefer naming based on the current normalized table only; other sources
+    # (e.g. `orig`, reports) may refer to a different feature set after filtering.
+    feature_names <- names(mSetObj$dataSet$norm)
+  }
+  if (is.null(feature_names) || length(feature_names) != n_features) {
+    feature_names <- paste0("V", seq_len(n_features))
+  }
+
+  if (is.null(colnames(mSetObj$dataSet$norm)) &&
+      length(feature_names) == n_features) {
+    colnames(mSetObj$dataSet$norm) <- feature_names
+  }
+
+  z.stat <- rep(NA_real_, n_features)
+  p.value <- rep(NA_real_, n_features)
+  names(z.stat) <- names(p.value) <- feature_names
+
+  n <- n_features
+  last_i <- 0
+  for (i in seq_len(n_features)) {
+    
+    feat <- feature_names[i]
+    x <- if (is.data.frame(xmat) || data.table::is.data.table(xmat)) {
+      xmat[[i]]
+    } else {
+      xmat[, i]
+    }
+    
+    # `mSet$dataSet$norm` should be numeric, but when running in-app the columns
+    # can occasionally be factor/character (e.g. from file import). Coerce
+    # safely; if coercion fails we skip that feature.
+    if (is.factor(x)) {
+      x <- as.character(x)
+    }
+    if (is.character(x)) {
+      x_num <- suppressWarnings(as.numeric(x))
+      if (all(is.na(x_num))) {
+        next
+      }
+      x <- x_num
+    } else if (!is.numeric(x)) {
+      x_num <- suppressWarnings(as.numeric(x))
+      if (all(is.na(x_num))) {
+        next
+      }
+      x <- x_num
+    }
+    
+    ok <- stats::complete.cases(cls, x)
+    if (sum(ok) < 3) {
+      next
+    }
+    
+    x_ok <- x[ok]
+    cls_ok <- cls[ok]
+    if (length(unique(stats::na.omit(cls_ok))) < 2) {
+      next
+    }
+    
+    if (all(is.na(x_ok)) || stats::sd(x_ok, na.rm = TRUE) == 0) {
+      z.stat[feat] <- 0
+      p.value[feat] <- 1
+      next
+    }
+    
+    fit <- suppressWarnings(stats::glm(cls_ok ~ x_ok, family = stats::binomial()))
+    
+    # `summary()` is a base generic; don't qualify with `stats::`.
+    s <- summary(fit)
+    
+    coefs <- s$coefficients
+    if (is.null(coefs) || !("x_ok" %in% rownames(coefs))) {
+      next
+    }
+    
+    z.stat[feat] <- coefs["x_ok", "z value"]
+    p.value[feat] <- coefs["x_ok", "Pr(>|z|)"]
+  }
+
+  p.log <- -log10(p.value)
+
+  fdr.p <- stats::p.adjust(p.value, method = multicorr_method)
+
+  if (isTRUE(all_results)) {
+    all.mat <- data.frame(signif(z.stat, 5),
+                          signif(p.value, 5),
+                          signif(p.log, 5),
+                          signif(fdr.p, 5))
+    colnames(all.mat) <- c("z.stat", "p.value", "-log10(p)", multicorr_method)
+    MetaboAnalystR:::fast.write.csv(all.mat, file = "logiscore_all.csv")
+  }
+
+  inx.imp <- fdr.p <= threshp
+  inx.imp[is.na(inx.imp)] <- FALSE
+  sig.num <- sum(inx.imp)
+
+  if (is.na(sig.num) || sig.num == 0) {
+    MetaboAnalystR:::AddMsg("No significant features were found.")
+    logiscore <- list(sig.num = 0,
+                      raw.thresh = threshp,
+                      z.stat = sort(z.stat),
+                      p.value = sort(p.value),
+                      p.log = p.log,
+                      thresh = -log10(threshp),
+                      inx.imp = inx.imp)
+    mSetObj$analSet$logiscore <- logiscore
+    return(MetaboAnalystR:::.set.mSet(mSetObj))
+  }
+
+  MetaboAnalystR:::AddMsg(paste("A total of", sig.num, "significant features were found."))
+
+  sig.z <- z.stat[inx.imp]
+  sig.p <- p.value[inx.imp]
+  lod <- -log10(sig.p)
+  sig.q <- fdr.p[inx.imp]
+  sig.mat <- cbind(sig.z, sig.p, lod, sig.q)
+  colnames(sig.mat) <- c("z.stat", "p.value", "-log10(p)", multicorr_method)
+  ord.inx <- order(sig.p)
+  sig.mat <- sig.mat[ord.inx, , drop = FALSE]
+  sig.mat <- signif(sig.mat, 5)
+  MetaboAnalystR:::fast.write.csv(sig.mat, file = "logiscore.csv")
+
+  logiscore <- list(sig.nm = "logiscore.csv",
+                    sig.num = sig.num,
+                    raw.thresh = threshp,
+                    z.stat = sort(z.stat),
+                    p.value = sort(p.value),
+                    p.log = p.log,
+                    thresh = -log10(threshp),
+                    inx.imp = inx.imp,
+                    sig.mat = sig.mat)
+
+  mSetObj$analSet$logiscore <- logiscore
+  return(MetaboAnalystR:::.set.mSet(mSetObj))
+}
+
 metshiPCA <- function(mSet, input){
   if(input$pca_source != "normalized"){
     mSet_pca = mSet

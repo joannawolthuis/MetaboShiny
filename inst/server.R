@@ -103,6 +103,93 @@ function(input, output, session) {
     replace_ns_fun(metshi_ns, "setOption", setOption_safe)
   })
 
+  # DEV-ONLY: override installed MetaboShiny functions with local `R/` sources.
+  # Opt-in via either:
+  # - `Sys.setenv(METABOSHINY_USE_LOCAL = "1")` OR
+  # - `options(metaboshiny.use_local = TRUE)`
+  #
+  # This is intended for quick testing without reinstalling the package.
+  try({
+    use_local <- isTRUE(getOption("metaboshiny.use_local", FALSE)) ||
+      identical(Sys.getenv("METABOSHINY_USE_LOCAL"), "1")
+
+    if (use_local) {
+      metshi_ns <- asNamespace("MetaboShiny")
+
+      replace_ns_fun_safe <- function(ns, name, fun) {
+        if (exists("replace_ns_fun", inherits = TRUE)) {
+          replace_ns_fun(ns, name, fun)
+        } else {
+          was_locked <- bindingIsLocked(name, ns)
+          if (was_locked) {
+            unlockBinding(name, ns)
+          }
+          assign(name, fun, envir = ns)
+          if (was_locked) {
+            lockBinding(name, ns)
+          }
+          invisible(NULL)
+        }
+      }
+
+      r_dir_candidates <- c("R", file.path("..", "R"), file.path("..", "..", "R"))
+      r_dir <- r_dir_candidates[dir.exists(r_dir_candidates)][1]
+
+      if (is.na(r_dir) || !nzchar(r_dir)) {
+        message("DEV mode: requested local overrides, but no `R/` directory found from wd: ", getwd())
+        invisible(NULL)
+      } else {
+        message("DEV mode: loading local overrides from ", normalizePath(r_dir), " (wd: ", getwd(), ").")
+
+        # Use `globalenv()` as parent so sourced code can resolve functions from the
+        # normal search path (e.g. `utils::globalVariables` via `package:utils`).
+        local_env <- new.env(parent = globalenv())
+        r_files <- list.files(r_dir, pattern = "\\.R$", full.names = TRUE, recursive = TRUE)
+        r_files <- r_files[!grepl(paste0("\\", .Platform$file.sep, "Rserve\\", .Platform$file.sep), r_files)]
+
+        for (fp in r_files) {
+          sys.source(fp, envir = local_env)
+        }
+
+        overridden <- character(0)
+        added <- character(0)
+        for (nm in ls(local_env, all.names = TRUE)) {
+          obj <- get(nm, envir = local_env, inherits = FALSE)
+          if (!is.function(obj)) {
+            next
+          }
+
+          if (exists(nm, envir = metshi_ns, inherits = FALSE)) {
+            replace_ns_fun_safe(metshi_ns, nm, obj)
+            overridden <- c(overridden, nm)
+          } else {
+            assign(nm, obj, envir = metshi_ns)
+            added <- c(added, nm)
+          }
+        }
+
+        overridden <- unique(overridden)
+        added <- unique(added)
+        message(
+          "DEV mode: overridden ", length(overridden),
+          " + added ", length(added),
+          " functions from local `", r_dir, "`."
+        )
+        try(
+          shiny::showNotification(
+            paste0(
+              "DEV mode: overridden ", length(overridden),
+              " + added ", length(added),
+              " functions from local `", r_dir, "`"
+            ),
+            type = "warning"
+          ),
+          silent = TRUE
+        )
+      }
+    }
+  })
+
   AddErrMsg <- function(msg) {
     print(msg)
     try({
@@ -135,6 +222,13 @@ function(input, output, session) {
   set_stat_collapse <- localize_fn(MetaboShiny:::set_stat_collapse)
   make_sel_adducts <- localize_fn(MetaboShiny:::make_sel_adducts)
   update_adducts_from_filter <- localize_fn(MetaboShiny:::update_adducts_from_filter)
+
+  diag_plots <- isTRUE(getOption("metaboshiny.diag_plots", FALSE)) ||
+    identical(Sys.getenv("METABOSHINY_DIAG_PLOTS"), "1")
+  if (diag_plots) {
+    message("Diagnostic plot mode enabled (fixed heights, no resizable panel, no conditional plot containers).")
+    try(shiny::showNotification("Diagnostic plot mode enabled", type = "message"), silent = TRUE)
+  }
 
   shinyDarkmode::darkmode_toggle(inputid = "night_mode")
 
@@ -287,13 +381,16 @@ function(input, output, session) {
 
   MetaboShiny:::init_export_observer(environment())
 
-  # triggered when user enters the statistics tab
-  shinyjs::runjs('$("#mainPanel").resizable({
-                                              handles: "e",
-                                              resize: function() {
-                                                $("#sidePanel").outerWidth($("#panelContainer").innerWidth() - $("#mainPanel").outerWidth());
-                                              }
-                                            });')
+  # Ensure any previous resizable binding/handle is removed.
+  shinyjs::runjs('
+    try {
+      if ($("#mainPanel").hasClass("ui-resizable")) {
+        $("#mainPanel").resizable("destroy");
+      }
+      $("#mainPanel .ui-resizable-handle").remove();
+      $("#mainPanel").removeClass("ui-resizable ui-resizable-autohide");
+    } catch (e) {}
+  ')
 
   MetaboShiny:::init_statistics_observer(environment())
 

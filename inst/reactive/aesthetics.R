@@ -17,11 +17,17 @@ output$ramp_plot <- plotly::renderPlotly({
   )
   
   # re-render preview plot with the new options (general heatmap using R standard volcano dataset)
-  plotly::plot_ly(z = volcano,
-                  colors = gbl$functions$color.functions[[lcl$aes$spectrum]](100),
-                  type = "heatmap",
-                  showscale=FALSE)  %>%
+  p <- plotly::plot_ly(z = volcano,
+                       colors = gbl$functions$color.functions[[lcl$aes$spectrum]](100),
+                       type = "heatmap",
+                       showscale = FALSE) %>%
     plotly::layout(xaxis = ax, yaxis = ax)
+  
+  # Newer plotly versions require explicit event registration to
+  # receive `event_data("plotly_click")` without warnings.
+  p <- plotly::event_register(p, "plotly_click")
+  
+  p
 })
 
 
@@ -36,7 +42,9 @@ output$ggplot_theme_example <- plotly::renderPlotly({
                                        colour = factor(gear))) +
     gbl$functions$plot.themes[[lcl$aes$theme]]()
   
-  plotly::ggplotly(p)
+  p <- plotly::ggplotly(p)
+  p <- plotly::event_register(p, "plotly_click")
+  p
 })
 
 
@@ -73,5 +81,7 @@ output$ggplot_font_size_example <- plotly::renderPlotly({
   MetaboShiny::setOption(lcl$paths$opt.loc, key="gfont", value=input$ggplot_font_size)
   
   lcl$aes$font$plot.font.size <<- input$ggplot_font_size
-  plotly::ggplotly(p)
+  p <- plotly::ggplotly(p)
+  p <- plotly::event_register(p, "plotly_click")
+  p
 })

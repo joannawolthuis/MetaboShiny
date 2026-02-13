@@ -160,3 +160,16 @@ shiny::observeEvent(input$network_interactive_selected, {
   my_selection$mz <<- input$network_interactive_selected
   plotmanager$make <- "summary"
 })
+
+# Ensure plotly click events are registered early (avoids warnings when
+# `event_data("plotly_click")` is evaluated before any visible plotly
+# widget is created).
+output$plotly_event_sink <- plotly::renderPlotly({
+  p <- plotly::plot_ly(
+    x = 0, y = 0,
+    type = "scatter",
+    mode = "markers",
+    source = "A"
+  )
+  plotly::event_register(p, "plotly_click")
+})

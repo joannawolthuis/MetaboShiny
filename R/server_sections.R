@@ -376,51 +376,52 @@ init_interface_tabs_observer <- function(env){
   evalq(
     shiny::observe({
       # hide all tabs by default, easier to hide them and then make visible selectively
-      hide.tabs <- list(
-        list("statistics", "inf"),#1
-        list("dimred", "pca"),#2
-        list("dimred", "plsda"),#3
-        list("permz", "asca"),#4
-        list("permz", "meba"),#5
-        list("permz", "aov"),#6
-        list("statistics", "ml"),#7
-        list("overview", "volcano"),#8
-        list("overview", "venn"),#9
-        list("overview", "heatmap"),#10
-        list("overview", "power"),#11
-        list("permz", "tt"),#12
-        list("permz", "fc"),#13
-        list("dimred", "tsne"),#14
-        list("permz", "corr"),#15
-        list("overview", "enrich"),#16
-        list("dimred", "umap"),#17
-        list("dimred", "ica"),#18
-        list("overview", "featsel"),#19,
-        list("permz", "cliffd"),#20,
-        list("overview", "multirank"),#21,
-        list("permz", "proda")#22
-      )
+       hide.tabs <- list(
+         list("statistics", "inf"),#1
+         list("dimred", "pca"),#2
+         list("dimred", "plsda"),#3
+         list("permz", "asca"),#4
+         list("permz", "meba"),#5
+         list("permz", "aov"),#6
+         list("statistics", "ml"),#7
+         list("overview", "volcano"),#8
+         list("overview", "venn"),#9
+         list("overview", "heatmap"),#10
+         list("overview", "power"),#11
+         list("permz", "tt"),#12
+         list("permz", "fc"),#13
+         list("dimred", "tsne"),#14
+         list("permz", "corr"),#15
+         list("overview", "enrich"),#16
+         list("dimred", "umap"),#17
+         list("dimred", "ica"),#18
+         list("overview", "featsel"),#19,
+         list("permz", "cliffd"),#20,
+         list("overview", "multirank"),#21,
+         list("permz", "proda"),#22
+         list("permz", "logiscore")#23
+       )
       # check mode of interface (depends on timeseries /yes/no and bivariate/multivariate)
       # then show the relevent tabs
       # TODO: enable multivariate time series analysis
-      if(is.null(interface$mode)){
-        show.tabs <- hide.tabs[1]
-      }else if(interface$mode == '1fb'){
-        show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22)]
-        update_ml_method(session, gbl$constants$ml.models)
-      }else if(interface$mode == '1fm'){
-        show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18,19,21)]
-        update_ml_method(session, setdiff(gbl$constants$ml.models,
-                                          gbl$constants$ml.twoonly))
-      }else if(interface$mode == '2f'){
-        show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18,19,21)]
-      }else if(interface$mode == 't1f'){
-        show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18,19,21)]
-      }else if(interface$mode == 't'){
-        show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18,19,21)]
-      }else{
-        show.tabs <- hide.tabs[1]
-      }
+       if(is.null(interface$mode)){
+         show.tabs <- hide.tabs[1]
+       }else if(interface$mode == '1fb'){
+         show.tabs <- hide.tabs[c(1,2,3,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23)]
+         update_ml_method(session, gbl$constants$ml.models)
+       }else if(interface$mode == '1fm'){
+         show.tabs <- hide.tabs[c(1,2,3,6,7,9,10,11,14,15,16,17,18,19,21)]
+         update_ml_method(session, setdiff(gbl$constants$ml.models,
+                                           gbl$constants$ml.twoonly))
+       }else if(interface$mode == '2f'){
+         show.tabs <- hide.tabs[c(1,2,4,6,9,10,11,14,16,17,18,19,21)]
+       }else if(interface$mode == 't1f'){
+         show.tabs = hide.tabs[c(1,2,4,5,6,9,10,11,14,16,17,18,19,21)]
+       }else if(interface$mode == 't'){
+         show.tabs = hide.tabs[c(1,2,5,6,7,9,10,11,14,15,16,17,18,19,21)]
+       }else{
+         show.tabs <- hide.tabs[1]
+       }
       
       # hide all the tabs to begin with
       stats_tabs <- c("dimred", "permz", "overview", "ml")
@@ -526,7 +527,8 @@ init_analysis_constants <- function(env){
                     "umap", "ica", "featsel",
                     "cliffd",
                     "multirank",
-                    "proda")
+                    "proda",
+                    "logiscore")
       
       vennrich_tabs <- c("venn", "enrich", "heatmap", "network", "ml", "multirank")
     },

@@ -6,10 +6,12 @@ req_minor <- 1
 
 if (!(getRversion()[1] == req_major && getRversion()[2] == req_minor)) {
   warning(sprintf(
-    "This install script mirrors rocker/rstudio:4.1.0 (R 4.1.x). You are running R %s. Expect breakage.",
+    "This install script expects R 4.1.x. You are running R %s. Expect breakage.",
     getRversion()
   ), call. = FALSE)
 }
+
+options(pkgType = "win.binary")
 
 cran <- "https://cloud.r-project.org"
 
@@ -19,11 +21,13 @@ install_if_missing <- function(pkgs) {
 }
 
 cat("== Core tools ==\n")
-install_if_missing(c("devtools", "remotes", "BiocManager", "pacman"))
+install_if_missing(c("devtools", "remotes", "BiocManager", "pacman", "rJava", "qdap"))
 
-cat("== Bioc org.Hs.eg.db ==\n")
-BiocManager::install("GenomeInfoDbData", ask = FALSE, update = FALSE)
-BiocManager::install("org.Hs.eg.db", ask = FALSE, update = FALSE)
+# cat("== Bioc org.Hs.eg.db ==\n")
+# install_if_missing(c("GenomeInfoDbData", "org.Hs.eg.db"))
+# 
+# BiocManager::install("GenomeInfoDbData", ask = FALSE, update = FALSE)
+# BiocManager::install(", ask = FALSE, update = FALSE)
 
 cat("== mvtnorm (source) ==\n")
 if (!requireNamespace("mvtnorm", quietly = TRUE)) {
@@ -32,7 +36,11 @@ if (!requireNamespace("mvtnorm", quietly = TRUE)) {
 
 cat("== METADBPARSE REQUIREMENTS (pacman::p_load) ==\n")
 pacman::p_load(
-  pacman, rcdk, rJava, parallel, pbapply, enviPat, data.table,
+  mvtnorm,
+  GenomeInfoDbData, org.Hs.eg.db,
+  pacman, 
+  #rcdk, rJava, 
+  parallel, pbapply, enviPat, data.table,
   RSQLite, DBI, gsubfn, utils, RCurl, XML, base,
   stringr, WikidataQueryServiceR, webchem, openxlsx, jsonlite,
   R.utils, KEGGREST, zip, ChemmineR, rvest, xml2, stringi, reshape2,
@@ -110,10 +118,10 @@ devtools::install_github("dengkuistat/WaveICA")
 # PINS exactly like your Dockerfile
 # cat("== Pin rlang to 1.1.0 (as in Dockerfile) ==\n")
 # if (requireNamespace("rlang", quietly = TRUE)) remove.packages("rlang")
-# install.packages(
-#   "https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.8.tar.gz",clean = T,
-#   repos = NULL, type = "source"
-# )
+install.packages(
+   "https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.1.6.tar.gz",clean = T,
+   repos = NULL
+ )
 
 cat("== Pin httr2 to 0.2.3 (as in Dockerfile) ==\n")
 install.packages(
@@ -129,7 +137,7 @@ pacman::p_load(ggpp, pathview, ggplot2)
 remotes::install_github("deepanshu88/shinyDarkmode")
 
 pacman::p_load(kohonen, ucminf, mclust, modeltools, scoringRules, ordinal,
-               kernlab, diptest, prabclus, flexmix, crch, fpc)
+               kernlab, diptest, prabclus, flexmix, crch, fpc, heatmaply)
 
 devtools::install_github("joannawolthuis/MetaboShiny", ref = "dev")
 

@@ -31,14 +31,14 @@ ui_pca <- function() {
               "samples",
               shiny::fluidRow(align = "center", shiny::column(
                 12,
-                shinyjqui::jqui_resizable(shiny::uiOutput("plot_pca_wrap"))
+                (shiny::uiOutput("plot_pca_wrap"))
               ))
             ),
             shiny::tabPanel(
               "loadings",
               shiny::fluidRow(align = "center", shiny::column(
                 12,
-                shinyjqui::jqui_resizable(shiny::uiOutput("plot_pca_loadings_wrap"))
+                (shiny::uiOutput("plot_pca_loadings_wrap"))
               ))
             )
           ),
@@ -93,7 +93,7 @@ ui_pca <- function() {
           ),
           shiny::tabPanel(
             title = "scree",
-            shinyjqui::jqui_resizable(shiny::uiOutput("pca_scree_wrap"))
+            (shiny::uiOutput("pca_scree_wrap"))
           ),
           shiny::tabPanel(
             title = "loadings",
@@ -143,14 +143,14 @@ ui_plsda <- function() {
               "samples",
               shiny::fluidRow(align = "center", shiny::column(
                 12,
-                shinyjqui::jqui_resizable(shiny::uiOutput("plot_plsda_wrap"))
+                (shiny::uiOutput("plot_plsda_wrap"))
               ))
             ),
             shiny::tabPanel(
               "loadings",
               shiny::fluidRow(align = "center", shiny::column(
                 12,
-                shinyjqui::jqui_resizable(shiny::uiOutput("plot_plsda_loadings_wrap"))
+                (shiny::uiOutput("plot_plsda_loadings_wrap"))
               ))
             ),
             shiny::tabPanel(
@@ -159,11 +159,11 @@ ui_plsda <- function() {
                 id = "plsda_2",
                 shiny::tabPanel(
                   title = "cross-validation",
-                  shinyjqui::jqui_resizable(shiny::uiOutput("plsda_cv_plot_wrap"))
+                  (shiny::uiOutput("plsda_cv_plot_wrap"))
                 ),
                 shiny::tabPanel(
                   title = "permutation",
-                  shinyjqui::jqui_resizable(shiny::uiOutput("plsda_perm_plot_wrap"))
+                  (shiny::uiOutput("plsda_perm_plot_wrap"))
                 )
               )
             )
@@ -254,7 +254,7 @@ ui_tsne <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_tsne_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("tsne_plot_wrap")),
+          (shiny::uiOutput("tsne_plot_wrap")),
           br(),
           shiny::conditionalPanel(
             "input.ggplotly == true",
@@ -343,7 +343,7 @@ ui_ica <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_ica_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("ica_plot_wrap")),
+          (shiny::uiOutput("ica_plot_wrap")),
           br(),
           shiny::conditionalPanel(
             "input.ggplotly == true",
@@ -419,7 +419,7 @@ ui_umap <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_umap_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("umap_plot_wrap")),
+          (shiny::uiOutput("umap_plot_wrap")),
           br(),
           shiny::conditionalPanel(
             "input.ggplotly == true",
@@ -505,12 +505,62 @@ ui_t_test <- function() {
           ),
           shinyBS::bsCollapsePanel(
             title = h2("plots"), value = "collapse_tt_plots",
-            shinyjqui::jqui_resizable(shiny::uiOutput("tt_plot_wrap")),
+            (shiny::uiOutput("tt_plot_wrap")),
             shiny::sliderInput("tt_topn", label = "Show top:", min = 5, max = 5000, value = 100)
           ),
           shinyBS::bsCollapsePanel(
             title = h2("tables"), value = "collapse_tt_tables",
             shiny::div(DT::dataTableOutput("tt_tab", width = "100%"), style = "font-size:80%")
+          )
+        )
+      )
+    )
+  )
+}
+
+ui_logiscore <- function() {
+  shiny::tabPanel("logistic scores",
+    value = "logiscore",
+    shiny::fluidRow(
+      align = "center",
+      shiny::fluidRow(
+        align = "center",
+        shinyBS::bsCollapse(
+          multiple = T, id = "collapse_logiscore",
+          shinyBS::bsCollapsePanel(
+            title = h2("settings"), value = "collapse_logiscore_settings",
+            shiny::selectInput("logiscore_multi_test", "Multiple testing correction method:",
+              choices = list(
+                "Holm" = "holm",
+                "Hochmerg" = "hochberg",
+                "Hommel" = "hommel",
+                "Bonferroni" = "bonferroni",
+                "Benjamini & Hochberg" = "fdr",
+                "Benjamini & Yekutieli" = "BY",
+                "none"
+              ),
+              selected = "fdr"
+            ),
+            shiny::numericInput("logiscore_p_thresh",
+              label = "Maximum p-value after multiple testing:",
+              value = 0.05, max = 1, min = 0
+            ),
+            shinyWidgets::actionBttn(
+              inputId = "do_logiscore",
+              label = "click to start logistic scores",
+              style = "bordered",
+              icon = icon("terminal"),
+              size = "sm"
+            )
+          ),
+          shinyBS::bsCollapsePanel(
+            title = h2("plots"), value = "collapse_logiscore_plots",
+            (shiny::uiOutput("logiscore_plot_wrap")),
+            shiny::sliderInput("logiscore_topn", label = "Show top:", min = 5, max = 5000, value = 100)
+          ),
+          shinyBS::bsCollapsePanel(
+            title = h2("tables"), value = "collapse_logiscore_tables",
+            shiny::div(DT::dataTableOutput("logiscore_tab", width = "100%"), style = "font-size:80%")
           )
         )
       )
@@ -559,7 +609,7 @@ ui_proda <- function() {
           ),
           shinyBS::bsCollapsePanel(
             title = h2("plots"), value = "collapse_proda_plots",
-            shinyjqui::jqui_resizable(shiny::uiOutput("proda_plot_wrap")),
+            (shiny::uiOutput("proda_plot_wrap")),
             shiny::sliderInput("proda_topn", label = "Show top:", min = 5, max = 5000, value = 100)
           ),
           shinyBS::bsCollapsePanel(
@@ -593,7 +643,7 @@ ui_anova <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_aov_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("aov_plot_wrap")),
+          (shiny::uiOutput("aov_plot_wrap")),
           shiny::sliderInput("aov_topn", label = "Show top:", min = 5, max = 5000, value = 100)
         ),
         shinyBS::bsCollapsePanel(
@@ -632,7 +682,7 @@ ui_fold_change <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_fc_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("fc_plot_wrap")),
+          (shiny::uiOutput("fc_plot_wrap")),
           shiny::sliderInput("fc_topn", label = "Show top:", min = 5, max = 5000, value = 100)
         ),
         shinyBS::bsCollapsePanel(
@@ -664,7 +714,7 @@ ui_cliffs_delta <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_cliffd_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("cliffd_plot_wrap")),
+          (shiny::uiOutput("cliffd_plot_wrap")),
           shiny::sliderInput("cliffd_topn", label = "Show top:", min = 5, max = 5000, value = 100)
         ),
         shinyBS::bsCollapsePanel(
@@ -696,7 +746,7 @@ ui_meba <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_meba_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("meba_plot_wrap")),
+          (shiny::uiOutput("meba_plot_wrap")),
           shiny::sliderInput("meba_topn", label = "Show top:", min = 5, max = 5000, value = 100)
         ),
         shinyBS::bsCollapsePanel(
@@ -728,7 +778,7 @@ ui_asca <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_asca_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("asca_plot_wrap"))
+          (shiny::uiOutput("asca_plot_wrap"))
         ),
         shinyBS::bsCollapsePanel(
           title = h2("tables"), value = "collapse_asca_tables",
@@ -773,7 +823,7 @@ ui_pattern <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_corr_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("corr_plot_wrap")),
+          (shiny::uiOutput("corr_plot_wrap")),
           shiny::sliderInput("corr_topn", label = "Show top:", min = 5, max = 200, value = 20)
         ),
         shinyBS::bsCollapsePanel(
@@ -856,7 +906,7 @@ ui_intersection_plot <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_combi_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("combi_plot_wrap"))
+          (shiny::uiOutput("combi_plot_wrap"))
         ),
         shinyBS::bsCollapsePanel(
           title = h2("tables"), value = "collapse_combi_tables",
@@ -903,7 +953,7 @@ ui_heatmap <- function() {
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_heatmap_plots",
           shiny::verbatimTextOutput("heatmap_now", placeholder = F),
-          shinyjqui::jqui_resizable(shiny::uiOutput("heatmap_plot_wrap")),
+          (shiny::uiOutput("heatmap_plot_wrap")),
           shiny::sliderInput("heatmap_topn",
             label = "Show top:",
             min = 10,
@@ -1028,12 +1078,12 @@ ui_network <- function() {
             shiny::tabPanel(
               title = "network", value = "network",
               icon = shiny::icon("project-diagram"),
-              shiny::fluidRow(align = "center", shinyjqui::jqui_resizable(shiny::uiOutput("network_wrap"))),
+              shiny::fluidRow(align = "center", (shiny::uiOutput("network_wrap"))),
             ),
             shiny::tabPanel(
               title = "heatmap", value = "heatmap",
               icon = shiny::icon("th"),
-              shiny::fluidRow(align = "center", shinyjqui::jqui_resizable(shiny::uiOutput("network_heatmap_wrap"))),
+              shiny::fluidRow(align = "center", (shiny::uiOutput("network_heatmap_wrap"))),
             )
           )
         )
@@ -1074,7 +1124,7 @@ ui_multirank <- function() {
       ),
       mainPanel = mainPanel(
         shiny::hr(),
-        shinyjqui::jqui_resizable(shiny::uiOutput("multirank_plot_wrap")),
+        (shiny::uiOutput("multirank_plot_wrap")),
         shiny::fluidRow(shiny::div(DT::dataTableOutput("multirank_tab"), style = "font-size:80%"),
           align = "center"
         )
@@ -1136,7 +1186,7 @@ ui_venn <- function() {
       ),
       mainPanel = mainPanel(
         shiny::hr(),
-        shinyjqui::jqui_resizable(shiny::uiOutput("venn_plot_wrap")),
+        (shiny::uiOutput("venn_plot_wrap")),
         # find the overlapping compounds between the groups you want to compare (user select)
         # TODO: enable this with clicking the numbers/areas
         shiny::fluidRow(shiny::selectizeInput(width = "80%", "intersect_venn", label = "Show hits from (only):", selected = 1, choices = "", multiple = T),
@@ -1186,7 +1236,7 @@ ui_power <- function() {
         ),
         shinyBS::bsCollapsePanel(
           title = h2("plots"), value = "collapse_power_plots",
-          shinyjqui::jqui_resizable(shiny::uiOutput("power_plot_wrap"))
+          (shiny::uiOutput("power_plot_wrap"))
         )
       )
     )
@@ -1350,7 +1400,7 @@ ui_enrichment <- function() {
               id = "enrich_results",
               shiny::tabPanel(
                 "overview",
-                shinyjqui::jqui_resizable(shiny::uiOutput("enrich_plot_wrap")),
+                (shiny::uiOutput("enrich_plot_wrap")),
                 shinyWidgets::switchInput("enrich_plot_mode", "Plot type:",
                   onLabel = "point", offLabel = "bar",
                   value = T
@@ -1868,7 +1918,7 @@ ui_ml_results <- function() {
       id = "ml_results",
       shiny::tabPanel(
         title = "curves", value = "roc", icon = shiny::icon("chart-area"),
-        shiny::fluidRow(align = "center", shinyjqui::jqui_resizable(shiny::uiOutput("ml_roc_wrap"))),
+        shiny::fluidRow(align = "center", (shiny::uiOutput("ml_roc_wrap"))),
         shiny::fluidRow(
           align = "center",
           shiny::column(
@@ -1931,7 +1981,7 @@ ui_ml_results <- function() {
         value = "bar", icon = shiny::icon("star"),
         shiny::fluidRow(
           align = "center",
-          shinyjqui::jqui_resizable(shiny::uiOutput("ml_bar_wrap")),
+          (shiny::uiOutput("ml_bar_wrap")),
           shiny::sliderInput("ml_topn",
             label = "Show top:",
             min = 10,

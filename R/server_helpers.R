@@ -162,7 +162,10 @@ show_stat_panels <- function(stat_id, show_plots){
 
 set_stat_collapse <- function(session, stat_id, panes){
   collapse_id <- paste0("collapse_", stat_id)
-  shinyBS::updateCollapse(session, collapse_id, open = paste0(collapse_id, panes))
+  panel_values <- paste0(collapse_id, panes)
+  for(panel_value in panel_values){
+    shinyBS::updateCollapse(session, collapse_id, open = panel_value)
+  }
 }
 
 make_sel_adducts <- function(adducts, selected_cats){

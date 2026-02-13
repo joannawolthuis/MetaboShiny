@@ -377,21 +377,21 @@ ui_tab_normalize <- function(gbl, adducts) {
             shiny::column(
               6,
               shiny::imageOutput("empty2", width = "100%", height = "1px"),
-              shinyjqui::jqui_resizable(shiny::uiOutput("var1_wrap"))
+              (shiny::uiOutput("var1_wrap"))
             ),
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("var3_wrap"))
+              (shiny::uiOutput("var3_wrap"))
             )
           ),
           shiny::fluidRow(
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("var2_wrap"))
+              (shiny::uiOutput("var2_wrap"))
             ),
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("var4_wrap"))
+              (shiny::uiOutput("var4_wrap"))
             )
           )
         ),
@@ -400,21 +400,21 @@ ui_tab_normalize <- function(gbl, adducts) {
           shiny::fluidRow(
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("samp1_wrap"))
+              (shiny::uiOutput("samp1_wrap"))
             ),
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("samp3_wrap"))
+              (shiny::uiOutput("samp3_wrap"))
             )
           ),
           shiny::fluidRow(
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("samp2_wrap"))
+              (shiny::uiOutput("samp2_wrap"))
             ),
             shiny::column(
               6,
-              shinyjqui::jqui_resizable(shiny::uiOutput("samp4_wrap"))
+              (shiny::uiOutput("samp4_wrap"))
             )
           )
         )
@@ -481,7 +481,7 @@ ui_tab_analyse <- function(gbl, adducts) {
     icon = shiny::icon("chart-bar", class = "outlined"), value = "analysis",
     div(id = "panelContainer", sidebarLayout(
       position = "right",
-      mainPanel = # shinyjqui::jqui_resizable(
+      mainPanel = # (
         mainPanel(
           width = 9, id = "mainPanel",
           shiny::fluidRow(
@@ -497,7 +497,7 @@ ui_tab_analyse <- function(gbl, adducts) {
                   icon("caret-down")
                 ),
                 style = "info",
-                shinyjqui::jqui_resizable(
+                (
                   shiny::uiOutput("summary_plot_wrap")
                 )
               )
@@ -535,6 +535,7 @@ ui_tab_analyse <- function(gbl, adducts) {
             shiny::navbarMenu("per m/z",
               icon = shiny::icon("fingerprint", "fa-2x"), menuName = "permz",
               MetaboShiny:::ui_t_test(),
+              MetaboShiny:::ui_logiscore(),
               MetaboShiny:::ui_proda(),
               MetaboShiny:::ui_anova(),
               MetaboShiny:::ui_fold_change(),
@@ -567,7 +568,7 @@ ui_tab_analyse <- function(gbl, adducts) {
         ),
         # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
         sidebarPanel =
-          shinyjqui::jqui_resizable(
+          (
             sidebarPanel(
               align = "center", width = 3, id = "sidePanel",
               shiny::fluidRow(
@@ -874,7 +875,7 @@ ui_tab_analyse <- function(gbl, adducts) {
                                 ),
                                 conditionalPanel(
                                   "input.wordbar == false",
-                                  shinyjqui::jqui_resizable(shiny::uiOutput("wordbar_wrap"))
+                                  (shiny::uiOutput("wordbar_wrap"))
                                 ),
                                 shinyWidgets::switchInput(
                                   inputId = "wordbar", value = TRUE,
@@ -1187,7 +1188,7 @@ ui_tab_analyse <- function(gbl, adducts) {
                         "Pastel2", "Set1", "Set2", "Set3"
                       ), selected = "rainbow", width = "80%"),
                       # preview plot
-                      shinyjqui::jqui_resizable(plotly::plotlyOutput("ramp_plot")),
+                      (plotly::plotlyOutput("ramp_plot")),
                       shiny::h2("Discrete data"),
                       shiny::uiOutput("colorPickers")
                     ),
@@ -1489,7 +1490,7 @@ ui_footer <- function() {
           label_on = "night",
           outline = TRUE,
           plain = TRUE,
-          value = T,
+          value = FALSE,
           status_off = "default",
           status_on = "default",
           icon_off = icon("sun"),

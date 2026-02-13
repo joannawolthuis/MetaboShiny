@@ -133,7 +133,7 @@ ggplotSampleNormSummary <- function(mSet,
     ggplot2::geom_boxplot(
       ggplot2::aes(y=value,x=Label),
       color=cf(sampsize),
-      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label)) + ggplot2::coord_flip() +
+      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value))) + ggplot2::coord_flip() +
     ggplot2::xlab("m/z") + 
     ggplot2::ylab("intensity")
   
@@ -146,7 +146,7 @@ ggplotSampleNormSummary <- function(mSet,
     ggplot2::geom_boxplot(
       ggplot2::aes(y=value,x=Label),
       color=cf(sampsize),
-      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value),text=Label))+ggplot2::coord_flip() + 
+      alpha=0.4) + ggplot2::geom_hline(ggplot2::aes(yintercept=median(value)))+ggplot2::coord_flip() + 
     ggplot2::xlab("m/z") + 
     ggplot2::ylab("intensity")
   
@@ -206,11 +206,11 @@ ggplotMebaSingle <- function(mSet, cpd, draw.average=T, cols,
                           group=profile$GroupA)
   
   p <- ggplot2::ggplot(data=profile) +
-    ggplot2::geom_line(size=if(draw.average) 0.3 else 1, ggplot2::aes(x=GroupB, 
-                                                                      y=Abundance, 
-                                                                      group=Individual, 
-                                                                      color=Color,
-                                                                      text=Sample), alpha=0.4) +
+    ggplot2::geom_line(linewidth=if(draw.average) 0.3 else 1, ggplot2::aes(x=GroupB, 
+                                                                       y=Abundance, 
+                                                                       group=Individual, 
+                                                                       color=Color,
+                                                                       text=Sample), alpha=0.4) +
     ggplot2::scale_x_discrete(expand = c(0, 0)) +
     
     ggplot2::scale_color_manual(values=cols) +
@@ -220,7 +220,7 @@ ggplotMebaSingle <- function(mSet, cpd, draw.average=T, cols,
                                                    t1f=mSet$dataSet$facA.lbl,
                                                    t="Individual")))
   if(draw.average){
-    p <- p + ggplot2::stat_summary(fun="mean", size=2, 
+    p <- p + ggplot2::stat_summary(fun="mean", linewidth=2, 
                                    geom="line", ggplot2::aes(x=GroupB, 
                                                              y=Abundance, 
                                                              color = Color, 
@@ -705,6 +705,67 @@ ggPlotTT <- function(mSet, cf, n=20, topn=NULL){
   p
 }
 
+#' @title Generate logistic score plot
+#' @description Function to generate ggplot or plotly plot for logistic-score ranking
+#' @param mSet mSet object
+#' @param cf Function to get plot colors from
+#' @param n Number of colors in gradient, Default: 20
+#' @return GGPLOT object
+#' @seealso 
+#'  \code{\link[data.table]{as.data.table}}
+#'  \code{\link[shiny]{showNotification}}
+#'  \code{\link[ggplot2]{ggplot}}
+#' @export
+ggPlotLogiscore <- function(mSet, cf, n = 20, topn = NULL) {
+  if (is.null(mSet$analSet$logiscore) || is.null(mSet$analSet$logiscore$p.log) || is.null(mSet$analSet$logiscore$inx.imp)) {
+    shiny::showNotification("No logistic-score results yet")
+    return(NULL)
+  }
+  profile <- data.table::as.data.table(mSet$analSet$logiscore$p.log[mSet$analSet$logiscore$inx.imp], keep.rownames = TRUE)
+
+  if (nrow(profile) == 0) {
+    shiny::showNotification("No significant hits")
+    return(NULL)
+  }
+
+  if (!is.null(topn)) {
+    profile <- profile[order(abs(V2), decreasing = TRUE)]
+    profile <- profile[1:min(topn, nrow(profile)), ]
+  }
+
+  profile[, 2] <- round(profile[, 2], digits = 2)
+  profile$Peak <- c(1:nrow(profile))
+  colnames(profile)[1:2] <- c("m/z", "-log(p)")
+  profile[["-log(p)"]] <- as.numeric(sprintf("%.1f", profile[["-log(p)"]]))
+
+  p <- ggplot2::ggplot() +
+    ggplot2::geom_point(
+      data = profile,
+      ggplot2::aes(
+        y = Peak,
+        x = `-log(p)`,
+        text = `m/z`,
+        color = `-log(p)`,
+        key = `m/z`
+      ),
+      size = 2.5
+    ) +
+    ggplot2::geom_segment(
+      data = profile,
+      ggplot2::aes(
+        y = Peak,
+        yend = Peak,
+        color = `-log(p)`,
+        x = 0,
+        xend = `-log(p)`
+      )
+    ) +
+    ggplot2::scale_colour_gradientn(colours = cf(n)) +
+    ggplot2::coord_flip()
+
+  p
+}
+
 #' @title Generate T-TEST plot
 #' @description Function to generate ggplot or plotly plot for T-TEST
 #' @param mSet mSet object
@@ -1180,13 +1241,12 @@ ggPlotMLMistakes <- function(predictions,
     })
     res = data.table::rbindlist(all_reps)
     
-    line_fun = if(smooth_line) geom_smooth else geom_line
     p = ggplot2::ggplot(data = res,aes(x = cutoff, 
                                        y = wrong_perc_var,
                                        text = meta_var,
                                        color = meta_var)) + 
       #geom_point() +
-      line_fun(cex = 1,se = FALSE ) +
+      {if(smooth_line) ggplot2::geom_smooth(se = FALSE, linewidth = 1) else ggplot2::geom_line(linewidth = 1)} +
       ggplot2::scale_color_manual(name = metadata_focus, 
                                   values=cf(length(unique(res$meta_var)))) +
       ggplot2::xlab("Cutoff") + ggplot2::ylab("% of testing mistakes")
@@ -2207,8 +2267,9 @@ plotPCA.2d <- function(mSet,
     ggplot2::scale_fill_manual(values = cols) +
     ggplot2::scale_color_manual(values = cols) +
     ggplot2::scale_shape_manual(values = as.numeric(symbols)) +
-    ggplot2::guides(fill = ggplot2::guide_legend(fill = ggplot2::guide_legend(override.aes = list(shape = 21)),
-                                                 color = ggplot2::guide_legend(override.aes = list(shape = 21)))
+    ggplot2::guides(
+      fill = ggplot2::guide_legend(override.aes = list(shape = 21)),
+      color = ggplot2::guide_legend(override.aes = list(shape = 21))
     )
   
   if(ellipse){
@@ -2322,7 +2383,7 @@ ggPlotVenn <- function(mSet,
     data <- ggVennDiagram:::process_data(venn)
     p <- ggplot2::ggplot() + ggplot2::geom_sf(ggplot2::aes_string(fill = "count"), 
                                               data = data@region) + 
-      ggplot2::geom_sf(ggplot2::aes_string(color = "id"), size = 1, data = data@setEdge, 
+      ggplot2::geom_sf(ggplot2::aes_string(color = "id"), linewidth = 1, data = data@setEdge, 
                        show.legend = F) + ggplot2::geom_sf_text(ggplot2::aes_string(label = "name"), 
                                                                 data = data@setLabel) + ggplot2::theme_void()
     label = "count"
@@ -2404,8 +2465,8 @@ ggPlotScree <- function(mSet, cf, pcs=20){
                                 paste0("PC", eightypoint, ":80%"),
                                 paste0("PC", ninetypoint, ":90%")))
   p <- ggplot2::ggplot(data=df) + 
-    ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var), cex=1, color="black") +
-    ggplot2::geom_point(mapping = ggplot2::aes(x=pc, y=var, color=var), cex=3) +
+    ggplot2::geom_line(mapping = ggplot2::aes(x=pc, y=var), linewidth = 1, color="black") +
+    ggplot2::geom_point(mapping = ggplot2::aes(x=pc, y=var, color=var), size = 3) +
     ggplot2::scale_colour_gradientn(colours = cf(200)) + 
     ggplot2::xlab("Principal components") +
     ggplot2::ylab("% Variance") +
@@ -2483,25 +2544,25 @@ ggPlotPower <- function(mSet,
   }else{
     p <- ggplot2::ggplot(data, ggplot2::aes(x=samples,y=power)) +
       ggplot2::geom_path(alpha=.5,
-                         cex=.5,
+                         linewidth=.5,
                          ggplot2::aes(color = comparison, group = comparison)) +
       ggplot2::stat_summary_bin(#alpha=.6,
         ggplot2::aes(samples, 
                      power, 
                      group=comparison), 
         fun=mean, geom="line", 
-        cex = 2.3,color="black") +
+        linewidth = 2.3,color="black") +
       ggplot2::stat_summary_bin(#alpha=.6,
         ggplot2::aes(samples, power, 
                      color=comparison
                      #,group=comparison
         ), 
         fun=mean, geom="line", 
-        cex = 1.2) +
+        linewidth = 1.2) +
       ggplot2::stat_summary_bin(ggplot2::aes(samples,
                                              power), 
                                 fun=mean, color="black", 
-                                geom="line", cex = 2)# +
+                                geom="line", linewidth = 2)# +
     # ggplot2::coord_cartesian(xlim = c(0,max_samples), 
     #                          ylim = c(.04,.96))
     p 
@@ -2645,11 +2706,11 @@ ggPlotMummi <- function(mSet, cf,
   p <- switch(plot_mode, 
               gsea = ggplot2::ggplot(df) + ggplot2::geom_bar(ggplot2::aes(y = path.nms, 
                                                                           x = x, 
-                                                                          fill = pval,
-                                                                          text = path.nms,
-                                                                          key = path.nms),
+                                                              fill = pval,
+                                                              text = path.nms,
+                                                              key = path.nms),
                                                              stat = "identity",
-                                                             color = "black",cex=0.1) +
+                                                             color = "black", linewidth=0.1) +
                 ggplot2::ylab("KEGG pathway") + 
                 ggplot2::xlab(if(anal.type == 'mummichog') "Significant/expected hits" else "NES") +
                 ggplot2::scale_fill_gradientn(colours = cf(20), name = 'p-value') + 
@@ -2661,10 +2722,10 @@ ggPlotMummi <- function(mSet, cf,
                                                                                 #color = `radi.vec`,
                                                                                 text = path.nms,
                                                                                 key = path.nms),
-                                                                   shape = 21,
-                                                                   color = "black"
-                                                                   ) +
-                ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, cex=0.3) +
+                                                                    shape = 21,
+                                                                    color = "black"
+                                                                    ) +
+                ggplot2::geom_hline(aes(yintercept = logpthresh), linetype=2, linewidth=0.3) +
                 ggrepel::geom_label_repel(data = df[df$y >= logpthresh,],
                                           mapping = ggplot2::aes(x = x, 
                                                                  y = y,
@@ -2740,7 +2801,7 @@ ggPlotMultirank <- function(mSet, cf,
   }
   
   p=ggplot2::ggplot(data = for_plot[group != "mean"], ggplot2::aes(x = group, y = ranking, group=`m.z`)) +
-    ggplot2::geom_line(ggplot2::aes(color = ranking.mean), size = 1) +
+    ggplot2::geom_line(ggplot2::aes(color = ranking.mean), linewidth = 1) +
     ggplot2::geom_point(ggplot2::aes(color = ranking.mean), size = 5) +
     ggplot2::geom_text(#data = for_plot[group == levels(group)[2]], 
               mapping=aes(label=ranking.mean),

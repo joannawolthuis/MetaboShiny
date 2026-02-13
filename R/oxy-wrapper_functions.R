@@ -442,7 +442,7 @@ metshiTable <- function(content, options=NULL, rownames= T, selection = 'single'
                   text = "<i class='fa fa-save'></i>"
                 )))
   if(!is.null(options)){
-    opts <- append(opts, options)      
+    opts <- utils::modifyList(opts, options)
   }
   mz_rownames = stringr::str_match(rownames(content),
                                    "(\\d+\\.\\d+)")[,2]
@@ -596,20 +596,31 @@ getTopHits <- function(mSet, expnames, top, thresholds=c(), filter_mode="top"){
                          names(res) = base_name
                          res
                        },
-                       tt = {
-                         values = analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
-                                                          decreasing = F),]
-                         res = list(data.frame(`m/z` = rownames(values),
-                                               value = values[,2])
-                                    )
-                         names(res) = base_name
-                         res
-                       },
-                       fc = {
-                         values = analysis$fc$sig.mat[order(analysis$fc$sig.mat[,2],
-                                                            decreasing = F),]
-                         res = list(data.frame(`m/z` = rownames(values),
-                                               value = values[,2])
+                        tt = {
+                          values = analysis$tt$sig.mat[order(analysis$tt$sig.mat[,2],
+                                                           decreasing = F),]
+                          res = list(data.frame(`m/z` = rownames(values),
+                                                value = values[,2])
+                                     )
+                          names(res) = base_name
+                          res
+                        },
+                        logiscore = {
+                          values <- analysis$logiscore$sig.mat
+                          if (is.null(values)) {
+                            return(NULL)
+                          }
+                          values <- values[order(values[, "p.value"], decreasing = FALSE), , drop = FALSE]
+                          res <- list(data.frame(`m/z` = rownames(values),
+                                                 value = values[, "p.value"]))
+                          names(res) <- base_name
+                          res
+                        },
+                        fc = {
+                          values = analysis$fc$sig.mat[order(analysis$fc$sig.mat[,2],
+                                                             decreasing = F),]
+                          res = list(data.frame(`m/z` = rownames(values),
+                                                value = values[,2])
                          )
                          names(res) = base_name
                          res
@@ -767,20 +778,37 @@ getAllHits <- function(mSet, expname, randomize = F){
                      res
                    },
                    tt = {
-                     res = data.frame(`m/z` = names(analysis$tt$p.value),
-                                      value = analysis$tt$p.value,
-                                      statistic = analysis$tt$t.score
-                     )
-                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
-                     res = res[order(abs(res$statistic),decreasing = T),]
-                     
-                     res
-                   },
-                  multirank = {
-                    res_tbl = analysis$multirank$result_table
-                    res_tbl = unique(res_tbl[group == "mean"])
-                    res = data.frame(`m/z` = res_tbl$m.z,
-                                     value = res_tbl$ranking,
+                      res = data.frame(`m/z` = names(analysis$tt$p.value),
+                                       value = analysis$tt$p.value,
+                                       statistic = analysis$tt$t.score
+                      )
+                      res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
+                      res = res[order(abs(res$statistic),decreasing = T),]
+                      
+                      res
+                    },
+                    logiscore = {
+                      if (is.null(analysis$logiscore) || is.null(analysis$logiscore$p.value) || is.null(analysis$logiscore$z.stat)) {
+                        return(data.table::data.table())
+                      }
+                      mzs <- names(analysis$logiscore$p.value)
+                      stats <- analysis$logiscore$z.stat[mzs]
+                      res <- data.frame(`m/z` = mzs,
+                                        value = analysis$logiscore$p.value[mzs],
+                                        statistic = stats)
+                      sig_rows <- character(0)
+                      if (!is.null(analysis$logiscore$sig.mat)) {
+                        sig_rows <- rownames(analysis$logiscore$sig.mat)
+                      }
+                      res$significant <- sapply(res$m.z, function(mz) mz %in% sig_rows)
+                      res <- res[order(abs(res$statistic), decreasing = TRUE), ]
+                      res
+                    },
+                   multirank = {
+                     res_tbl = analysis$multirank$result_table
+                     res_tbl = unique(res_tbl[group == "mean"])
+                     res = data.frame(`m/z` = res_tbl$m.z,
+                                      value = res_tbl$ranking,
                                      statistic = c(0)
                     )
                     res$significant = sapply(res$m.z, function(mz) mz %in% rownames(analysis$tt$sig.mat))
@@ -1294,10 +1322,10 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                                                      legend.title = element_text(size=15),
                                                                      legend.text = element_text(size=12),
                                                                      axis.line = ggplot2::element_line(colour = 'black',
-                                                                                                       size = .5),
+                                                                                                        linewidth = .5),
                                                                      plot.title = ggplot2::element_text(hjust = 0.5,
-                                                                                                        vjust = 0.1,
-                                                                                                        size=lcl$aes$font$plot.font.size * 1.2),
+                                                                                                         vjust = 0.1,
+                                                                                                         size=lcl$aes$font$plot.font.size * 1.2),
                                                                      text = ggplot2::element_text(family = lcl$aes$font$family))
                                                     
                                                   })
@@ -1384,20 +1412,27 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                                     topn=input$meba_topn)
                      list(meba_plot = p)
                    },
-                   tt = {
-                     # render manhattan-like plot for UI
-                     p = ggPlotTT(mSet,
-                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
-                                  20,topn=input$tt_topn)
-                     
-                     list(tt_plot = p)
-                   },
-                   proda = {
-                     # render manhattan-like plot for UI
-                     p = ggPlotProDA(mSet,
-                                  cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
-                                  20,topn=input$proda_topn)
-                     
+                    tt = {
+                      # render manhattan-like plot for UI
+                      p = ggPlotTT(mSet,
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                   20,topn=input$tt_topn)
+                      
+                      list(tt_plot = p)
+                    },
+                    logiscore = {
+                      p = ggPlotLogiscore(mSet,
+                                          cf = gbl$functions$color.functions[[lcl$aes$spectrum]],
+                                          20,
+                                          topn = input$logiscore_topn)
+                      list(logiscore_plot = p)
+                    },
+                    proda = {
+                      # render manhattan-like plot for UI
+                      p = ggPlotProDA(mSet,
+                                   cf = gbl$functions$color.functions[[lcl$aes$spectrum]], 
+                                   20,topn=input$proda_topn)
+                      
                      list(proda_plot = p)
                    },
                    fc = {
@@ -1808,10 +1843,10 @@ getPlots <- function(do, mSet, input, gbl, lcl, venn_yes, my_selection){
                        legend.title = element_text(size=15),
                        legend.text = element_text(size=12),
                        axis.line = ggplot2::element_line(colour = 'black',
-                                                         size = .5),
+                                                          linewidth = .5),
                        plot.title = ggplot2::element_text(hjust = 0.5,
-                                                          vjust = 0.1,
-                                                          size=lcl$aes$font$plot.font.size * 1.2),
+                                                           vjust = 0.1,
+                                                           size=lcl$aes$font$plot.font.size * 1.2),
                        text = ggplot2::element_text(family = lcl$aes$font$family))
       
       if(grepl("venn", plotName) & !input$venn_plot_mode){
@@ -1941,6 +1976,11 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     }  
   }
   qs::qsave(mSet$dataSet$orig, "data_orig.qs")
+
+  # Keep a reference to feature names so we can restore them if later processing
+  # drops dimnames (some matrix ops / batch-corr paths can return objects without
+  # colnames, which breaks downstream per-m/z analyses).
+  ref_feature_names <- colnames(mSet$dataSet$orig)
   
   if(!init) mSet$dataSet$missing <- NULL
   
@@ -2177,6 +2217,12 @@ metshiProcess <- function(mSet, session, init=F, cl=0){
     mSet$dataSet$norm <- as.data.frame(trunc)
   }
 
+  if (is.null(colnames(mSet$dataSet$norm)) &&
+      !is.null(ref_feature_names) &&
+      length(ref_feature_names) == ncol(mSet$dataSet$norm)) {
+    colnames(mSet$dataSet$norm) <- ref_feature_names
+  }
+ 
   mSet$dataSet$cls.num <- length(levels(mSet$dataSet$cls))
   
   if(mSet$metshiParams$repl_merge & init){
@@ -2710,19 +2756,24 @@ runStats <- function(mSet, input,lcl, analysis, ml_queue, cl, multirank_yes, ext
            output$heatmap_now <- shiny::renderText(input$heattable)
          },
          tt = {
-             mSet <- Ttests.Anal.JW(mSet,
-                                    nonpar = input$tt_nonpar,
-                                    threshp = input$tt_p_thresh,
-                                    paired = input$tt_paired,
-                                    equal.var = input$tt_eqvar,
-                                    multicorr_method = input$tt_multi_test)
-           
-         },
+              mSet <- Ttests.Anal.JW(mSet,
+                                     nonpar = input$tt_nonpar,
+                                     threshp = input$tt_p_thresh,
+                                     paired = input$tt_paired,
+                                     equal.var = input$tt_eqvar,
+                                     multicorr_method = input$tt_multi_test)
+            
+          },
+          logiscore = {
+            mSet <- logisticScores.Anal.JW(mSet,
+                                          threshp = input$logiscore_p_thresh,
+                                          multicorr_method = input$logiscore_multi_test)
+          },
          fc = {
-             mSet$dataSet$combined.method = T
-             if(input$fc_paired){
-               mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
-                                                      as.numeric(input$fc_thresh),
+              mSet$dataSet$combined.method = T
+              if(input$fc_paired){
+                mSet <- MetaboAnalystR::FC.Anal.paired(mSet,
+                                                       as.numeric(input$fc_thresh),
                                                       1)  
              }else{
                mSet <- MetaboAnalystR::FC.Anal.unpaired(mSet,
