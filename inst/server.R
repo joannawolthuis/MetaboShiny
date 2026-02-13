@@ -381,7 +381,7 @@ function(input, output, session) {
 
   MetaboShiny:::init_export_observer(environment())
 
-  # Ensure any previous resizable binding/handle is removed.
+  # Re-enable resizable main panel and trigger widget resize during interaction.
   shinyjs::runjs('
     try {
       if ($("#mainPanel").hasClass("ui-resizable")) {
@@ -389,6 +389,27 @@ function(input, output, session) {
       }
       $("#mainPanel .ui-resizable-handle").remove();
       $("#mainPanel").removeClass("ui-resizable ui-resizable-autohide");
+      $("#mainPanel").resizable({
+        handles: "se",
+        minHeight: 500,
+        minWidth: 700,
+        start: function() {
+          try {
+            var extraH = 16;
+            var extraW = 16;
+            var contentMinH = Math.ceil(this.scrollHeight + extraH);
+            var contentMinW = Math.ceil(this.scrollWidth + extraW);
+            $(this).resizable("option", "minHeight", Math.max(500, contentMinH));
+            $(this).resizable("option", "minWidth", Math.max(700, contentMinW));
+          } catch (e) {}
+        },
+        resize: function() {
+          try { $(window).trigger("resize"); } catch (e) {}
+        },
+        stop: function() {
+          try { $(window).trigger("resize"); } catch (e) {}
+        }
+      });
     } catch (e) {}
   ')
 

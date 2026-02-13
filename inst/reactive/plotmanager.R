@@ -80,7 +80,10 @@ shiny::observe({
                       align = "right",
                       downloadButton(outputId = paste0("download_", plotName), label = "")
                     ),
-                    plotly::plotlyOutput(paste0(plotName, "_interactive"), height = plot_h)
+                    div(
+                      style = paste0("height:", plot_h, "; width: 100%;"),
+                      plotly::plotlyOutput(paste0(plotName, "_interactive"), height = "100%")
+                    )
                   )
                 } else {
                   list(
@@ -88,7 +91,10 @@ shiny::observe({
                       align = "right",
                       downloadButton(outputId = paste0("download_", plotName), label = "")
                     ),
-                    plotOutput(plotName, height = plot_h)
+                    div(
+                      style = paste0("height:", plot_h, "; width: 100%;"),
+                      plotOutput(plotName, height = "100%")
+                    )
                   )
                 }
               }else{

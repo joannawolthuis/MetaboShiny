@@ -637,3 +637,46 @@ a {
 .selectize-input { word-break: break-word;}
 
 .selectize-dropdown {word-wrap : break-word;}
+
+/* Make jQuery UI resizable handles visible across themes. */
+.ui-resizable {
+  position: relative;
+}
+
+.ui-resizable-handle {
+  position: absolute;
+  z-index: 1000;
+  background: transparent;
+}
+
+.ui-resizable-se {
+  width: 14px;
+  height: 14px;
+  right: 2px;
+  bottom: 2px;
+  cursor: se-resize;
+  clip-path: polygon(100% 0, 0 100%, 100% 100%);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(90, 90, 90, 0.8) 0px,
+    rgba(90, 90, 90, 0.8) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.ui-resizable-e {
+  width: 8px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  cursor: e-resize;
+}
+
+.ui-resizable-s {
+  height: 8px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  cursor: s-resize;
+}

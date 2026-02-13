@@ -377,21 +377,21 @@ ui_tab_normalize <- function(gbl, adducts) {
             shiny::column(
               6,
               shiny::imageOutput("empty2", width = "100%", height = "1px"),
-              (shiny::uiOutput("var1_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("var1_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             ),
             shiny::column(
               6,
-              (shiny::uiOutput("var3_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("var3_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             )
           ),
           shiny::fluidRow(
             shiny::column(
               6,
-              (shiny::uiOutput("var2_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("var2_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             ),
             shiny::column(
               6,
-              (shiny::uiOutput("var4_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("var4_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             )
           )
         ),
@@ -400,21 +400,21 @@ ui_tab_normalize <- function(gbl, adducts) {
           shiny::fluidRow(
             shiny::column(
               6,
-              (shiny::uiOutput("samp1_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("samp1_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             ),
             shiny::column(
               6,
-              (shiny::uiOutput("samp3_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("samp3_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             )
           ),
           shiny::fluidRow(
             shiny::column(
               6,
-              (shiny::uiOutput("samp2_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("samp2_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             ),
             shiny::column(
               6,
-              (shiny::uiOutput("samp4_wrap"))
+              (shinyjqui::jqui_resizable(shiny::uiOutput("samp4_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
             )
           )
         )
@@ -498,7 +498,7 @@ ui_tab_analyse <- function(gbl, adducts) {
                 ),
                 style = "info",
                 (
-                  shiny::uiOutput("summary_plot_wrap")
+                  shinyjqui::jqui_resizable(shiny::uiOutput("summary_plot_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700))
                 )
               )
             )
@@ -875,7 +875,7 @@ ui_tab_analyse <- function(gbl, adducts) {
                                 ),
                                 conditionalPanel(
                                   "input.wordbar == false",
-                                  (shiny::uiOutput("wordbar_wrap"))
+                                  (shinyjqui::jqui_resizable(shiny::uiOutput("wordbar_wrap"), options = list(handles = "se", minHeight = 560, minWidth = 700)))
                                 ),
                                 shinyWidgets::switchInput(
                                   inputId = "wordbar", value = TRUE,
