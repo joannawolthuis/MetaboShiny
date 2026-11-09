@@ -186,14 +186,15 @@ shiny::observeEvent(input$create_csv,{
                                   inputId = "proj_name",
                                   selected = proj_name)
       
-      lcl$proj_name <- proj_name
-      lcl$paths$proj_dir <- file.path(lcl$paths$work_dir, proj_name)
+      # Persist the active project in the session, not just this observer's frame.
+      lcl$proj_name <<- proj_name
+      lcl$paths$proj_dir <<- file.path(lcl$paths$work_dir, proj_name)
       
       if(dir.exists(lcl$paths$proj_dir)) unlink(lcl$paths$proj_dir)
       dir.create(lcl$paths$proj_dir,showWarnings = F)
       
-      lcl$paths$csv_loc <- file.path(lcl$paths$proj_dir, paste0(proj_name, ".csv"))
-      lcl$paths$patdb <- file.path(lcl$paths$proj_dir, paste0(proj_name, ".db"))
+      lcl$paths$csv_loc <<- file.path(lcl$paths$proj_dir, paste0(proj_name, ".csv"))
+      lcl$paths$patdb <<- file.path(lcl$paths$proj_dir, paste0(proj_name, ".db"))
       
       # change project name in user options file
       MetaboShiny::setOption(lcl$paths$opt.loc, key="proj_name", value=proj_name)
@@ -285,6 +286,7 @@ shiny::observeEvent(input$metadata_new_add, {
 # triggers when 'get options' is clicked in the normalization pane
 shiny::observeEvent(input$check_csv, {
   # ----------------------
+  shiny::req(length(lcl$paths$csv_loc) == 1L, file.exists(lcl$paths$csv_loc))
   
   # get the names of those experimental variables
   opts = get_exp_vars(lcl$paths$csv_loc)

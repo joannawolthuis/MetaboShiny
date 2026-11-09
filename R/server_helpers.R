@@ -104,7 +104,7 @@ update_ml_method <- function(session, choices){
 stop_session_cluster <- function(){
   try({
     shiny::showNotification("Stopping threads...")
-    parallel::stopCluster(session_cl)
+    if (inherits(session_cl, "cluster")) parallel::stopCluster(session_cl)
   })
 }
 

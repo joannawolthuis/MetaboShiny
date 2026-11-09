@@ -1,16 +1,35 @@
+.metshi_launch_settings <- function(port, inBrowser, debug, host) {
+  if (!is.numeric(port) || length(port) != 1L || is.na(port) ||
+      !is.finite(port) || port < 1 || port > 65535 || port != as.integer(port)) {
+    stop("port must be a whole number between 1 and 65535.", call. = FALSE)
+  }
+  for (setting in list(inBrowser = inBrowser, debug = debug)) {
+    if (!is.logical(setting) || length(setting) != 1L || is.na(setting)) {
+      stop("inBrowser and debug must each be TRUE or FALSE.", call. = FALSE)
+    }
+  }
+  if (!is.character(host) || length(host) != 1L || is.na(host) || !nzchar(trimws(host))) {
+    stop("host must be a nonempty address string.", call. = FALSE)
+  }
+  list(launch.browser = inBrowser, port = as.integer(port), host = host,
+       display.mode = if (debug) "showcase" else "normal")
+}
+
 #' @title Start MetaboShiny
 #' @description Function to start the MetaboShiny app
 #' @param port Port to host the app on, Default: 8080
 #' @param inBrowser Open in browser automatically?, Default: F
 #' @param debug Run in debug mode?, Default: F
 #' @param runmode Run locally or on server? (deprecated, ignore), Default: 'local'
+#' @param host Address to bind the app to. Use 127.0.0.1 locally or 0.0.0.0 in Docker.
 #' @seealso 
 #'  \code{\link[shiny]{runApp}}
 #' @rdname start.metshi
 #' @export 
 #' @importFrom shiny runApp
 start_metshi <- function(port=8080, inBrowser=F, 
-                         debug=F, runmode="local"){
+                         debug=F, runmode="local", host="0.0.0.0"){
+  settings <- .metshi_launch_settings(port, inBrowser, debug, host)
   
   # options("download.file.method" = "libcurl")
   # 
@@ -79,14 +98,15 @@ start_metshi <- function(port=8080, inBrowser=F,
   
   #library(httr)
   # rjava.so error.. or rdb corrupt.. 'sudo R CMD javareconf'
-  requireNamespace("MetaboAnalystR", quietly = TRUE)
-  requireNamespace("ggVennDiagram", quietly = TRUE)
-  requireNamespace("MetaDBparse", quietly = TRUE)
+  required <- c("shiny", "MetaboShiny", "MetaboAnalystR", "ggVennDiagram", "MetaDBparse")
+  missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing)) {
+    stop(paste0("Missing or unloadable startup packages: ", paste(missing, collapse = ", "),
+                ". See docs/SETUP.md in the repository. Startup installs nothing."), call. = FALSE)
+  }
 
   options('unzip.unzip' = getOption("unzip"),
-          'download.file.extra' = switch(runmode, 
-                                         docker="--insecure",
-                                         local=""),  # bad but only way to have internet in docker...
+          'download.file.extra' = "",
           'download.file.method' = 'curl',
           width = 1200, height=800)
   
@@ -94,11 +114,7 @@ start_metshi <- function(port=8080, inBrowser=F,
   
   #runmode <<- runmode
   
-  shiny::runApp(
-    appDir = appdir,
-    launch.browser = inBrowser,
-    port = 8080, # DONT REMOVE OR DOCKER STOPS WORKING
-    host = "0.0.0.0", # DONT REMOVE OR DOCKER STOPS WORKING
-    display.mode = "normal")
+  if (!nzchar(appdir)) stop("The installed MetaboShiny app directory was not found.", call. = FALSE)
+  do.call(shiny::runApp, c(list(appDir = appdir), settings))
 }
 

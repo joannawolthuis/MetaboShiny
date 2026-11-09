@@ -24,6 +24,8 @@ getMissing <- function(peakpath,
   skipCols=c("sample","label")
   
   con <- file(peakpath, "r")#, blocking = FALSE)
+  on.exit(close(con), add = TRUE)
+  samps_in_peaklist <- character()
   header = readLines(con, n = 1) # empty
   cols = stringi::stri_split(header, fixed=",")[[1]]
 
@@ -42,6 +44,7 @@ getMissing <- function(peakpath,
                "smallmolecule_abundance_std_error_sub")
     peaklist_melty <- data.table::melt(peaklist[,-..rmcols], id.vars=c("mzmed"), variable.name = "sample", value.name="into")  
     peaklist <- data.table::dcast(peaklist_melty, sample ~ mzmed, value.var = "into")
+    samps_in_peaklist <- peaklist$sample
     considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
     peaklist = peaklist[, ..considerMe]
     totalMissing = switch(dim,
@@ -52,6 +55,7 @@ getMissing <- function(peakpath,
       peaklist <- data.table::fread(peakpath,
                                     header=T,
                                     fill=TRUE)
+      samps_in_peaklist <- peaklist[[1]]
       considerMe=which(!(tolower(colnames(peaklist)) %in% skipCols))
       peaklist = peaklist[, ..considerMe]
       totalMissing = switch(dim, 

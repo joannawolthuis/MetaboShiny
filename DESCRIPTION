@@ -10,7 +10,8 @@ Description: Rapid and rigorous analysis and interpretation of direct infusion u
 License: file LICENSE
 Encoding: UTF-8
 LazyData: true
-URL: https://github.com/UMCUGenetics/MetaboShiny
+URL: https://github.com/joannawolthuis/MetaboShiny
+BugReports: https://github.com/joannawolthuis/MetaboShiny/issues
 Imports:
   ggplot2,
   data.table,

@@ -436,7 +436,7 @@ function(input, output, session) {
 
   onStop(function() {
     print("Closing MetaboShiny...")
-    if (!is.null(session_cl)) {
+    if (inherits(session_cl, "cluster")) {
       parallel::stopCluster(session_cl)
     }
     session_cl <<- NULL

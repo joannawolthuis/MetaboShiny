@@ -563,8 +563,8 @@ ui_tab_analyse <- function(gbl, adducts) {
                 MetaboShiny:::ui_ml_configure(),
                 MetaboShiny:::ui_ml_results()
               )
-            ),
-          ),
+            )
+          )
         ),
         # this is the sidebar that shows in the analysis tab. contains a lot of settings on the current variable of interest, plot themes and colours, and venn diagrams.
         sidebarPanel =

@@ -1,8 +1,12 @@
 # MetaboShiny
-Welcome to the info page on MetaboShiny! We are currently on BioRXiv and the paper itself is somewhat of a guide to how to use the software. Additionally, a visual manual to all the possible actions within the app can be viewed below.
-For example input files (positive and negative peaklists + metadata) please see the `examples` folder.
+MetaboShiny provides interactive analysis and annotation of metabolomics data.
+The published software paper is [Wolthuis et al. (2020)](https://doi.org/10.1007/s11306-020-01717-8).
+Example peak tables and metadata are in [inst/examples](inst/examples).
 
-http://biorxiv.org/cgi/content/short/734236v1
+For this `dev` checkout, start with [installation and configuration](docs/SETUP.md).
+It documents dependency checks, the legacy installer, local-checkout installation,
+startup configuration and the remaining environment-validation work. The manual
+below describes the interface; older installation instructions are historical.
 
 # Table of Contents
 - [MetaboShiny](#metaboshiny)
@@ -70,6 +74,11 @@ http://biorxiv.org/cgi/content/short/734236v1
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 
 # Installation
+For the local Docker build, use [docker/README.md](docker/README.md). It installs
+this checkout on a pinned dependency image and runs installation/data smoke checks.
+For current development setup, follow [docs/SETUP.md](docs/SETUP.md).
+The instructions below describe the legacy distribution, not a validated build
+of this checkout. Published container images do not include local changes.
 ## Through Docker
 1. Install Docker. If you are on Windows and not running 10 pro or enterprise (likely) please try the following tutorial:https://docs.docker.com/toolbox/toolbox_install_windows/
 2. Run the following in a terminal: `docker pull jcwolthuis/metaboshiny`

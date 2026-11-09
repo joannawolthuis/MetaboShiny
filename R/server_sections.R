@@ -772,7 +772,7 @@ init_core_observers <- function(env){
       shiny::observeEvent(input$ncores, {
         stop_session_cluster()
         net_cores = input$ncores# - 1
-        if(net_cores > 0){
+        if(net_cores > 0 && !identical(Sys.getenv("METABOSHINY_PARALLEL"), "0")){
           start_session_cluster(net_cores)
         }else{
           session_cl <<- 0

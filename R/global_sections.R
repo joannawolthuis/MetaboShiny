@@ -52,7 +52,7 @@ init_global_state <- function(env){
       add_idx <- order(c(seq_along(gbl$vectors$pos_adducts$Name), seq_along(gbl$vectors$neg_adducts$Name)))
       sort_order <<- unlist(c(gbl$vectors$pos_adducts$Name, gbl$vectors$neg_adducts$Name))[add_idx]
       
-      session_cl <- parallel::makeCluster(1)
+      session_cl <- if (identical(Sys.getenv("METABOSHINY_PARALLEL"), "0")) 0 else parallel::makeCluster(1)
       debug_mSet <- list()
       debug_lcl <- list()
       debug_input <- list()

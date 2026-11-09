@@ -1,17 +1,17 @@
-# install_metaboshiny_local.R
-# Mirrors the posted Dockerfile (rocker/rstudio:4.1.0) as closely as possible.
+# Legacy dependency bootstrap for the dev branch. See docs/SETUP.md first.
+# Installs/replaces packages in the active library; use an isolated R 4.1 library.
 
 req_major <- 4
 req_minor <- 1
 
-if (!(getRversion()[1] == req_major && getRversion()[2] == req_minor)) {
+if (!(getRversion() >= "4.1" && getRversion() < "4.2")) {
   warning(sprintf(
     "This install script expects R 4.1.x. You are running R %s. Expect breakage.",
     getRversion()
   ), call. = FALSE)
 }
 
-options(pkgType = "win.binary")
+options(pkgType = if (.Platform$OS.type == "windows") "win.binary" else "source")
 
 cran <- "https://cloud.r-project.org"
 
@@ -163,7 +163,7 @@ install.packages("mutoss",  INSTALL_opts="--no-multiarch")
 install.packages("metap",   INSTALL_opts="--no-multiarch")
 install.packages("Rserve",   INSTALL_opts="--no-multiarch")
 
-options(pkgType = "win.binary")
+options(pkgType = if (.Platform$OS.type == "windows") "win.binary" else "source")
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 install.packages("Rserve")

@@ -209,7 +209,7 @@ shiny::observe({
           })),
           # row 2: description
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
-            shiny::column(width=3,align="center", shiny::helpText(gbl$constants$db.build.info[[db]]$description))
+            shiny::column(width=3,align="center", shiny::helpText(shiny::markdown(gbl$constants$db.build.info[[db]]$description)))
           })),
           # row 3: image
           shiny::fluidRow(lapply(gbl$vectors$db_list[min_i:max_i], function(db){
